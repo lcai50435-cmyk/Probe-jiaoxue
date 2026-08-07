@@ -59,6 +59,12 @@
 - 无理由新增专用脚本、硬编码数据、主动重构存量代码（除非任务涉及）。
 - 场景结构与 Setup 脚本逻辑漂移。
 
+## 7.1 Unity 6 已知坑（2026-08-07 M1 面板实战）
+
+- **运行时 `Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd")` 会报错**：该内置 UI 切片图在 Unity 6 运行时加载不到（Editor 的 `AssetDatabase.GetBuiltinExtraResource` 正常）。运行时动态创建气泡等 UI 时改用程序化生成（`Sprite.Create` 自绘圆角 + border 九宫格）或项目内 Sprite 资产。
+- **动态尺寸 UI 不要依赖嵌套布局组 preferred 缓存**：逐字/动态生长场景（气泡随文本增长）中，`HorizontalLayoutGroup` 的行高按子物体 preferred 推算且带缓存，尺寸变化时行高跟不上会重叠/错位。改用显式控制：行挂 `LayoutElement`（minHeight/preferredHeight 同值手动同步），气泡手动锚定定位，逐字更新后立即 `LayoutRebuilder.ForceRebuildLayoutImmediate`。
+- **`TextAnchor` 枚举无 `Top/Bottom`**：Unity 命名体系为 `Upper/Middle/Lower`（如 `UpperLeft`、`UpperRight`）。
+
 ## 8. 与 AGENTS.md 的同步契约
 
 - 本文档为权威来源；`AGENTS.md` 总纲只存放摘要（项目速览、五条规则、约定速查）。
