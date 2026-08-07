@@ -26,6 +26,9 @@ namespace M1.EditorTools
         private const float PanelWidth = 780f;
         private const float HeaderHeight = 110f;
         private const float InputRowHeight = 130f;
+        private const float MessageSpacing = 2f;       // 消息行基础间距（微信风格：连续消息紧凑）
+        private const float ScrollbarWidth = 10f;     // 滚动条宽度
+        private const float ScrollbarReserve = 14f;   // Viewport 右侧为滚动条让位宽度
 
         [MenuItem("Tools/M1/Setup AI 提问面板 %#&q")]
         public static void SetupQAPanel()
@@ -65,9 +68,10 @@ namespace M1.EditorTools
                 blockerGo.SetActive(false);
             }
 
-            // 2) 抽屉面板
+            // 2) 抽屉面板（已存在则刷新消息区布局参数，保证 Setup 重入不漂移）
             var panelGo = FindIncludingInactive(board.transform, PanelName)?.gameObject;
             if (panelGo == null) panelGo = CreatePanel(board, cnFont);
+            else RefreshMessageList(panelGo.transform);
 
             // 3) 运行时脚本
             var comp = board.GetComponent<M1QAPanel>();
@@ -164,6 +168,7 @@ namespace M1.EditorTools
             viewportGo.transform.SetParent(listGo.transform, false);
             var vrt = viewportGo.GetComponent<RectTransform>();
             Stretch(vrt);
+            vrt.offsetMax = new Vector2(-ScrollbarReserve, 0f); // 右侧为滚动条让位
 
             var contentGo = new GameObject("Content",
                 typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
@@ -176,7 +181,7 @@ namespace M1.EditorTools
             crt2.sizeDelta = new Vector2(0f, 0f);
             var vlg = contentGo.GetComponent<VerticalLayoutGroup>();
             vlg.padding = new RectOffset(14, 14, 12, 12);
-            vlg.spacing = 14f;
+            vlg.spacing = MessageSpacing;
             vlg.childControlWidth = true;
             vlg.childForceExpandWidth = true;
             vlg.childControlHeight = false;
@@ -191,6 +196,7 @@ namespace M1.EditorTools
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.scrollSensitivity = 30f;
+            EnsureScrollbar(listGo.transform, scroll);
 
             // ---------- InputRow ----------
             var rowGo = new GameObject("InputRow",
@@ -320,6 +326,68 @@ namespace M1.EditorTools
             var tmp = textGo.GetComponent<TextMeshProUGUI>();
             tmp.alignment = TextAlignmentOptions.Center;
             return go;
+        }
+
+        /// <summary>消息列表滚动条（AutoHide：内容不足自动隐藏，超出自动出现）。幂等：已存在则复用。</summary>
+        private static void EnsureScrollbar(Transform listGo, ScrollRect scroll)
+        {
+            var sbGo = FindIncludingInactive(listGo, "Scrollbar")?.gameObject;
+            if (sbGo == null)
+            {
+                sbGo = new GameObject("Scrollbar",
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Scrollbar));
+                sbGo.transform.SetParent(listGo, false);
+                var srt = sbGo.GetComponent<RectTransform>();
+                srt.anchorMin = new Vector2(1f, 0f);
+                srt.anchorMax = new Vector2(1f, 1f);
+                srt.pivot = new Vector2(1f, 0.5f);
+                srt.anchoredPosition = new Vector2(-2f, 0f);
+                srt.sizeDelta = new Vector2(ScrollbarWidth, 0f);
+                var sImg = sbGo.GetComponent<Image>();
+                sImg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                sImg.type = Image.Type.Sliced;
+                sImg.color = new Color(0.55f, 0.55f, 0.55f, 0.35f);
+
+                var handleGo = new GameObject("Handle",
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                handleGo.transform.SetParent(sbGo.transform, false);
+                var hrt = handleGo.GetComponent<RectTransform>();
+                hrt.anchorMin = Vector2.zero;
+                hrt.anchorMax = Vector2.one;
+                hrt.offsetMin = new Vector2(1f, 1f);
+                hrt.offsetMax = new Vector2(-1f, -1f);
+                var hImg = handleGo.GetComponent<Image>();
+                hImg.sprite = sImg.sprite;
+                hImg.type = Image.Type.Sliced;
+                hImg.color = new Color(0.45f, 0.45f, 0.45f, 0.9f);
+
+                var sb = sbGo.GetComponent<Scrollbar>();
+                sb.direction = Scrollbar.Direction.BottomToTop;
+                sb.handleRect = hrt;
+                sb.targetGraphic = hImg;
+            }
+
+            if (scroll != null && scroll.verticalScrollbar == null)
+                scroll.verticalScrollbar = sbGo.GetComponent<Scrollbar>();
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        }
+
+        /// <summary>刷新已有面板的消息区布局（间距/Viewport 偏移/滚动条），保证 Setup 重入不漂移。</summary>
+        private static void RefreshMessageList(Transform panelGo)
+        {
+            var listGo = panelGo.Find("MessageList");
+            if (listGo == null) return;
+            var scroll = listGo.GetComponent<ScrollRect>();
+            if (scroll == null) return;
+
+            var viewport = listGo.Find("Viewport");
+            if (viewport != null)
+            {
+                viewport.GetComponent<RectTransform>().offsetMax = new Vector2(-ScrollbarReserve, 0f);
+                var vlg = viewport.Find("Content")?.GetComponent<VerticalLayoutGroup>();
+                if (vlg != null) vlg.spacing = MessageSpacing;
+            }
+            EnsureScrollbar(listGo, scroll);
         }
 
         private static void Stretch(RectTransform rt)

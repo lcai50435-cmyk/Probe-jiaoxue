@@ -18,7 +18,7 @@ namespace M1
     /// M1 AI 提问面板（原型）：右侧抽屉式。
     ///  - 长按数字人头像（数字人/背景圆/大头）打开
     ///  - 文字输入（最多 200 字）+ 语音按钮占位 + 发送
-    ///  - 用户消息右对齐蓝气泡；AI 回复左对齐白气泡 + 逐字显示（真实 DeepSeek 回复）
+    ///  - 用户消息左对齐蓝气泡；AI 回复右对齐白气泡 + 逐字显示（真实 DeepSeek 回复）
     ///  - 回答生命周期通过 OnAnswerStateChanged 事件对外发布，供数字人动画消费
     ///  - 挡板点击 / 关闭按钮关闭；打开时挡板锁定底层交互
     /// 挂到场景 "画板" 上，运行时空自动按物体名解析引用。
@@ -80,11 +80,36 @@ namespace M1
         private bool _busy; // 请求等待中或逐字显示中（防重入）
         private Coroutine _typingCoroutine;
 
-        private static readonly Color UserBubbleColor = new Color(0.16f, 0.45f, 0.86f, 1f);
-        private static readonly Color AiBubbleColor = new Color(1f, 1f, 1f, 1f);
+        private static readonly Color UserBubbleColor = Color.white; // 微信风格：用户消息浅色气泡黑字（与 AI 同步）
+        private static readonly Color AiBubbleColor = Color.white;
         private const float BubbleMaxWidth = 560f;
         private const float BubblePaddingX = 32f;
         private const float BubblePaddingY = 20f;
+
+        private static Sprite _bubbleSprite;
+
+        /// <summary>气泡九宫格切片图：程序化生成白色圆角（Unity 6 运行时加载不到内置 UI/Skin/UISprite.psd，故自建），静态缓存只生成一次。</summary>
+        private static Sprite GetBubbleSprite()
+        {
+            if (_bubbleSprite != null) return _bubbleSprite;
+            const int size = 12;   // 纹理边长
+            const int radius = 4;  // 圆角半径（同时作为 9-slice border）
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var cx = x < radius ? radius - x - 0.5f : (x >= size - radius ? x - (size - radius - 0.5f) : 0f);
+                    var cy = y < radius ? radius - y - 0.5f : (y >= size - radius ? y - (size - radius - 0.5f) : 0f);
+                    var alpha = Mathf.Clamp01(radius - Mathf.Sqrt(cx * cx + cy * cy) + 0.5f); // 边缘 1px 渐变抗锯齿
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            _bubbleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f),
+                100f, 0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
+            return _bubbleSprite;
+        }
 
         private void Awake()
         {
@@ -294,7 +319,7 @@ namespace M1
         private void ShowError(MessageBubble bubble, string error)
         {
             bubble.text.text = error;
-            ApplyBubbleSize(bubble.text, bubble.rect);
+            UpdateBubbleSize(bubble);
             ScrollToBottom();
             _busy = false;
             UpdateSendInteractable();
@@ -324,8 +349,10 @@ namespace M1
             for (var i = 1; i <= fullText.Length; i++)
             {
                 tmp.text = fullText.Substring(0, i);
-                ApplyBubbleSize(tmp, bubble.rect);
-                ScrollToBottom();
+                UpdateBubbleSize(bubble);
+                // 立即重建布局并置底：避免下一帧才重建导致气泡扩展时与相邻消息重叠
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_messageContent);
+                if (_scroll != null) _scroll.verticalNormalizedPosition = 0f;
                 yield return new WaitForSecondsRealtime(typeSpeed);
             }
             _busy = false;
@@ -343,28 +370,35 @@ namespace M1
                 return null;
             }
 
-            // 行：水平布局，气泡靠右（用户）/ 靠左（AI）
+            // 行：行高由 LayoutElement 显式控制（不依赖布局组 preferred 缓存，逐字生长不错位），气泡手动顶部锚定
             var rowGo = new GameObject(isUser ? "UserMessage" : "AiMessage",
-                typeof(RectTransform), typeof(HorizontalLayoutGroup));
+                typeof(RectTransform), typeof(LayoutElement));
             rowGo.transform.SetParent(_messageContent, false);
-            var row = rowGo.GetComponent<HorizontalLayoutGroup>();
-            row.childControlWidth = false;
-            row.childControlHeight = true;
-            row.childForceExpandWidth = false;
-            row.childForceExpandHeight = false;
-            row.padding = new RectOffset(12, 12, 4, 4);
-            row.childAlignment = isUser ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+            var rowRt = rowGo.GetComponent<RectTransform>();
+            rowRt.anchorMin = new Vector2(0f, 1f);
+            rowRt.anchorMax = new Vector2(1f, 1f);
+            rowRt.pivot = new Vector2(0.5f, 1f);
+            rowRt.anchoredPosition = Vector2.zero;
+            var rowElement = rowGo.GetComponent<LayoutElement>();
+            // 微信风格间距：同发送者连续消息紧凑（2+2+spacing2 ≈ 6px），切换发送者顶部加大到 14（≈ 18px）
+            var last = _messageContent.childCount > 0
+                ? _messageContent.GetChild(_messageContent.childCount - 1).name
+                : string.Empty;
+            var topPad = last == (isUser ? "UserMessage" : "AiMessage") ? 2f : 14f;
 
-            // 气泡：切片图 + 内边距
+            // 气泡：顶部锚定 + 切片，左侧消息锚左、右侧消息锚右
             var bubbleGo = new GameObject("Bubble",
                 typeof(RectTransform), typeof(Image));
             bubbleGo.transform.SetParent(rowGo.transform, false);
             var bubbleImg = bubbleGo.GetComponent<Image>();
-            bubbleImg.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            bubbleImg.sprite = GetBubbleSprite();
             bubbleImg.type = Image.Type.Sliced;
             bubbleImg.color = isUser ? UserBubbleColor : AiBubbleColor;
             var bubbleRt = bubbleGo.GetComponent<RectTransform>();
-            bubbleRt.pivot = new Vector2(0.5f, 0.5f);
+            bubbleRt.anchorMin = new Vector2(isUser ? 0f : 1f, 1f);
+            bubbleRt.anchorMax = new Vector2(isUser ? 0f : 1f, 1f);
+            bubbleRt.pivot = new Vector2(isUser ? 0f : 1f, 1f);
+            bubbleRt.anchoredPosition = new Vector2(isUser ? 12f : -12f, -topPad);
 
             // 文本
             var textGo = new GameObject("Text",
@@ -373,7 +407,7 @@ namespace M1
             var tmp = textGo.GetComponent<TextMeshProUGUI>();
             tmp.font = cnFont;
             tmp.fontSize = 28;
-            tmp.color = isUser ? Color.white : new Color(0.15f, 0.15f, 0.15f, 1f);
+            tmp.color = new Color(0.15f, 0.15f, 0.15f, 1f); // 两侧消息统一黑字（微信/参考图风格）
             tmp.textWrappingMode = TextWrappingModes.Normal;
             tmp.alignment = TextAlignmentOptions.Left;
             tmp.text = text;
@@ -383,18 +417,24 @@ namespace M1
             textRt.offsetMin = new Vector2(16f, 10f);
             textRt.offsetMax = new Vector2(-16f, -10f);
 
-            ApplyBubbleSize(tmp, bubbleRt);
+            var bubble = new MessageBubble { text = tmp, rect = bubbleRt, row = rowRt, rowElement = rowElement, topPad = topPad };
+            UpdateBubbleSize(bubble);
             ScrollToBottom();
-            return new MessageBubble { text = tmp, rect = bubbleRt };
+            return bubble;
         }
 
-        /// <summary>按文本换行后的实际尺寸调整气泡大小。</summary>
-        private static void ApplyBubbleSize(TextMeshProUGUI tmp, RectTransform bubbleRt)
+        /// <summary>按文本实际尺寸更新气泡大小，并同步行高（LayoutElement min/preferred 同值，保证逐字生长时行高立即跟随）。</summary>
+        private static void UpdateBubbleSize(MessageBubble bubble)
         {
+            var tmp = bubble.text;
             var size = tmp.GetPreferredValues(BubbleMaxWidth, 0f);
             var w = Mathf.Min(size.x, BubbleMaxWidth);
             var h = size.y;
-            bubbleRt.sizeDelta = new Vector2(w + BubblePaddingX, h + BubblePaddingY);
+            bubble.rect.sizeDelta = new Vector2(w + BubblePaddingX, h + BubblePaddingY);
+            var rowH = bubble.rect.sizeDelta.y + bubble.topPad + 2f; // 气泡高 + 顶部留白 + 底部留白 2
+            bubble.row.sizeDelta = new Vector2(0f, rowH);
+            bubble.rowElement.minHeight = rowH;
+            bubble.rowElement.preferredHeight = rowH;
         }
 
         private void ScrollToBottom()
@@ -414,6 +454,9 @@ namespace M1
         {
             public TextMeshProUGUI text;
             public RectTransform rect;
+            public RectTransform row;
+            public LayoutElement rowElement;
+            public float topPad;
         }
 
         // ==================== 查找工具 ====================
