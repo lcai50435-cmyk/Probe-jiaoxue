@@ -64,8 +64,16 @@
 - **运行时 `Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd")` 会报错**：该内置 UI 切片图在 Unity 6 运行时加载不到（Editor 的 `AssetDatabase.GetBuiltinExtraResource` 正常）。运行时动态创建气泡等 UI 时改用程序化生成（`Sprite.Create` 自绘圆角 + border 九宫格）或项目内 Sprite 资产。
 - **动态尺寸 UI 不要依赖嵌套布局组 preferred 缓存**：逐字/动态生长场景（气泡随文本增长）中，`HorizontalLayoutGroup` 的行高按子物体 preferred 推算且带缓存，尺寸变化时行高跟不上会重叠/错位。改用显式控制：行挂 `LayoutElement`（minHeight/preferredHeight 同值手动同步），气泡手动锚定定位，逐字更新后立即 `LayoutRebuilder.ForceRebuildLayoutImmediate`。
 - **`TextAnchor` 枚举无 `Top/Bottom`**：Unity 命名体系为 `Upper/Middle/Lower`（如 `UpperLeft`、`UpperRight`）。
+- **UI 场景音效必须强制 2D（`spatialBlend = 0`）**：AudioSource 挂在 UI 画板/普通场景物体上时，默认 3D 音效会随与 Main Camera 的距离衰减，画板远离相机则完全听不见。接入点播音效时在运行时获取 AudioSource 后立即设 `spatialBlend = 0f`（运行时兜底优于 Setup 创建时设置——Setup 只在新建时生效，用户手动挂的 AudioSource 覆盖不到）。
 
-## 8. 与 AGENTS.md 的同步契约
+## 8. 音效接入约定（M1 起）
+
+- 素材放 `Assets/Audio/`（按 E-xx 用途分目录，附选择说明 txt）；素材由 **Editor Setup 注入**，运行时脚本只暴露 `AudioClip` 字段，禁止硬编码路径（运行时无法按 Assets 路径加载，除非走 Resources/Addressables）。
+- Setup 注入采用「仅当字段为空时赋值」（`if (comp.clip == null) comp.clip = LoadClip(...)`），幂等且不覆盖用户手动替换的素材；`LoadClip` 失败打 `Debug.LogWarning` 返回 null 不中断 Setup。
+- 播放统一用 `AudioSource.PlayOneShot(clip)`：互不打断、适合短音效；未配置素材或 AudioSource 缺失时**静默跳过不报错**（`if (clip == null || src == null) return;`）。
+- 场景音频出口：AudioSource 由 Setup Ensure 到交互物体上（`GetComponent ?? AddComponent`），`playOnAwake` 默认 false，不产生开机噪音。
+
+## 9. 与 AGENTS.md 的同步契约
 
 - 本文档为权威来源；`AGENTS.md` 总纲只存放摘要（项目速览、五条规则、约定速查）。
 - 修改本文档后必须同步更新总纲对应条目；总纲不新增本文档没有的规则。
