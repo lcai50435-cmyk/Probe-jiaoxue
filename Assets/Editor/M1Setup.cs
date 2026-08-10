@@ -12,7 +12,7 @@ namespace M1.EditorTools
     /// <summary>
     /// 编辑器一次性配置：Tools/M1/Setup M1-1
     /// 1) 移除 "画板" 上的缺失脚本引用
-    /// 2) 挂载 M1ToolSelection
+    /// 2) 挂载 M1ToolSelection，注入点击音效素材（正确/错误/通过），确保画板挂 AudioSource
     /// 3) 创建 "点击继续" 占位按钮（默认隐藏）
     /// 4) 把场景里所有 TMP 文字的字体重指向到生成好的中文 SDF 资产（*_cn.asset）
     /// 幂等：重复执行不会重复创建/挂载/重指向。
@@ -35,6 +35,11 @@ namespace M1.EditorTools
         private const float IntroDimAlpha = 0.8f;          // 半黑遮罩黑度（与视频纯黑底视觉融合）
         private const float IntroVideoAspect = 1080f / 1450f; // 竖屏 1080x1450，方案 A：高度适配居中
         private const string LumaKeyMatPath = "Assets/Shaders/UI-LumaKey.mat";
+
+        // M1-1 点击音效素材（正确/错误/通过，已与用户确认）
+        private const string CorrectClipPath = "Assets/Audio/E-01 正确提示音/正确音2.mp3";
+        private const string WrongClipPath = "Assets/Audio/E-02 错误提示音/错误提示音.mp3";
+        private const string PassClipPath = "Assets/Audio/E-04 通关音效/通关音效1.mp3";
 
         /// <summary>命令行/批处理入口：打开 M1 场景后执行 Setup（供 CI 与无人值守使用）。</summary>
         public static void SetupM11Batch()
@@ -81,6 +86,12 @@ namespace M1.EditorTools
             comp.toolsRootPath = "白板背景/物品";
             comp.aiAnswerPath = "白板背景/数字人/对话框/AI回答";
             comp.continueButtonPath = "点击继续";
+            // 2.1) 确保画板挂 AudioSource（供 M1ToolSelection.PlaySfx 播放）
+            if (board.GetComponent<AudioSource>() == null) board.AddComponent<AudioSource>();
+            // 2.2) 注入点击音效素材（幂等：仅当字段为空时赋值，不覆盖用户手动替换的素材）
+            if (comp.correctClip == null) comp.correctClip = LoadClip(CorrectClipPath, "正确提示音");
+            if (comp.wrongClip == null) comp.wrongClip = LoadClip(WrongClipPath, "错误提示音");
+            if (comp.passClip == null) comp.passClip = LoadClip(PassClipPath, "通关音效");
             EditorUtility.SetDirty(comp);
 
             // 3) 创建占位按钮
@@ -113,6 +124,7 @@ namespace M1.EditorTools
             var saved = EditorSceneManager.SaveScene(scene);
             Debug.Log($"[M1Setup] 完成：移除缺失脚本 {removed} 个；挂载 {comp.GetType().Name}；" +
                       $"按钮 {button.name} (active={button.activeSelf})；重指向 TMP {repointed} 个；修复图片 {spriteFixed} 个；" +
+                      $"音效：正确={comp.correctClip?.name ?? "未配置"} 错误={comp.wrongClip?.name ?? "未配置"} 通过={comp.passClip?.name ?? "未配置"}；" +
                       $"引导 {intro}；场景保存={saved}");
         }
 
@@ -143,7 +155,7 @@ namespace M1.EditorTools
 
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
-            btn.onClick.AddListener(() => Debug.Log("[M1-1] 点击继续：M1-2 尚未实现（占位）。"));
+            // 点击监听由运行时 M1ToolSelection 统一注册（OnContinueClicked），此处不持久化
 
             var textGo = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(TextMeshProUGUI));
@@ -165,6 +177,14 @@ namespace M1.EditorTools
             // 默认隐藏，选对后由运行时脚本显示
             go.SetActive(false);
             return go;
+        }
+
+        /// <summary>加载 AudioClip 素材；失败打警告并返回 null（不中断 Setup）。</summary>
+        private static AudioClip LoadClip(string path, string label)
+        {
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null) Debug.LogWarning("[M1Setup] 未找到" + label + "：" + path);
+            return clip;
         }
 
         /// <summary>

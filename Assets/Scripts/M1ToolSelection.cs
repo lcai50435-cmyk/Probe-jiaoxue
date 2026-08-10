@@ -40,6 +40,14 @@ namespace M1
         [Tooltip("抖动幅度（像素）")]
         public float shakeAmplitude = 12f;
 
+        [Header("点击音效（可留空，留空则静默跳过）")]
+        [Tooltip("选对工具时播放的正确提示音")]
+        public AudioClip correctClip;
+        [Tooltip("选错工具时播放的错误提示音")]
+        public AudioClip wrongClip;
+        [Tooltip("点击继续时播放的通关音效")]
+        public AudioClip passClip;
+
         private static readonly string[] ToolNames =
         {
             "超声波焊缝探伤仪",
@@ -54,10 +62,14 @@ namespace M1
         private RectTransform _correctToolRect;
         private TextMeshProUGUI _aiAnswer;
         private Button _continueButton;
+        [SerializeField] private AudioSource _audioSource;
         private bool _solved;
 
         private void Awake()
         {
+            if (_audioSource == null) _audioSource = GetComponent<AudioSource>();
+            if (_audioSource != null) _audioSource.spatialBlend = 0f; // 强制 2D：画板为 UI 场景，避免 3D 距离衰减导致听不见
+
             var toolsRoot = FindDeep(transform, toolsRootPath);
             if (toolsRoot == null)
             {
@@ -102,7 +114,10 @@ namespace M1
             var contGo = FindDeep(transform, continueButtonPath);
             if (contGo != null) _continueButton = contGo.GetComponent<Button>();
             if (_continueButton != null)
-                _continueButton.onClick.AddListener(() => Debug.Log("[M1-1] 点击继续：M1-2 尚未实现（占位）。"));
+            {
+                _continueButton.onClick.RemoveAllListeners(); // 清掉历史持久化占位监听，统一收敛到本脚本
+                _continueButton.onClick.AddListener(OnContinueClicked);
+            }
 
             if (_aiAnswer != null) _aiAnswer.text = textInitial;
             if (_continueButton != null) _continueButton.gameObject.SetActive(false);
@@ -115,6 +130,7 @@ namespace M1
             if (toolName == correctToolName)
             {
                 _solved = true;
+                PlaySfx(correctClip);
                 if (_aiAnswer != null) _aiAnswer.text = textCorrect;
                 if (_correctToolRect != null)
                     StartCoroutine(Shake(_correctToolRect, shakeDuration, shakeAmplitude));
@@ -126,8 +142,23 @@ namespace M1
             }
             else
             {
+                PlaySfx(wrongClip);
                 if (_aiAnswer != null) _aiAnswer.text = textWrong;
             }
+        }
+
+        /// <summary>点击“点击继续”：播放通关音效（M1-2 跳转后续实现，当前仅占位）。</summary>
+        private void OnContinueClicked()
+        {
+            PlaySfx(passClip);
+            Debug.Log("[M1-1] 点击继续：M1-2 尚未实现（占位）。");
+        }
+
+        /// <summary>播放音效；素材或 AudioSource 缺失时静默跳过，不报错。</summary>
+        private void PlaySfx(AudioClip clip)
+        {
+            if (clip == null || _audioSource == null) return;
+            _audioSource.PlayOneShot(clip);
         }
 
         private static IEnumerator Shake(RectTransform rt, float duration, float amplitude)
