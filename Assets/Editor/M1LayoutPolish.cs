@@ -13,8 +13,9 @@ namespace M1.EditorTools
     ///   - CanvasScaler matchWidthOrHeight 0 → 0.5
     ///   - 标题栏 120→160、标题字号 40→50、标题回到 anchor(0.5,0.5) 原位置
     ///   - 卡片 372→356、PreserveAspect 关、容器回到 anchor(0.5,0.5) 原位置
-    ///   - QAPanel 700→780、Header 100→110、Header 标题 40→34
-    ///   - 输入行：输入框 420→470、语音 110→76、发送 110→130 字号 32、计数器回 InputRow 顶部
+    ///   - QAPanel 700→580（与 M1QASetup 一致）、Header 100→110、Header 标题 40→34
+    ///   - 输入行：输入框 420→360、语音 110→76、发送 110→106 字号 32、计数器回 InputRow 顶部
+    ///   - 输入行排布按 580 面板宽度（与 M1QASetup 一致：输入 18..378、语音 388..464、发送 472..578）
     /// 幂等：重复执行结果不变。
     /// 注意：恢复完成后本工具与 M1QASetup 的新常量将被移除，请勿再次运行优化工具。
     /// </summary>
@@ -75,7 +76,7 @@ namespace M1.EditorTools
             }
 
             // 4) 卡片容器：回到 anchor(0.5,0.5) 原位置原尺寸
-            var items = FindIncludingInactive(board.transform, "白板背景/物品")?.GetComponent<RectTransform>();
+            var items = FindIncludingInactive(board.transform, "白板背景/M1物品")?.GetComponent<RectTransform>();
             if (items != null)
             {
                 items.anchorMin = new Vector2(0.5f, 0.5f);
@@ -99,26 +100,26 @@ namespace M1.EditorTools
                 changed++;
             }
 
-            // 6) QAPanel：700 → 780
+            // 6) QAPanel：700 → 580（与 M1QASetup 一致）
             var panel = FindIncludingInactive(board.transform, "QAPanel")?.GetComponent<RectTransform>();
             if (panel != null)
             {
-                panel.sizeDelta = new Vector2(780f, panel.sizeDelta.y);
+                panel.sizeDelta = new Vector2(580f, panel.sizeDelta.y);
                 changed++;
             }
 
             // 7) Header：100 → 110；标题字号 40 → 34
-            var header = FindIncludingInactive(board.transform, "QAPanel/Panel/Header")?.GetComponent<RectTransform>();
+            var header = FindIncludingInactive(board.transform, "QAPanel/Header")?.GetComponent<RectTransform>();
             if (header != null)
             {
                 header.sizeDelta = new Vector2(header.sizeDelta.x, 110f);
                 changed++;
             }
-            var headerTitle = FindIncludingInactive(board.transform, "QAPanel/Panel/Header/Title")?.GetComponent<TextMeshProUGUI>();
+            var headerTitle = FindIncludingInactive(board.transform, "QAPanel/Header/Title")?.GetComponent<TextMeshProUGUI>();
             if (headerTitle != null) { headerTitle.fontSize = 34; changed++; }
 
             // 8) MessageList：offsetMax.y 回到 -240（110+130）
-            var list = FindIncludingInactive(board.transform, "QAPanel/Panel/MessageList")?.GetComponent<RectTransform>();
+            var list = FindIncludingInactive(board.transform, "QAPanel/MessageList")?.GetComponent<RectTransform>();
             if (list != null)
             {
                 list.offsetMax = new Vector2(list.offsetMax.x, -240f);
@@ -126,43 +127,43 @@ namespace M1.EditorTools
             }
 
             // 9) InputRow：120 → 130
-            var row = FindIncludingInactive(board.transform, "QAPanel/Panel/InputRow")?.GetComponent<RectTransform>();
+            var row = FindIncludingInactive(board.transform, "QAPanel/InputRow")?.GetComponent<RectTransform>();
             if (row != null)
             {
                 row.sizeDelta = new Vector2(row.sizeDelta.x, 130f);
                 changed++;
             }
 
-            // 10) 输入框：420 → 470；Text Area 右边距 -80 → -12
-            var input = FindIncludingInactive(board.transform, "QAPanel/Panel/InputRow/InputField")?.GetComponent<RectTransform>();
+            // 10) 输入框：420 → 360（580 面板）；Text Area 右边距 -80 → -12
+            var input = FindIncludingInactive(board.transform, "QAPanel/InputRow/InputField")?.GetComponent<RectTransform>();
             if (input != null)
             {
-                input.sizeDelta = new Vector2(470f, input.sizeDelta.y);
+                input.sizeDelta = new Vector2(360f, input.sizeDelta.y);
                 changed++;
             }
-            var textArea = FindIncludingInactive(board.transform, "QAPanel/Panel/InputRow/InputField/Text Area")?.GetComponent<RectTransform>();
+            var textArea = FindIncludingInactive(board.transform, "QAPanel/InputRow/InputField/Text Area")?.GetComponent<RectTransform>();
             if (textArea != null)
             {
                 textArea.offsetMax = new Vector2(-12f, textArea.offsetMax.y);
                 changed++;
             }
 
-            // 11) 语音 110→76 @pos 500；发送 110→130 @pos 588 字号 32
-            var voice = FindIncludingInactive(board.transform, "QAPanel/Panel/InputRow/VoiceButton")?.GetComponent<RectTransform>();
+            // 11) 语音 110→76 @pos 388；发送 110→106 @pos 472 字号 32（580 面板排布）
+            var voice = FindIncludingInactive(board.transform, "QAPanel/InputRow/VoiceButton")?.GetComponent<RectTransform>();
             if (voice != null)
             {
-                voice.anchoredPosition = new Vector2(500f, voice.anchoredPosition.y);
+                voice.anchoredPosition = new Vector2(388f, voice.anchoredPosition.y);
                 voice.sizeDelta = new Vector2(76f, voice.sizeDelta.y);
                 changed++;
             }
-            var send = FindIncludingInactive(board.transform, "QAPanel/Panel/InputRow/SendButton")?.GetComponent<RectTransform>();
+            var send = FindIncludingInactive(board.transform, "QAPanel/InputRow/SendButton")?.GetComponent<RectTransform>();
             if (send != null)
             {
-                send.anchoredPosition = new Vector2(588f, send.anchoredPosition.y);
-                send.sizeDelta = new Vector2(130f, send.sizeDelta.y);
+                send.anchoredPosition = new Vector2(472f, send.anchoredPosition.y);
+                send.sizeDelta = new Vector2(106f, send.sizeDelta.y);
                 changed++;
             }
-            var sendText = FindIncludingInactive(board.transform, "QAPanel/Panel/InputRow/SendButton/Text")?.GetComponent<TextMeshProUGUI>();
+            var sendText = FindIncludingInactive(board.transform, "QAPanel/InputRow/SendButton/Text")?.GetComponent<TextMeshProUGUI>();
             if (sendText != null) { sendText.fontSize = 32; changed++; }
 
             // 12) 字数计数：从输入框内部迁回 InputRow 顶部（幂等：已迁回则原地重设）
@@ -180,11 +181,11 @@ namespace M1.EditorTools
                 changed++;
             }
 
-            // 13) 运行时组件路径还原
+            // 13) 运行时组件路径还原（真实层级：QAPanel 下无虚构 Panel 中间层）
             var qa = board.GetComponent<M1QAPanel>();
-            if (qa != null && qa.counterTextPath != "QAPanel/Panel/InputRow/CounterText")
+            if (qa != null && qa.counterTextPath != "QAPanel/InputRow/CounterText")
             {
-                qa.counterTextPath = "QAPanel/Panel/InputRow/CounterText";
+                qa.counterTextPath = "QAPanel/InputRow/CounterText";
                 EditorUtility.SetDirty(qa);
                 changed++;
             }

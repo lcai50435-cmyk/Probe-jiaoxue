@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/index.md","reason":"检查 Unity 层规范覆盖完整性"}
+{"file":".trellis/spec/unity/low-code.md","reason":"检查低代码、脚本行数、配置化、Setup 幂等与路径契约"}
+{"file":".trellis/spec/unity/video-intro.md","reason":"检查视频链路、静音、LumaKey、生命周期与场景搭建契约"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"检查输入、面板、回答状态与数字人显示的跨组件数据流"}

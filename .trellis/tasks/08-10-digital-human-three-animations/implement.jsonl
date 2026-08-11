@@ -1,0 +1,4 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/unity/index.md", "reason": "Unity 项目规范与质量检查入口"}
+{"file": ".trellis/spec/unity/low-code.md", "reason": "低代码、Setup 幂等和场景结构约束"}
+{"file": ".trellis/spec/unity/video-intro.md", "reason": "VideoPlayer、RenderTexture、LumaKey 和静音约束"}

@@ -44,12 +44,16 @@ namespace M1
         public string counterTextPath = "QAPanel/InputRow/CounterText";
         [Tooltip("长按目标（数字人头像）")]
         public string pressTargetPath = "数字人/背景圆/大头";
+        [Tooltip("是否由本组件自动绑定长按入口（Setup 会关闭，改由数字人 Presenter 统一处理两个显示形态的输入）")]
+        public bool bindPressTarget = true;
 
         [Header("AI 服务")]
         [Tooltip("DeepSeek 客户端（由 Setup 注入；未配置时发送给出提示）")]
         public M1DeepSeekClient deepSeekClient;
         [Tooltip("回答状态变化事件：Thinking=等待回复 / Speaking=逐字显示中 / Idle=完成或失败（数字人动画订阅处）")]
         public event Action<AnswerState> OnAnswerStateChanged;
+        [Tooltip("面板可见性变化：Open 开始发布 true；完全滑出隐藏后发布 false（数字人恢复形态的时机依据）")]
+        public event Action<bool> OnPanelVisibilityChanged;
 
         [Header("参数")]
         [Tooltip("中文 SDF 字体（由 Setup 注入；为空则从 AI回答 复制）")]
@@ -64,6 +68,8 @@ namespace M1
         public float typeSpeed = 0.035f;
         [Tooltip("面板隐藏时右侧偏移量（像素）")]
         public float hiddenOffsetX = 800f;
+        [Tooltip("气泡最大宽度（像素，超出自动换行）")]
+        public float bubbleMaxWidth = 480f;
 
         private RectTransform _panelRt;
         private GameObject _blocker;
@@ -82,7 +88,6 @@ namespace M1
 
         private static readonly Color UserBubbleColor = Color.white; // 微信风格：用户消息浅色气泡黑字（与 AI 同步）
         private static readonly Color AiBubbleColor = Color.white;
-        private const float BubbleMaxWidth = 560f;
         private const float BubblePaddingX = 32f;
         private const float BubblePaddingY = 20f;
 
@@ -164,22 +169,25 @@ namespace M1
                 if (aiGo != null) cnFont = aiGo.GetComponent<TextMeshProUGUI>()?.font;
             }
 
-            // 长按数字人头像 → 打开面板
-            var targetGo = FindDeep(transform, pressTargetPath)?.gameObject;
-            if (targetGo == null) targetGo = FindDeep(transform, "数字人")?.gameObject;
-            if (targetGo != null)
+            // 长按数字人头像 → 打开面板（Setup 关闭此自动绑定，改由 M1DigitalHumanPresenter 统一处理）
+            if (bindPressTarget)
             {
-                _pressDetector = targetGo.GetComponent<M1PressDetector>();
-                if (_pressDetector == null) _pressDetector = targetGo.AddComponent<M1PressDetector>();
-                _pressDetector.holdDuration = holdDuration;
-                _pressDetector.OnLongPress += Open;
-                // 保证长按目标可被射线命中（防止美术误关 raycastTarget 导致入口失效）
-                var targetImg = targetGo.GetComponent<Image>();
-                if (targetImg != null) targetImg.raycastTarget = true;
-            }
-            else
-            {
-                Debug.LogError("[M1QAPanel] 未找到长按目标：" + pressTargetPath);
+                var targetGo = FindDeep(transform, pressTargetPath)?.gameObject;
+                if (targetGo == null) targetGo = FindDeep(transform, "数字人")?.gameObject;
+                if (targetGo != null)
+                {
+                    _pressDetector = targetGo.GetComponent<M1PressDetector>();
+                    if (_pressDetector == null) _pressDetector = targetGo.AddComponent<M1PressDetector>();
+                    _pressDetector.holdDuration = holdDuration;
+                    _pressDetector.OnLongPress += Open;
+                    // 保证长按目标可被射线命中（防止美术误关 raycastTarget 导致入口失效）
+                    var targetImg = targetGo.GetComponent<Image>();
+                    if (targetImg != null) targetImg.raycastTarget = true;
+                }
+                else
+                {
+                    Debug.LogError("[M1QAPanel] 未找到长按目标：" + pressTargetPath);
+                }
             }
 
             // 按钮绑定
@@ -213,8 +221,8 @@ namespace M1
             if (_blocker != null) _blocker.SetActive(true);
             if (_panelRt == null) return;
             _panelRt.gameObject.SetActive(true);
-            // 面板关闭时协程会被停止，重置忙碌态避免发送按钮永久置灰
-            _busy = false;
+            OnPanelVisibilityChanged?.Invoke(true);
+            // 请求进行中（R7 中途关闭再重开）保持忙碌防并发；空闲时 _busy 本为 false，无需重置（Close 不停止请求/逐字协程）
             UpdateSendInteractable();
             // 从屏幕外滑入
             _panelRt.anchoredPosition = new Vector2(hiddenOffsetX, _panelRt.anchoredPosition.y);
@@ -247,7 +255,11 @@ namespace M1
                 yield return null;
             }
             _panelRt.anchoredPosition = new Vector2(toX, _panelRt.anchoredPosition.y);
-            if (!_isOpen) _panelRt.gameObject.SetActive(false);
+            if (!_isOpen)
+            {
+                _panelRt.gameObject.SetActive(false);
+                OnPanelVisibilityChanged?.Invoke(false); // 完全滑出并隐藏后发布，数字人据此恢复提问前形态
+            }
         }
 
         // ==================== 输入 ====================
@@ -424,11 +436,11 @@ namespace M1
         }
 
         /// <summary>按文本实际尺寸更新气泡大小，并同步行高（LayoutElement min/preferred 同值，保证逐字生长时行高立即跟随）。</summary>
-        private static void UpdateBubbleSize(MessageBubble bubble)
+        private void UpdateBubbleSize(MessageBubble bubble)
         {
             var tmp = bubble.text;
-            var size = tmp.GetPreferredValues(BubbleMaxWidth, 0f);
-            var w = Mathf.Min(size.x, BubbleMaxWidth);
+            var size = tmp.GetPreferredValues(bubbleMaxWidth, 0f);
+            var w = Mathf.Min(size.x, bubbleMaxWidth);
             var h = size.y;
             bubble.rect.sizeDelta = new Vector2(w + BubblePaddingX, h + BubblePaddingY);
             var rowH = bubble.rect.sizeDelta.y + bubble.topPad + 2f; // 气泡高 + 顶部留白 + 底部留白 2

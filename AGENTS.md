@@ -20,10 +20,12 @@
 
 - 场景结构改动走 Setup 脚本：改 `Assets/Editor/M1Setup.cs` / `M1QASetup.cs` 后重新生成，保持幂等；
   纯视觉微调（颜色、文字、字号）可直接改场景。
-- 目录：runtime 脚本 `Assets/Scripts/`，Editor 工具 `Assets/Editor/`，素材 `Assets/交互动画素材/`，
+- 目录：runtime 脚本 `Assets/Scripts/`，Editor 工具 `Assets/Editor/`，素材 `Assets/交互动画素材/`（工具图 `Assets/InspectionToolMaterials/`、探头图 `Assets/probeFootage/`、音频 `Assets/Audio/`、数字人 `Assets/DigitalHuman/`），
   场景 `Assets/Settings/Scenes/`，文档 `文档/`。
 - 存量代码不主动重构（规则只管新增代码）；任务涉及存量文件时才顺手精简。
-- 细节规范见 `.trellis/spec/unity/low-code.md`（改规范先改它，再同步本摘要）。
+- **引导/讲解视频复用 M1IntroVideo + UI-LumaKey**（首次记忆、暂停恢复、黑底抠像悬空人物都已封装好，
+  新模块只换 VideoClip；调参走材质 Inspector）。H.264 `yuv420p` 黑底视频无 Alpha，仍需 LumaKey；视频 UI 节点只放一个 Graphic，点击由 RawImage 自身或独立子节点承载。常驻数字人（小尺寸）用独立 LumaKey 材质资产收窄 KeySmooth + RT 开 mipmap（关闭 autoGenerateMips 后在 VideoPlayer.frameReady 中显式 GenerateMips），不碰开场引导材质。详见 `.trellis/spec/unity/video-intro.md`。
+- 细节规范见 `.trellis/spec/unity/`（low-code.md / video-intro.md；改规范先改它，再同步本摘要）。
 
 <!-- TRELLIS:START -->
 # Trellis Instructions

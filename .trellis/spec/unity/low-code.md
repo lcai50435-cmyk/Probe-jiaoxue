@@ -44,6 +44,14 @@
 
 - Setup 写入运行时组件的路径字段必须与生成的真实层级**逐层一致**，不得包含虚构中间层；运行时组件按路径查找失败的默认行为是**报错而非静默跳过**。
 - 教训：`M1QAPanel` 路径曾含虚构 "Panel" 层（`QAPanel/Panel/Header/...`），导致关闭/语音/发送按钮与输入框静默失效、发送按钮永久置灰，排查成本高（2026-08-07 归档）。
+- 教训：用户改名节点（`物品 → M1物品`）后，`M1ToolSelection.toolsRootPath` 与 `M1Setup` 素材注入路径同步失效，运行时 LogError 跳过全部工具绑定（2026-08-10）。改名/移动节点必须同步 Setup 与运行时默认值，并跑一次 Setup 自愈。
+
+## 5.2 场景 YAML 手改陷阱（块头丢失）
+
+- 用正则重组 Unity YAML 块时必须**保留 `--- !u!1 &xxx` 块头行**：`re.search(r'--- !u!1 &%s\n(.*?)...')` 中块头在匹配范围内，重组 `text[:m.start()] + block + text[m.end():]` 会丢掉块头，产生孤立块体行（`GameObject:` 前没有 `--- !u!1 &xxx`），Unity 打开报 YAML 错误。
+- 正确做法：重组时补回 `m.group(1)`（块头），或只替换块内字段（如 `m_IsActive`）不重组整块。
+- 手改后必验：块头数与块体数配对（`grep -c '^--- !u!1 &'`）；孤立块体行（前一行不是 `--- !u!` 的 `GameObject:`/`RectTransform:` 等）为 0。
+- 教训：2026-08-10 M1-2 场景手改连续丢两次块头（M1物品/M2物品/画板），均靠此校验兜住。
 
 ## 6. 目录与模块约定
 
@@ -51,6 +59,16 @@
 - `Assets/Editor/` — 搭建/生成工具（幂等）。
 - `Assets/交互动画素材/` — 美术素材；`Assets/Settings/Scenes/` — 场景；`文档/` — 需求文档（技术规格书、功能文档、DeepSeek 接入方案）。
 - M1 模块结构：QAPanel（问答抽屉）、ToolSelection（工具卡片）、PressDetector（按压检测）；后续模块复用其通用部分。
+- 素材组织（2026-08-10 整理后）：探伤工具图 `Assets/InspectionToolMaterials/`（PNG）；探头图 `Assets/probeFootage/探头素材（有白边版）/` 与 `（无白边版）/`（M1-2 探头用**有白边版**）；音频 `Assets/Audio/E-xx 用途/`；数字人 `Assets/DigitalHuman/A-xx/`。旧目录 `01 探伤工具素材`、`02 探头素材` 已删除。素材迁移后必须同步 Setup 注入路径，否则 `LoadAssetAtPath` 返回 null 只打 Warning、场景空白但流程继续。
+
+## 6.1 M1-2 阶段切换与防卡死模式（2026-08-10）
+
+- M1-1/M1-2 由单一组件 `M1ToolSelection` 承载（同一"探测仪器选择模块"，不拆脚本）：
+  - M1-1：6 个工具按 `ToolNames` 绑定，`correctToolName` 判定；选对显示"点击继续"。
+  - `OnContinueClicked`：隐藏 `m1ItemsPath` 容器、显示 `m2ItemsPath` 容器、AI 回答切 `textM2Initial`、启动 M1-2 防卡死；`_phase2` 标志防重复进入。
+  - M1-2：`probeNames` 列表按物体名绑定到 `m2ItemsPath` 容器，`correctProbeName` 判定；选对抖动+音效+锁定+显示"开始探测"。
+- 防卡死（规格书硬性要求）：`toolIdleTimeout` / `probeIdleTimeout` 秒无操作 → `PulseHighlight` 金色脉动高亮正确项 → 自动选对并推进（M1-1 还自动进入 M1-2）；0=关闭。高亮与手动判定共用 `correctToolName/correctProbeName` 字段，保证行为一致。
+- 阶段容器激活由运行时兜底（Awake 强制 M1-1 可见、M1-2 隐藏）+ Setup 幂等设置，两端一致不漂移。
 
 ## 7. 禁止事项
 

@@ -7,25 +7,51 @@ using TMPro;
 namespace M1
 {
     /// <summary>
-    /// M1-1 探伤工具选择交互。
-    /// 挂到场景 "画板" 上。运行时空自动按物体名解析 6 个工具按钮与 AI 回答文本框，
+    /// M1-1/M1-2 探测仪器选择交互。挂在场景 "画板" 上，运行时空自动按物体名解析，
     /// 无需在 Inspector 手工拖引用。
     ///
-    /// 规则（已与用户确认）：
+    /// M1-1（规则已与用户确认）：
     ///  - 正确工具：手推式钢轨探伤仪
     ///  - 选错：AI 回答框显示 "选择错了，请重新选择"，错误工具不抖动
-    ///  - 选对：正确图标抖动，AI 回答框显示 "选择正确"，锁定全部工具按钮，显示"点击继续"占位按钮
-    ///  - "点击继续" 仅占位，不跳转（M1-2 后续实现）
+    ///  - 选对：正确图标抖动，AI 回答框显示 "选择正确"，锁定全部工具按钮，显示"点击继续"
+    ///  - 点击"点击继续"：进入 M1-2（隐藏工具容器，显示探头容器）
+    ///
+    /// M1-2（规格书 3.1.2）：
+    ///  - 探头按钮：K1/K2.5/K3/0度（M2物品 容器），正确探头 K2.5
+    ///  - 点对：抖动 + 正确音效 + "选择正确！"，显示"开始探测"
+    ///  - 点错：抖动 + 错误音效 + "请选择K2.5探头"
+    ///  - 防卡死：probeIdleTimeout 秒无操作自动高亮 K2.5 并完成选择
+    ///  - "开始探测"：占位（M2 轨顶面探测后续实现）
     /// </summary>
     public class M1ToolSelection : MonoBehaviour
     {
         [Header("场景解析路径（相对本物体）")]
-        [Tooltip("工具按钮所在容器")]
-        public string toolsRootPath = "白板背景/物品";
+        [Tooltip("M1-1 工具按钮所在容器")]
+        public string toolsRootPath = "白板背景/M1物品";
         [Tooltip("AI 回答文本框")]
         public string aiAnswerPath = "白板背景/数字人/对话框/AI回答";
-        [Tooltip("点击继续按钮（占位，选对后显示）")]
+        [Tooltip("点击继续按钮（M1-1 选对后显示）")]
         public string continueButtonPath = "点击继续";
+
+        [Header("M1-1 工具选择（防卡死）")]
+        [Tooltip("工具选择无操作自动完成秒数（防卡死，0=关闭；完成后自动进入 M1-2）")]
+        public float toolIdleTimeout = 20f;
+
+        [Header("M1-2 探头选择（阶段切换）")]
+        [Tooltip("M1-1 工具容器（进入 M1-2 时隐藏）")]
+        public string m1ItemsPath = "白板背景/M1物品";
+        [Tooltip("M1-2 探头容器（进入 M1-2 时显示）")]
+        public string m2ItemsPath = "白板背景/M2物品";
+        [Tooltip("探头按钮物体名（按名称匹配容器内物体）")]
+        public string[] probeNames = { "K2.5", "K3", "K1", "0度" };
+        [Tooltip("正确探头物体名")]
+        public string correctProbeName = "K2.5";
+        [Tooltip("开始探测按钮（M1-2 选对后显示）")]
+        public string startButtonPath = "开始探测";
+        [Tooltip("探头选择无操作自动完成秒数（防卡死，0=关闭）")]
+        public float probeIdleTimeout = 20f;
+        [Tooltip("防卡死自动高亮颜色（金色脉动）")]
+        public Color autoHighlightColor = new Color(1f, 0.85f, 0.3f, 1f);
 
         [Header("判定与文案")]
         [Tooltip("正确工具物体名")]
@@ -33,6 +59,12 @@ namespace M1
         public string textInitial = "请选择钢轨探伤工具";
         public string textWrong = "选择错了，请重新选择";
         public string textCorrect = "选择正确";
+        [Tooltip("M1-2 初始提示文案")]
+        public string textM2Initial = "请选择探头";
+        [Tooltip("M1-2 选错提示文案")]
+        public string textProbeWrong = "请选择K2.5探头";
+        [Tooltip("M1-2 选对提示文案")]
+        public string textProbeCorrect = "选择正确！";
 
         [Header("抖动参数")]
         [Tooltip("抖动时长（秒）")]
@@ -59,16 +91,31 @@ namespace M1
         };
 
         private readonly List<Button> _toolButtons = new List<Button>();
+        private readonly List<Button> _probeButtons = new List<Button>();
         private RectTransform _correctToolRect;
+        private RectTransform _correctProbeRect;
         private TextMeshProUGUI _aiAnswer;
         private Button _continueButton;
+        private Button _startButton;
+        private Transform _m1Items;
+        private Transform _m2Items;
         [SerializeField] private AudioSource _audioSource;
         private bool _solved;
+        private bool _probeSolved;
+        private bool _phase2;
+        private Coroutine _toolTimeout;
+        private Coroutine _probeTimeout;
 
         private void Awake()
         {
             if (_audioSource == null) _audioSource = GetComponent<AudioSource>();
             if (_audioSource != null) _audioSource.spatialBlend = 0f; // 强制 2D：画板为 UI 场景，避免 3D 距离衰减导致听不见
+
+            // 初始阶段：M1-1 可见、M1-2 隐藏（运行时兜底，与 Setup 幂等状态一致）
+            _m1Items = FindDeep(transform, m1ItemsPath);
+            _m2Items = FindDeep(transform, m2ItemsPath);
+            if (_m1Items != null) _m1Items.gameObject.SetActive(true);
+            if (_m2Items != null) _m2Items.gameObject.SetActive(false);
 
             var toolsRoot = FindDeep(transform, toolsRootPath);
             if (toolsRoot == null)
@@ -111,6 +158,41 @@ namespace M1
             if (_aiAnswer == null)
                 Debug.LogError("[M1ToolSelection] 未找到 AI 回答文本框：" + aiAnswerPath);
 
+            // M1-2 探头按钮绑定（容器初始隐藏，Transform 遍历不受影响）
+            if (_m2Items != null)
+            {
+                foreach (var probeName in probeNames)
+                {
+                    var child = FindChildByName(_m2Items, probeName);
+                    if (child == null)
+                    {
+                        Debug.LogWarning("[M1ToolSelection] 未找到探头物体：" + probeName);
+                        continue;
+                    }
+                    var btn = child.GetComponent<Button>();
+                    if (btn == null)
+                    {
+                        Debug.LogWarning("[M1ToolSelection] 探头物体缺少 Button：" + probeName);
+                        continue;
+                    }
+                    _probeButtons.Add(btn);
+                    var name = child.name; // 闭包捕获
+                    btn.onClick.AddListener(() => OnProbeClicked(name, btn));
+                    if (name == correctProbeName)
+                        _correctProbeRect = child.GetComponent<RectTransform>();
+                }
+            }
+
+            // 开始探测按钮（默认隐藏，M1-2 选对后显示）
+            var startGo = FindDeep(transform, startButtonPath);
+            if (startGo != null) _startButton = startGo.GetComponent<Button>();
+            if (_startButton != null)
+            {
+                _startButton.onClick.RemoveAllListeners(); // 统一收敛到本脚本
+                _startButton.onClick.AddListener(OnStartClicked);
+                _startButton.gameObject.SetActive(false);
+            }
+
             var contGo = FindDeep(transform, continueButtonPath);
             if (contGo != null) _continueButton = contGo.GetComponent<Button>();
             if (_continueButton != null)
@@ -121,6 +203,9 @@ namespace M1
 
             if (_aiAnswer != null) _aiAnswer.text = textInitial;
             if (_continueButton != null) _continueButton.gameObject.SetActive(false);
+
+            // M1-1 防卡死（规格书 3.1.1：20 秒无操作自动选对并进入 M1-2）
+            StartToolTimeout();
         }
 
         private void OnToolClicked(string toolName, Button btn)
@@ -147,11 +232,139 @@ namespace M1
             }
         }
 
-        /// <summary>点击“点击继续”：播放通关音效（M1-2 跳转后续实现，当前仅占位）。</summary>
+        /// <summary>点击“点击继续”：进入 M1-2 探头选择（隐藏工具容器，显示探头容器）。</summary>
         private void OnContinueClicked()
         {
+            if (_phase2) return; // 已进入 M1-2，忽略重复
+            _phase2 = true;
+            StopToolTimeout();
             PlaySfx(passClip);
-            Debug.Log("[M1-1] 点击继续：M1-2 尚未实现（占位）。");
+            if (_m1Items != null) _m1Items.gameObject.SetActive(false);
+            if (_m2Items != null) _m2Items.gameObject.SetActive(true);
+            if (_continueButton != null) _continueButton.gameObject.SetActive(false);
+            if (_aiAnswer != null) _aiAnswer.text = textM2Initial;
+            StartProbeTimeout();
+        }
+
+        /// <summary>点击探头：K2.5 正确（抖动+音效+锁定+显示开始探测），其余错误提示。</summary>
+        private void OnProbeClicked(string probeName, Button btn)
+        {
+            if (_probeSolved) return; // 已选对，忽略后续点击
+
+            if (probeName == correctProbeName)
+            {
+                _probeSolved = true;
+                StopProbeTimeout();
+                PlaySfx(correctClip);
+                if (_aiAnswer != null) _aiAnswer.text = textProbeCorrect;
+                if (_correctProbeRect != null)
+                    StartCoroutine(Shake(_correctProbeRect, shakeDuration, shakeAmplitude));
+                foreach (var b in _probeButtons)
+                {
+                    if (b != null) b.interactable = false;
+                }
+                if (_startButton != null) _startButton.gameObject.SetActive(true);
+            }
+            else
+            {
+                PlaySfx(wrongClip);
+                if (_aiAnswer != null) _aiAnswer.text = textProbeWrong;
+                if (btn != null)
+                    StartCoroutine(Shake(btn.GetComponent<RectTransform>(), shakeDuration, shakeAmplitude));
+            }
+        }
+
+        /// <summary>点击“开始探测”：播放通关音效（M2 轨顶面探测后续实现，当前占位）。</summary>
+        private void OnStartClicked()
+        {
+            PlaySfx(passClip);
+            Debug.Log("[M1-2] 开始探测：M2 轨顶面探测尚未实现（占位）。");
+        }
+
+        private void StartToolTimeout()
+        {
+            if (toolIdleTimeout <= 0f) return;
+            StopToolTimeout();
+            _toolTimeout = StartCoroutine(ToolTimeoutFlow());
+        }
+
+        private void StopToolTimeout()
+        {
+            if (_toolTimeout != null)
+            {
+                StopCoroutine(_toolTimeout);
+                _toolTimeout = null;
+            }
+        }
+
+        /// <summary>M1-1 防卡死：超时无操作则金色脉动高亮正确工具，自动选对并进入 M1-2。</summary>
+        private IEnumerator ToolTimeoutFlow()
+        {
+            yield return new WaitForSeconds(toolIdleTimeout);
+            if (_solved || _phase2 || _correctToolRect == null) yield break;
+            PulseHighlight(_correctToolRect, () =>
+            {
+                if (_solved || _phase2) return;
+                var btn = _correctToolRect.GetComponent<Button>();
+                if (btn != null) OnToolClicked(correctToolName, btn);
+                OnContinueClicked(); // 完成选择并进入 M1-2
+            });
+        }
+
+        private void StartProbeTimeout()
+        {
+            if (probeIdleTimeout <= 0f || _probeSolved) return;
+            StopProbeTimeout();
+            _probeTimeout = StartCoroutine(ProbeTimeoutFlow());
+        }
+
+        private void StopProbeTimeout()
+        {
+            if (_probeTimeout != null)
+            {
+                StopCoroutine(_probeTimeout);
+                _probeTimeout = null;
+            }
+        }
+
+        /// <summary>防卡死：超时无操作则金色脉动高亮正确探头，并自动完成选择。</summary>
+        private IEnumerator ProbeTimeoutFlow()
+        {
+            yield return new WaitForSeconds(probeIdleTimeout);
+            if (_probeSolved || _correctProbeRect == null) yield break;
+            PulseHighlight(_correctProbeRect, () =>
+            {
+                if (_probeSolved) return;
+                var probeBtn = _correctProbeRect.GetComponent<Button>();
+                if (probeBtn != null) OnProbeClicked(correctProbeName, probeBtn);
+            });
+        }
+
+        /// <summary>金色脉动高亮目标（约 0.9 秒），结束后执行 onDone。</summary>
+        private void PulseHighlight(RectTransform target, System.Action onDone)
+        {
+            if (target == null)
+            {
+                onDone?.Invoke();
+                return;
+            }
+            StartCoroutine(PulseFlow(target, onDone));
+        }
+
+        private IEnumerator PulseFlow(RectTransform target, System.Action onDone)
+        {
+            var img = target.GetComponent<Image>();
+            var original = img != null ? img.color : Color.white;
+            var elapsed = 0f;
+            while (elapsed < 0.9f)
+            {
+                elapsed += Time.deltaTime;
+                var t = (Mathf.Sin(elapsed * 12f) + 1f) * 0.5f;
+                if (img != null) img.color = Color.Lerp(original, autoHighlightColor, t);
+                yield return null;
+            }
+            if (img != null) img.color = original;
+            onDone?.Invoke();
         }
 
         /// <summary>播放音效；素材或 AudioSource 缺失时静默跳过，不报错。</summary>

@@ -62,6 +62,27 @@ color.a *= keyAlpha;
 
 **新视频接入前必须离线验证**（numpy 模拟 sRGB→线性→转回→键控），确认背景误保留率 ≈0%、主体误抠率 <5%。
 
+### 视频透明与 UI 点击合同
+
+- H.264 `yuv420p` 且 VideoClip `encodeAlpha: 0` 表示视频**没有 Alpha 通道**；画面四角为纯黑只说明素材适合键控，不代表已经是透明成片。此类素材必须保留显示阶段 LumaKey，否则 RawImage 会显示黑色矩形。
+- 一个 UI GameObject 只放一个 `Graphic`（`RawImage` 或 `Image`）。禁止在同一节点用 `RawImage + 透明 Image` 叠加点击层：两者共享 `CanvasRenderer` 时会互相覆盖 mesh，表现为视频消失或闪烁。
+- 视频本体需要点击时，优先设 `RawImage.raycastTarget = true`；若点击区域必须独立，创建带自己 `CanvasRenderer + Image` 的子 GameObject，不与 RawImage 共用节点。
+
+```csharp
+// 错误：同一节点叠两个 Graphic
+new GameObject("Video", typeof(RawImage), typeof(Image));
+
+// 正确：RawImage 自身承接点击
+var raw = videoGo.GetComponent<RawImage>();
+raw.raycastTarget = true;
+```
+
+### 小尺寸常驻视频：缩小质量（2026-08-10 数字人验收）
+
+- **常驻数字人（显著缩小显示）必须用独立材质资产**（如 `Assets/Shaders/UI-LumaKey-DigitalHuman.mat`，同 `UI/LumaKey` shader、只收窄 `_KeySmooth`），不得改开场引导 `UI-LumaKey.mat` 或全局 Shader。Setup 幂等 Ensure：不存在才创建，存在则保留用户调参。
+- **RenderTexture 高质量缩小**：`useMipMap = true` + `autoGenerateMips = false`（filterMode Bilinear），RT 保持视频原生分辨率。开启 `VideoPlayer.sendFrameReadyEvents`，在 `frameReady` 回调中调用 `RenderTexture.GenerateMips()`；禁止在普通 `Update` 中首帧未写入时调用（会报 `render texture is not rendered into yet`），也禁止在 `autoGenerateMips = true` 时手动调用（会报 mip 自动生成冲突）。
+- **收窄 KeySmooth 只影响边缘羽化带宽（更硬更锐利），不移动阈值**：人物暗部 sRGB ≥8/255 仍远高于“阈值+羽化上界”，不会误抠；背景 ≤2/255 仍远低于阈值。
+
 ## 4. Editor 搭建契约（幂等）
 
 - 嵌套 Canvas 创建后**必须** `StretchFullScreen`（anchor 0~1），否则默认 100×100 内容挤在屏幕中心

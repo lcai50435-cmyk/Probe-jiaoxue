@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/index.md","reason":"Unity 规范入口与适用层确认"}
+{"file":".trellis/spec/unity/low-code.md","reason":"约束 runtime 脚本行数、Inspector 配置、Setup 幂等和场景结构所有权"}
+{"file":".trellis/spec/unity/video-intro.md","reason":"复用 VideoPlayer、RenderTexture、LumaKey、预解码和黑底抠像契约"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"核对 QAPanel 事件、Presenter 状态和场景引用之间的组件边界"}

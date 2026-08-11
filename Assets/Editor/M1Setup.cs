@@ -22,6 +22,7 @@ namespace M1.EditorTools
         private const string BoardName = "画板";
         private const string M1ScenePath = "Assets/Settings/Scenes/M1.unity";
         private const string ContinueButtonName = "点击继续";
+        private const string StartButtonName = "开始探测";
         private const string FontAssetPath =
             "Assets/font/sarasa-gothic-sc-regular/sarasa-gothic-sc-regular_cn.asset";
 
@@ -82,10 +83,22 @@ namespace M1.EditorTools
             // 2) 挂载运行时脚本
             var comp = board.GetComponent<M1ToolSelection>();
             if (comp == null) comp = board.AddComponent<M1ToolSelection>();
-            // 规范化路径字段（幂等，确保序列化值正确）
-            comp.toolsRootPath = "白板背景/物品";
+            // 规范化路径字段（幂等，确保序列化值正确；注意工具容器已由用户改名 物品→M1物品）
+            comp.toolsRootPath = "白板背景/M1物品";
             comp.aiAnswerPath = "白板背景/数字人/对话框/AI回答";
             comp.continueButtonPath = "点击继续";
+            comp.toolIdleTimeout = 20f;
+            // M1-2 阶段切换字段（幂等规范化；probeNames 数组仅当为空时注入，不覆盖用户名单）
+            comp.m1ItemsPath = "白板背景/M1物品";
+            comp.m2ItemsPath = "白板背景/M2物品";
+            comp.correctProbeName = "K2.5";
+            comp.startButtonPath = "开始探测";
+            comp.probeIdleTimeout = 20f;
+            comp.textM2Initial = "请选择探头";
+            comp.textProbeWrong = "请选择K2.5探头";
+            comp.textProbeCorrect = "选择正确！";
+            if (comp.probeNames == null || comp.probeNames.Length == 0)
+                comp.probeNames = new[] { "K2.5", "K3", "K1", "0度" };
             // 2.1) 确保画板挂 AudioSource（供 M1ToolSelection.PlaySfx 播放）
             if (board.GetComponent<AudioSource>() == null) board.AddComponent<AudioSource>();
             // 2.2) 注入点击音效素材（幂等：仅当字段为空时赋值，不覆盖用户手动替换的素材）
@@ -96,6 +109,12 @@ namespace M1.EditorTools
 
             // 3) 创建占位按钮
             var button = EnsureContinueButton(board, cnFont);
+
+            // 3.5) M1-2 初始阶段：M1-1 工具容器显示、M1-2 探头容器隐藏（幂等）
+            EnsureM12Stage(board);
+
+            // 3.6) 创建“开始探测”按钮（M1-2 选对后显示，默认隐藏）
+            var startButton = EnsureStartButton(board, cnFont);
 
             // 4) 场景所有 TMP 字体重指向到中文 SDF
             var repointed = 0;
@@ -123,21 +142,45 @@ namespace M1.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             var saved = EditorSceneManager.SaveScene(scene);
             Debug.Log($"[M1Setup] 完成：移除缺失脚本 {removed} 个；挂载 {comp.GetType().Name}；" +
-                      $"按钮 {button.name} (active={button.activeSelf})；重指向 TMP {repointed} 个；修复图片 {spriteFixed} 个；" +
+                      $"按钮 {button.name} (active={button.activeSelf}) / {startButton.name} (active={startButton.activeSelf})；" +
+                      $"重指向 TMP {repointed} 个；修复图片 {spriteFixed} 个；" +
                       $"音效：正确={comp.correctClip?.name ?? "未配置"} 错误={comp.wrongClip?.name ?? "未配置"} 通过={comp.passClip?.name ?? "未配置"}；" +
                       $"引导 {intro}；场景保存={saved}");
         }
 
         private static GameObject EnsureContinueButton(GameObject board, TMP_FontAsset font)
+            => EnsureNamedButton(board, font, ContinueButtonName, "点击继续", new Vector2(0f, 80f), new Vector2(240f, 76f));
+
+        private static GameObject EnsureStartButton(GameObject board, TMP_FontAsset font)
         {
-            var existing = FindIncludingInactive(board.transform, ContinueButtonName);
+            var btn = EnsureNamedButton(board, font, StartButtonName, "开始探测", new Vector2(0f, 80f), new Vector2(240f, 76f));
+            // 层级自愈：按钮紧邻 QAPanel（ChatArea）之下，避免跑到 DigitalHumanStage 之后
+            var chatArea = FindIncludingInactive(board.transform, "ChatArea");
+            if (chatArea != null && chatArea.parent == btn.transform.parent)
+            {
+                var target = chatArea.GetSiblingIndex() + 1;
+                if (btn.transform.GetSiblingIndex() != target)
+                {
+                    btn.transform.SetSiblingIndex(target);
+                    EditorUtility.SetDirty(btn);
+                    Debug.Log("[M1Setup] " + StartButtonName + " 层级已调整到 ChatArea 之下。");
+                }
+            }
+            return btn;
+        }
+
+        /// <summary>创建命名操作按钮（画板直接子节点，默认隐藏，监听由运行时 M1ToolSelection 统一注册）。</summary>
+        private static GameObject EnsureNamedButton(GameObject board, TMP_FontAsset font, string name, string text,
+            Vector2 anchoredPos, Vector2 size)
+        {
+            var existing = FindIncludingInactive(board.transform, name);
             if (existing != null)
             {
-                Debug.Log("[M1Setup] 已存在 " + ContinueButtonName + "，跳过创建。");
+                Debug.Log("[M1Setup] 已存在 " + name + "，跳过创建。");
                 return existing.gameObject;
             }
 
-            var go = new GameObject(ContinueButtonName, typeof(RectTransform), typeof(CanvasRenderer),
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(Image), typeof(Button));
             go.transform.SetParent(board.transform, false);
 
@@ -145,8 +188,8 @@ namespace M1.EditorTools
             rt.anchorMin = new Vector2(0.5f, 0f);
             rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0f);
-            rt.anchoredPosition = new Vector2(0f, 80f);
-            rt.sizeDelta = new Vector2(240f, 76f);
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = size;
 
             var img = go.GetComponent<Image>();
             img.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -155,7 +198,7 @@ namespace M1.EditorTools
 
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
-            // 点击监听由运行时 M1ToolSelection 统一注册（OnContinueClicked），此处不持久化
+            // 点击监听由运行时 M1ToolSelection 统一注册，此处不持久化
 
             var textGo = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(TextMeshProUGUI));
@@ -167,7 +210,7 @@ namespace M1.EditorTools
             trt.offsetMax = Vector2.zero;
 
             var tmp = textGo.GetComponent<TextMeshProUGUI>();
-            tmp.text = "点击继续";
+            tmp.text = text;
             tmp.fontSize = 36;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
@@ -177,6 +220,31 @@ namespace M1.EditorTools
             // 默认隐藏，选对后由运行时脚本显示
             go.SetActive(false);
             return go;
+        }
+
+        /// <summary>M1-2 初始阶段：M1-1 工具容器显示、M1-2 探头容器隐藏（幂等，存在才管理、不重建）。</summary>
+        private static void EnsureM12Stage(GameObject board)
+        {
+            var m1 = FindDeep(board.transform, "白板背景/M1物品");
+            var m2 = FindDeep(board.transform, "白板背景/M2物品");
+            if (m1 != null && !m1.gameObject.activeSelf)
+            {
+                m1.gameObject.SetActive(true);
+                EditorUtility.SetDirty(m1.gameObject);
+                Debug.Log("[M1Setup] M1-1 工具容器已恢复显示。");
+            }
+            if (m2 == null)
+            {
+                Debug.LogWarning("[M1Setup] 未找到 M1-2 探头容器（白板背景/M2物品），" +
+                                 "请先在场景中排布探头按钮后重跑 Setup。");
+                return;
+            }
+            if (m2.gameObject.activeSelf)
+            {
+                m2.gameObject.SetActive(false);
+                EditorUtility.SetDirty(m2.gameObject);
+                Debug.Log("[M1Setup] M1-2 探头容器已设为隐藏（点击“点击继续”后由运行时显示）。");
+            }
         }
 
         /// <summary>加载 AudioClip 素材；失败打警告并返回 null（不中断 Setup）。</summary>
@@ -366,9 +434,17 @@ namespace M1.EditorTools
         {
             var map = new (string objPath, string spritePath)[]
             {
-                ("白板背景/物品/手推式钢轨探伤仪", "Assets/交互动画素材/01 探伤工具素材/手推式钢轨探伤仪.jpg"),
-                ("白板背景/物品/钢轨打磨机", "Assets/交互动画素材/01 探伤工具素材/钢轨打磨机.jpeg"),
-                ("白板背景/物品/内燃威客镐", "Assets/交互动画素材/01 探伤工具素材/内燃威客镐.jpeg"),
+                ("白板背景/M1物品/手推式钢轨探伤仪", "Assets/InspectionToolMaterials/手推式钢轨探伤仪.PNG"),
+                ("白板背景/M1物品/钢轨打磨机", "Assets/InspectionToolMaterials/钢轨打磨机.PNG"),
+                ("白板背景/M1物品/内燃威客镐", "Assets/InspectionToolMaterials/内燃威客镐.PNG"),
+                ("白板背景/M1物品/超声波焊缝探伤仪", "Assets/InspectionToolMaterials/超声波焊缝探伤仪.PNG"),
+                ("白板背景/M1物品/双轨式探伤仪", "Assets/InspectionToolMaterials/双轨式探伤仪.PNG"),
+                ("白板背景/M1物品/轨距尺", "Assets/InspectionToolMaterials/轨距尺.PNG"),
+                // M1-2 探头（有白边版）
+                ("白板背景/M2物品/K1", "Assets/probeFootage/探头素材（有白边版）/K1.PNG"),
+                ("白板背景/M2物品/K2.5", "Assets/probeFootage/探头素材（有白边版）/k2.5.PNG"),
+                ("白板背景/M2物品/K3", "Assets/probeFootage/探头素材（有白边版）/K3.PNG"),
+                ("白板背景/M2物品/0度", "Assets/probeFootage/探头素材（有白边版）/0度PNG.PNG"),
                 ("白板背景/数字人/背景圆", "Assets/交互动画素材/额外/圆蓝色.png"),
                 ("白板背景/数字人/对话框", "Assets/交互动画素材/额外/对话框.png"),
             };
