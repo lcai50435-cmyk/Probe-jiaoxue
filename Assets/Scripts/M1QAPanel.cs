@@ -70,6 +70,8 @@ namespace M1
         public float hiddenOffsetX = 800f;
         [Tooltip("气泡最大宽度（像素，超出自动换行）")]
         public float bubbleMaxWidth = 480f;
+        [Tooltip("面板打开时暂停游戏（Time.timeScale=0，关闭时恢复；数字人视频与面板动画不受影响）")]
+        public bool pauseGameOnOpen = true;
 
         private RectTransform _panelRt;
         private GameObject _blocker;
@@ -83,6 +85,8 @@ namespace M1
         private M1PressDetector _pressDetector;
 
         private bool _isOpen;
+        private bool _paused;        // 本次打开期间是否已暂停游戏（防重复设置）
+        private float _timeScaleBefore = 1f; // 打开前的 timeScale，关闭时原样恢复
         private bool _busy; // 请求等待中或逐字显示中（防重入）
         private Coroutine _typingCoroutine;
 
@@ -210,16 +214,17 @@ namespace M1
         private void OnDestroy()
         {
             if (_pressDetector != null) _pressDetector.OnLongPress -= Open;
+            ApplyPause(false);
         }
 
         // ==================== 开关 ====================
 
         public void Open()
         {
-            if (_isOpen) return;
+            if (_isOpen || _panelRt == null || _blocker == null) return;
             _isOpen = true;
-            if (_blocker != null) _blocker.SetActive(true);
-            if (_panelRt == null) return;
+            ApplyPause(true);
+            _blocker.SetActive(true);
             _panelRt.gameObject.SetActive(true);
             OnPanelVisibilityChanged?.Invoke(true);
             // 请求进行中（R7 中途关闭再重开）保持忙碌防并发；空闲时 _busy 本为 false，无需重置（Close 不停止请求/逐字协程）
@@ -238,9 +243,27 @@ namespace M1
         {
             if (!_isOpen) return;
             _isOpen = false;
+            ApplyPause(false);
             if (_panelRt == null) return;
             StartCoroutine(Slide(_panelRt.anchoredPosition.x, hiddenOffsetX));
             if (_blocker != null) _blocker.SetActive(false);
+        }
+
+        /// <summary>问答面板激活时全局暂停游戏，关闭时恢复打开前的 timeScale（数字人视频/滑入动画走 unscaled 不受影响）。</summary>
+        private void ApplyPause(bool pause)
+        {
+            if (!pauseGameOnOpen) return;
+            if (pause && !_paused)
+            {
+                _paused = true;
+                _timeScaleBefore = Time.timeScale;
+                Time.timeScale = 0f;
+            }
+            else if (!pause && _paused)
+            {
+                _paused = false;
+                Time.timeScale = _timeScaleBefore;
+            }
         }
 
         private IEnumerator Slide(float fromX, float toX)

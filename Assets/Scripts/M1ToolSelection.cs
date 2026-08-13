@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
@@ -21,7 +22,7 @@ namespace M1
     ///  - 点对：抖动 + 正确音效 + "选择正确！"，显示"开始探测"
     ///  - 点错：抖动 + 错误音效 + "请选择K2.5探头"
     ///  - 防卡死：probeIdleTimeout 秒无操作自动高亮 K2.5 并完成选择
-    ///  - "开始探测"：占位（M2 轨顶面探测后续实现）
+    ///  - "开始探测"：按 nextSceneName 配置加载 M2 场景（空则保持占位，不跳转）
     /// </summary>
     public class M1ToolSelection : MonoBehaviour
     {
@@ -48,6 +49,8 @@ namespace M1
         public string correctProbeName = "K2.5";
         [Tooltip("开始探测按钮（M1-2 选对后显示）")]
         public string startButtonPath = "开始探测";
+        [Tooltip("点击开始探测后加载的场景名（Inspector 可配置；空则不跳转，保持占位）")]
+        public string nextSceneName = "M2";
         [Tooltip("探头选择无操作自动完成秒数（防卡死，0=关闭）")]
         public float probeIdleTimeout = 20f;
         [Tooltip("防卡死自动高亮颜色（金色脉动）")]
@@ -274,11 +277,17 @@ namespace M1
             }
         }
 
-        /// <summary>点击“开始探测”：播放通关音效（M2 轨顶面探测后续实现，当前占位）。</summary>
+        /// <summary>点击“开始探测”：播放通关音效后按配置加载下一场景（默认 M2）。</summary>
         private void OnStartClicked()
         {
             PlaySfx(passClip);
-            Debug.Log("[M1-2] 开始探测：M2 轨顶面探测尚未实现（占位）。");
+            if (string.IsNullOrEmpty(nextSceneName))
+            {
+                Debug.Log("[M1-2] 开始探测：nextSceneName 未配置，保持占位不跳转。");
+                return;
+            }
+            Debug.Log("[M1-2] 开始探测：加载场景 " + nextSceneName);
+            SceneManager.LoadScene(nextSceneName);
         }
 
         private void StartToolTimeout()
