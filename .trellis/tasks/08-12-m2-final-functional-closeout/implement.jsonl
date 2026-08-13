@@ -1,0 +1,5 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"低代码、Setup 幂等、runtime 行数与事件绑定规范"}
+{"file":".trellis/spec/unity/video-intro.md","reason":"数字人 VideoPlayer/RenderTexture/LumaKey 与 QA 暂停链路"}
+{"file":".trellis/spec/unity/ugui-module-template.md","reason":"M2 已批准 UGUI 骨架、层级和三视口合同"}
+{"file":".trellis/tasks/08-11-m2-implementation/prd.md","reason":"M2 四阶段、QA、Build Settings 与最终验收合同"}
+{"file":".trellis/tasks/08-12-m2-final-functional-closeout/design.md","reason":"伤损坐标、角度视觉、QA 复用和串联技术设计"}

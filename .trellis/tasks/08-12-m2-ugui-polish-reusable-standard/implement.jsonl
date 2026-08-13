@@ -1,0 +1,4 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/tasks/08-11-m2-implementation/prd.md", "reason": "M2 现有功能、布局与数字人 QA 验收合同。"}
+{"file": ".trellis/spec/unity/video-intro.md", "reason": "数字人保持 VideoPlayer/RenderTexture/LumaKey 链路及层级合同。"}
+{"file": ".trellis/spec/unity/low-code.md", "reason": "M2 结构改动必须走幂等 Setup，禁止新增无必要 runtime 脚本。"}

@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/unity/low-code.md", "reason": "低代码决策树：配置优先/复用优先/Editor 工具化；runtime ≤150 行；Setup 幂等与素材注入约定——M2 全部 runtime 与 Editor 实现遵循此规范"}
+{"file": ".trellis/spec/unity/video-intro.md", "reason": "数字人视频链路（VideoPlayer/RenderTexture/LumaKey 抠像）——M2 数字人舞台复用 M1 链路时遵循"}
+{"file": ".trellis/tasks/08-10-m2-readiness-audit/design.md", "reason": "权威技术设计：四区布局、波形距离契约、透视/帮助/重置/出口、低代码实现边界（4 个 runtime 组件基线）"}
+{"file": ".trellis/tasks/08-10-m2-readiness-audit/implement.md", "reason": "权威执行清单：里程碑一~六、验证计划、回滚点、文件边界——本轮返工对照其里程碑二/三要求"}
+{"file": ".trellis/tasks/08-10-m2-readiness-audit/audit.md", "reason": "素材判定：K2.5 探头/蜂鸣/波形参考可用；钢轨俯视/透明版/自制尺缺失或待修——影响钢轨接入决策"}

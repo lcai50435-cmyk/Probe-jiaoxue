@@ -36,15 +36,23 @@
 
 ## 5. 场景改动规则
 
-- **结构改动**（增删元素、布局参数、锚点/尺寸）→ 改 `Assets/Editor/*Setup.cs` 后重新生成场景。
-- **纯视觉微调**（单个对象的颜色、文字、字号）→ 可直接改场景文件，不动 Setup。
+- 未冻结模块的**结构改动**（增删元素、布局参数、锚点/尺寸）→ 改 `Assets/Editor/*Setup.cs` 后重新生成场景。
+- 未冻结模块的**纯视觉微调**（单个对象的颜色、文字、字号）→ 可直接改场景文件，不动 Setup。
 - 禁止两种方式混合导致 Setup 与场景漂移；改动后建议跑一次 Setup 验证幂等。
+
+### 5.0 M2/M3 场景冻结例外（2026-08-12 产品决定）
+
+- `Assets/Settings/Scenes/M2.unity` 与 `Assets/Settings/Scenes/M3.unity` 的当前 Scene 文件是冻结后的视觉权威。后续程序、Setup 和 Agent 不得修改、重生成或保存覆盖；只有老板在 Unity Scene 中手工修改才允许改变视觉。
+- `M2Setup` / `M3Setup` 只能打开或检测现有 Scene 并明确日志后返回；Scene 不存在时必须报错，二者均不得创建。历史生成代码只能保留为不可调用的参考实现，不得重新接回入口。
+- 旧的“结构改动走 Setup”“Ensure 自愈已有节点”“双跑保存验证幂等”规则不适用于这两份冻结 Scene。调用 M2/M3 Setup 的验收标准是调用前后文件字节哈希完全一致。
+- 后续 M2/M3 功能只能通过 runtime 动态绑定、复用已有节点或添加不改变视觉的组件完成。禁止 Setup 重写 `RectTransform`、`Graphic`/TMP、文案、颜色、Sprite、active 状态或 sibling 顺序，也禁止借功能修改绕过冻结。
+- 若需求必须改变 M2/M3 视觉、层级或序列化视觉状态，应停止实现并交由老板手工修改 Scene；不得修改 Scene YAML 或恢复旧生成入口。
 
 ## 5.1 路径契约（防静默失效）
 
 - Setup 写入运行时组件的路径字段必须与生成的真实层级**逐层一致**，不得包含虚构中间层；运行时组件按路径查找失败的默认行为是**报错而非静默跳过**。
 - 教训：`M1QAPanel` 路径曾含虚构 "Panel" 层（`QAPanel/Panel/Header/...`），导致关闭/语音/发送按钮与输入框静默失效、发送按钮永久置灰，排查成本高（2026-08-07 归档）。
-- 教训：用户改名节点（`物品 → M1物品`）后，`M1ToolSelection.toolsRootPath` 与 `M1Setup` 素材注入路径同步失效，运行时 LogError 跳过全部工具绑定（2026-08-10）。改名/移动节点必须同步 Setup 与运行时默认值，并跑一次 Setup 自愈。
+- 教训：用户改名节点（`物品 → M1物品`）后，`M1ToolSelection.toolsRootPath` 与 `M1Setup` 素材注入路径同步失效，运行时 LogError 跳过全部工具绑定（2026-08-10）。改名/移动节点必须同步 Setup 与运行时默认值；未冻结 Scene 跑一次 Setup 自愈，M2/M3 冻结 Scene 则只允许老板手工修正 Scene。
 
 ## 5.2 场景 YAML 手改陷阱（块头丢失）
 
@@ -52,6 +60,12 @@
 - 正确做法：重组时补回 `m.group(1)`（块头），或只替换块内字段（如 `m_IsActive`）不重组整块。
 - 手改后必验：块头数与块体数配对（`grep -c '^--- !u!1 &'`）；孤立块体行（前一行不是 `--- !u!` 的 `GameObject:`/`RectTransform:` 等）为 0。
 - 教训：2026-08-10 M1-2 场景手改连续丢两次块头（M1物品/M2物品/画板），均靠此校验兜住。
+
+### 5.3 UGUI 运行时事件绑定（2026-08-11 M2）
+
+- `Button.onClick.AddListener`、`Slider.onValueChanged.AddListener` 和普通 C# event 在 Editor Setup 中注册的委托只存在于当前编辑器进程，**不会**写入场景的 `m_PersistentCalls`；重新打开场景后会丢失。
+- 未冻结 Scene 的 Setup 只负责序列化对象引用、默认参数和层级；M2/M3 冻结 Scene 不再接受 Setup 写入。每个 runtime 组件必须在 `Awake` / `OnEnable` 由事件所有者执行幂等绑定：先 `RemoveListener` / `-=`，再 `AddListener` / `+=`。例如 Flow 绑定流程按钮，Probe 绑定角度滑块与距离事件，Ruler 绑定对齐事件，IdleHelp 绑定帮助按钮。
+- 验证必须包含“保存并重新打开场景后再进入 Play Mode”；`m_Calls: []` 对纯运行时绑定是预期结果，不能将其当作失效证据。
 
 ## 6. 目录与模块约定
 
@@ -75,7 +89,7 @@
 - 引入 Bolt / Visual Scripting 等可视化脚本包。
 - 复制粘贴式扩展（同一逻辑复制到多模块）。
 - 无理由新增专用脚本、硬编码数据、主动重构存量代码（除非任务涉及）。
-- 场景结构与 Setup 脚本逻辑漂移。
+- 未冻结场景的结构与 Setup 脚本逻辑漂移；或用 Setup/Agent 覆盖已冻结的 M2/M3 Scene。
 
 ## 7.1 Unity 6 已知坑（2026-08-07 M1 面板实战）
 
@@ -83,6 +97,8 @@
 - **动态尺寸 UI 不要依赖嵌套布局组 preferred 缓存**：逐字/动态生长场景（气泡随文本增长）中，`HorizontalLayoutGroup` 的行高按子物体 preferred 推算且带缓存，尺寸变化时行高跟不上会重叠/错位。改用显式控制：行挂 `LayoutElement`（minHeight/preferredHeight 同值手动同步），气泡手动锚定定位，逐字更新后立即 `LayoutRebuilder.ForceRebuildLayoutImmediate`。
 - **`TextAnchor` 枚举无 `Top/Bottom`**：Unity 命名体系为 `Upper/Middle/Lower`（如 `UpperLeft`、`UpperRight`）。
 - **UI 场景音效必须强制 2D（`spatialBlend = 0`）**：AudioSource 挂在 UI 画板/普通场景物体上时，默认 3D 音效会随与 Main Camera 的距离衰减，画板远离相机则完全听不见。接入点播音效时在运行时获取 AudioSource 后立即设 `spatialBlend = 0f`（运行时兜底优于 Setup 创建时设置——Setup 只在新建时生效，用户手动挂的 AudioSource 覆盖不到）。
+- **Vector2/Vector3 混合运算符重载歧义（Unity 6000）**：`(Vector2)vector3 - vector2` 在 Unity 实际编译下报 CS0034（Vector3/Vector2 混合运算符使重载解析歧义）；改用逐分量运算 `new Vector2(a.x - b.x, a.y - b.y)` 规避（2026-08-11 M2RulerDrag）。
+- **离线编译 ≠ Unity 编译**：用外部 csc + `Managed/UnityEngine` impl dll 做离线编译可能漏报 Unity 实际编译错误（重载解析/引用集差异，实测 Vector2/Vector3 混合运算漏报）；编译验证一律以 Unity 编辑器/批处理为准（2026-08-11）。
 
 ## 8. 音效接入约定（M1 起）
 
@@ -90,6 +106,12 @@
 - Setup 注入采用「仅当字段为空时赋值」（`if (comp.clip == null) comp.clip = LoadClip(...)`），幂等且不覆盖用户手动替换的素材；`LoadClip` 失败打 `Debug.LogWarning` 返回 null 不中断 Setup。
 - 播放统一用 `AudioSource.PlayOneShot(clip)`：互不打断、适合短音效；未配置素材或 AudioSource 缺失时**静默跳过不报错**（`if (clip == null || src == null) return;`）。
 - 场景音频出口：AudioSource 由 Setup Ensure 到交互物体上（`GetComponent ?? AddComponent`），`playOnAwake` 默认 false，不产生开机噪音。
+
+## 8.1 问答面板暂停契约（M1 起，M2/M3 复用）
+
+- `M1QAPanel.pauseGameOnOpen`（默认 true）：面板 Open 时 `Time.timeScale = 0` 全局暂停（含模块计时/拖拽/动画），Close 时恢复**打开前**的值（`_timeScaleBefore` 记录，不硬编码 1，避免覆盖引导等场景的 timeScale 设置）。
+- 暂停期间不受影响是设计前提：长按检测用 `Time.unscaledTime`、面板滑入/逐字用 `unscaledDeltaTime` / `WaitForSecondsRealtime`、DeepSeek 请求用 `UnityWebRequest`、数字人视频走 VideoPlayer（不受 timeScale 影响）。**新增问答链路组件必须遵循 unscaled 计时**，否则暂停时功能卡死。
+- 引导期间（M1IntroVideo 全屏遮罩挡点击）QA 入口不可达，与引导的 timeScale 管理无并发冲突；若未来出现并发场景需先协调。
 
 ## 9. 与 AGENTS.md 的同步契约
 

@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"复核 Setup 幂等、隐藏 TMP 字体自愈、运行时绑定和 ≤150 行要求"}
+{"file":".trellis/tasks/08-12-m2-probe-font-waveform-fix/prd.md","reason":"逐项验证探头初始位置、放置/角度门控、手动扫描、中文字体与波形验收标准"}
+{"file":".trellis/tasks/08-12-m2-probe-font-waveform-fix/design.md","reason":"复核手动/自动坐标合同、单一状态所有权、迁移兼容与回滚边界"}
+{"file":".trellis/tasks/08-12-m2-probe-font-waveform-fix/implement.md","reason":"核对 Unity 编译、Setup 两次、重开场景、Play Mode 和三视口证据完整性"}

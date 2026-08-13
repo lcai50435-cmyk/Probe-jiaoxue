@@ -1,0 +1,5 @@
+{"file":".trellis/tasks/08-12-m2-final-functional-closeout/prd.md","reason":"逐项核对最终需求与验收标准"}
+{"file":".trellis/tasks/08-12-m2-final-functional-closeout/design.md","reason":"核对坐标公式、组件边界、QA 复用与 Build Settings 顺序"}
+{"file":".trellis/spec/unity/low-code.md","reason":"检查 Setup 幂等、事件绑定、runtime 行数和范围边界"}
+{"file":".trellis/spec/unity/video-intro.md","reason":"检查数字人/QA 暂停与 unscaled 视频链路"}
+{"file":".trellis/spec/unity/ugui-module-template.md","reason":"检查已批准布局和层级无回归"}
