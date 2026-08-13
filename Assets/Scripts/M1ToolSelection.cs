@@ -80,8 +80,10 @@ namespace M1
         public AudioClip correctClip;
         [Tooltip("选错工具时播放的错误提示音")]
         public AudioClip wrongClip;
-        [Tooltip("点击继续时播放的通关音效")]
+        [Tooltip("M1-2 点击开始探测进入下一模块时播放的通关音效")]
         public AudioClip passClip;
+        [Tooltip("M1-1 点击继续进入 M1-2 时播放的通关音效")]
+        public AudioClip pass2Clip;
 
         private static readonly string[] ToolNames =
         {
@@ -241,7 +243,7 @@ namespace M1
             if (_phase2) return; // 已进入 M1-2，忽略重复
             _phase2 = true;
             StopToolTimeout();
-            PlaySfx(passClip);
+            PlaySfx(pass2Clip);
             if (_m1Items != null) _m1Items.gameObject.SetActive(false);
             if (_m2Items != null) _m2Items.gameObject.SetActive(true);
             if (_continueButton != null) _continueButton.gameObject.SetActive(false);
@@ -277,16 +279,24 @@ namespace M1
             }
         }
 
-        /// <summary>点击“开始探测”：播放通关音效后按配置加载下一场景（默认 M2）。</summary>
+        /// <summary>点击“开始探测”：播放通关音效，播完后再加载下一场景（默认 M2）。</summary>
         private void OnStartClicked()
         {
-            PlaySfx(passClip);
             if (string.IsNullOrEmpty(nextSceneName))
             {
                 Debug.Log("[M1-2] 开始探测：nextSceneName 未配置，保持占位不跳转。");
                 return;
             }
-            Debug.Log("[M1-2] 开始探测：加载场景 " + nextSceneName);
+            Debug.Log("[M1-2] 开始探测：播放通关音效后加载场景 " + nextSceneName);
+            PlaySfx(passClip);
+            // 同步 LoadScene 会立即销毁当前场景音源，导致通关音效被截断；先等音效播完再切场景。
+            StartCoroutine(LoadSceneAfterSfx(passClip != null ? passClip.length : 0f));
+        }
+
+        /// <summary>等待通关音效播完再切场景，避免同步 LoadScene 销毁音源截断音效。</summary>
+        private System.Collections.IEnumerator LoadSceneAfterSfx(float delay)
+        {
+            yield return new WaitForSecondsRealtime(delay);
             SceneManager.LoadScene(nextSceneName);
         }
 

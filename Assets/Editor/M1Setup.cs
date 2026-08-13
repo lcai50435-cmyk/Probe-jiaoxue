@@ -40,7 +40,8 @@ namespace M1.EditorTools
         // M1-1 点击音效素材（正确/错误/通过，已与用户确认）
         private const string CorrectClipPath = "Assets/Audio/E-01 正确提示音/正确音2.mp3";
         private const string WrongClipPath = "Assets/Audio/E-02 错误提示音/错误提示音.mp3";
-        private const string PassClipPath = "Assets/Audio/E-04 通关音效/通关音效1.mp3";
+        private const string PassClipPath = "Assets/Audio/E-04 通关音效/通关音效1.mp3"; // M1-2 开始探测进入下一模块
+        private const string Pass2ClipPath = "Assets/Audio/E-04 通关音效/通关音效2.mp3"; // M1-1 点击继续进入 M1-2
 
         /// <summary>命令行/批处理入口：打开 M1 场景后执行 Setup（供 CI 与无人值守使用）。</summary>
         public static void SetupM11Batch()
@@ -104,7 +105,8 @@ namespace M1.EditorTools
             // 2.2) 注入点击音效素材（幂等：仅当字段为空时赋值，不覆盖用户手动替换的素材）
             if (comp.correctClip == null) comp.correctClip = LoadClip(CorrectClipPath, "正确提示音");
             if (comp.wrongClip == null) comp.wrongClip = LoadClip(WrongClipPath, "错误提示音");
-            if (comp.passClip == null) comp.passClip = LoadClip(PassClipPath, "通关音效");
+            if (comp.passClip == null) comp.passClip = LoadClip(PassClipPath, "通关音效1");
+            if (comp.pass2Clip == null) comp.pass2Clip = LoadClip(Pass2ClipPath, "通关音效2");
             EditorUtility.SetDirty(comp);
 
             // 3) 创建占位按钮
@@ -144,7 +146,8 @@ namespace M1.EditorTools
             Debug.Log($"[M1Setup] 完成：移除缺失脚本 {removed} 个；挂载 {comp.GetType().Name}；" +
                       $"按钮 {button.name} (active={button.activeSelf}) / {startButton.name} (active={startButton.activeSelf})；" +
                       $"重指向 TMP {repointed} 个；修复图片 {spriteFixed} 个；" +
-                      $"音效：正确={comp.correctClip?.name ?? "未配置"} 错误={comp.wrongClip?.name ?? "未配置"} 通过={comp.passClip?.name ?? "未配置"}；" +
+                      $"音效：正确={comp.correctClip?.name ?? "未配置"} 错误={comp.wrongClip?.name ?? "未配置"} " +
+                      $"通关1(M1-2→M2)={comp.passClip?.name ?? "未配置"} 通关2(M1-1→M1-2)={comp.pass2Clip?.name ?? "未配置"}；" +
                       $"引导 {intro}；场景保存={saved}");
         }
 

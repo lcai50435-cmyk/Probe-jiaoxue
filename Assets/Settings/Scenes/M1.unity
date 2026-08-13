@@ -4992,6 +4992,7 @@ MonoBehaviour:
   correctClip: {fileID: 8300000, guid: 42d00cc799d68904cb56f3e8d569cf36, type: 3}
   wrongClip: {fileID: 8300000, guid: 8e130769cac1f554197dbcb1f66fa14d, type: 3}
   passClip: {fileID: 8300000, guid: ea297755149bbb04b9d2d7e7a74b9e3c, type: 3}
+  pass2Clip: {fileID: 8300000, guid: 0f21d9017ee1d2b44a2afee88254261c, type: 3}
   _audioSource: {fileID: 1636157572}
 --- !u!114 &1636157570
 MonoBehaviour:
