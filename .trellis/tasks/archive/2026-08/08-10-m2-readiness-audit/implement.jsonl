@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"约束 M2 采用 Inspector/Editor Setup 优先、幂等场景搭建和 runtime 脚本行数边界"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"约束问答面板复用与 M2 组件拆分，避免复制 M1QASetup 和重复状态逻辑"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"定义 FlowController、拖拽、波形、尺子、QA 和场景出口之间的数据流合同"}
+{"file":".trellis/tasks/08-10-m2-readiness-audit/audit.md","reason":"提供 M2 文档需求、素材库存、冲突结论和可开工边界"}

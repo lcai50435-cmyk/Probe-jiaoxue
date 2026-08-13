@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"检查 M2Setup 幂等、场景结构来源、Inspector 配置和 runtime 脚本规模是否合规"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"检查 M1 QA 复用是否引入复制逻辑或破坏现有模块"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"检查输入、流程状态、距离、波形、测距、QA 暂停和完成出口的端到端一致性"}
+{"file":".trellis/tasks/08-10-m2-readiness-audit/audit.md","reason":"逐项核对需求、素材占位边界、文档歧义和最终视觉限制"}
