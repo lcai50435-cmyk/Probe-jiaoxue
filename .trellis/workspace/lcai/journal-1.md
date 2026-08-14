@@ -61,3 +61,73 @@
 人工门槛（未自动执行，已写入 implement.md §5）：主 Editor 打开 M2 后 Play Mode 跑四阶段/角度/手动+自动 110mm/QA/重置/数字人、M1 QA 回归、M1→M2 串联；三视口只读截图。
 
 收尾补记：上述核心流程、三视口和 M1→M2 串联后续均已由隔离副本自动验收通过，任务已归档。工作提交后主 Editor 又将 M2 `FullBodyView.x` 从 `-124` 手调为 `-13`，该后续视觉改动保留在工作区，未混入 M2 收口提交，也未被 Agent 覆盖。
+
+## 08-13 M2 轨头顶面流程重构（m2-top-surface-flow-refactor）
+
+规划（prd/design/implement 三件套，老板批准）→ 实施 → 双烟测 PASS → 收口。冻结 Scene 全程未动（SHA 保持 `ea4268…` 基线，数字人 x=-13 保留）。
+
+实施要点（不新增 runtime 脚本，复用 4 脚本重构 + Smoke/Shot 工具适配）：
+
+1. **共享几何合同**：`M2RulerDrag` 提供 `PixelsPerMm`（正式尺 0→110 锚点 preserveAspect 渲染矩形二维欧氏跨度 ÷110，实测 2.7914）；`M2ProbeDrag` 提供 RailViewport 本地像素的 `ProbeEntryPointInRail`/`DamagePointInRail`（损伤继续从 RailPerspective UV 换算）+ `ScanStart/HitPoint`（damage ∓ dir×150/110mm×ppm 反算，含入射点偏置补偿）。
+2. **定位门控**：Flow 增 `AngleVerifiedByRuler`；扫描需 `Placed && AngleCorrect && AngleVerifiedByRuler`。Ruler 双模式（AngleGuide 校角三条件：Slider 10° + 10°槽对入射点 + 尺身平行钢轨 → 吸附归槽；DistanceMeasure 双点 0/110 容差 → 刚体变换吸附）。Slider 校角后锁定到 Reset。
+3. **检出合同**：删除旧 `_prevMm` 跨越阈值因果；Probe 每次移动报欧氏距离并判三条件（10° + |mm-110|≤容差 + beam 端点距损伤≤容差）→ Flow 锁定探头/波形峰值/蜂鸣一次/显"下一步"。60s 帮助 AutoMoveToMm(110) 与手动同几何路径。
+4. **关键教训（已写入 low-code.md 5.4）**：入射点锚点不在 Rect 中心时，ScanStart/HitPoint 必须减 `EntryOffset` 反推探头中心，否则欧氏距离合同失效（首次烟测 150mm 起点误差 0.9mm）。M1→M2 加载依赖 M1 passClip 音效时长，链路烟测改轮询+超时。冻结 Scene 旧 stepHints 数组用代码 `DefaultHints` 覆盖。
+5. **验收**：编译零 error；主烟测 PASS（QA 暂停、门控单条件负例、110mm 几何、检出锁定、双点负例/正例、自动帮助、重置复跑）；M1→M2 链路 PASS；M2Shot 三视口截图无回归、Scene 哈希不变。5 个 runtime 脚本 140/142/148/119/91 行均 ≤150。
+
+## 08-13 M2 第一轮人工反馈修复（4 项）
+
+老板主编辑器打开验证发现 4 问题，全部处理（冻结 Scene 依旧零改动，SHA 保持 `ea4268…`）：
+
+1. **尺子素材 + 尺寸**：换 `Assets/Ruler/尺子正面.png`（1205x213，Multiple 单子图）。冻结 Scene 无法改序列化 Sprite/measureSize → 复制素材到 `Assets/Resources/`，`M2RulerDrag.Bind` 运行时 `Resources.LoadAll<Sprite>("尺子正面")[0]` 换 sprite、强制工作态 `measureSize=320x57`（旧 420x91 太大）。新锚点（底左 UV）：0mm 左端底尖 (0.005,0.038)、110mm 竖刻线 x≈880 (0.73,0.038)、10° 斜面尖角 (0.005,0.136)；0 与 110 同底边水平线 → ppm=232/110≈2.109，150mm=316px/110mm=232px 均落视口。
+2. **校角过程**：答复老板——规划（design.md §4）即"Slider 驱动 10°（探头视觉随 Slider 旋转）+ 尺子三项校验吸附"，尺子不直接驱动探头旋转；给出增强选项待确认。
+3. **校角后探头拖不动（bug）**：根因 `Go(Scanning)` 用 `SetInputLocked(true)` 同时锁了角度与拖拽。新增 `M2ProbeDrag.SetAngleLocked`（只锁 Slider），`Go(Scanning)` 改用它；`SetInputLocked` 仅检出后/帮助演示用。连带修复 `M2IdleHelp` 演示结束改为按 `Detected` 锁定（原按 stage==Scanning 会锁死拖拽）。
+4. **绿色射线不可见**：根因 `BeamLayer` Scene 初态 active=0 且 `ApplyView` 普通视图强制隐藏。改 `ApplyView` 不再控制 beamLayer；`ShowBeam` 激活 beamLine 父级 → 扫描阶段普通/透视视图均显示绿色检测束。
+
+验收（主项目被老板编辑器占用，用隔离副本 `Probe-jiaoxue-smoke` 跑）：主烟测 PASS（含反向/平移双点负例替换——新素材 0/110 同底边线，水平放置单点对齐=双点对齐，旧负例失效）、M1→M2 链路 PASS、三视口截图正常、5 脚本 140/143/150/91/119 行。副本与临时裁剪图已删除。
+
+## 08-13 M2 夹具式校角重构（老板定稿方案）
+
+老板否决"吸附即归槽"，定稿 7 步操作链：放探头(0°) → 拖尺子吸附成夹具 → 解锁 Slider → 沿槽调角 → 10° 稳定 0.5s → 正确音效+锁定 10° → 手动撤尺 → 绿色检测束+扫描。实现要点：
+
+1. `M2RulerDrag`：`CheckAngleGuide` 移除角度条件（吸附=槽位+平行，保留现场不 ResetTool）；新增 `UnlockRetract`（撤尺解锁）、`SetPoseRetract`/`CheckRetract`（以 RulerHome 世界位置为靶拖回归槽）、`OnAngleRetracted` 事件；删 `SetPoseZeroOnEntry/SetPose110OnDamage/Pose`（旧 Smoke 负例辅助）。
+2. `M2FlowController`：新状态 `RulerDocked`；`NotifyRulerAligned`→吸附解锁 Slider；`NotifyAngleConfirmed`→锁角度+正确音效+解锁撤尺；`NotifyRulerRetracted`→Go(Scanning)。删 `TryEnterScanning/NotifyAngleCorrect`（门控变为顺序链）。
+3. `M2ProbeDrag`：`Update` 稳定计时（RulerDocked && AngleCorrect 累积 Time.deltaTime 0.5s）；`SetAngleLocked`（Slider）与 `SetInputLocked`（拖拽）职责分离；Bind 锁 Slider + probeVisual pivot 改 (0.5,0) 绕入射点旋转（含位置补偿）；ResetTool 恢复角度锁。
+4. `M2IdleHelp`：30s 帮助按新链演示（吸附→调角→等 0.6s→撤尺）。
+5. `M2RuntimeSmoke`：case1 改为夹具链断言（放置后 Slider 锁、吸附后解锁+保留现场、稳定后确认+锁定、撤尺进扫描）；case2 撤尺断言后接几何/检出。
+
+验收（隔离副本）：主烟测 PASS、M1→M2 链路 PASS、三视口截图正常；5 脚本 147/148/145/93/119 行；M2.unity SHA 保持 `ea4268…`。规范 low-code.md 5.4 更新为夹具式合同。
+
+## 08-13 M2 第二轮人工反馈（探头素材 + 射线美化）
+
+老板两张截图反馈：① 探头初始位置/观感错误；② 绿色射线难看。
+
+根因定位：
+1. **探头素材用错**：M2 bg 用的是 `K2.5.PNG`（K2.5 斜探头 3D 立体侧视图，属 M3 轨头侧面场景）；M2 是轨顶面直探头偏转 10° 场景，立体斜楔块放俯视钢轨上视觉"悬浮、倾斜、不贴轨"。修复：复制 `0度.PNG`（直探头）到 `Assets/Resources/probe0.png`，运行时 `Resources.LoadAll<Sprite>("probe0")[0]` 换 bg sprite（不改冻结 Scene）；手动生成 probe0.png.meta（新 guid/内部 ID，Multiple 单子图，参照源素材导入设置）。探头放置几何本身正确（ScanStart 在 railViewport 内、入射点与损伤同水平、位于钢轨图上）。
+2. **射线难看**：BeamLine 是单条实心绿 Image。美化（纯程序化，不改 Scene/素材）：`BeamGradient()` 生成 8x64 渐变 Sprite（底部亮→顶部透明 + 横向高斯），UpdateBeam 换成渐变 sprite、pivot 改 (0.5,0)（探头端为起点），Update 每帧亮度脉冲（alpha 0.3~0.8 sin 波动）形成"超声波光柱"感。BeamLine 是 RectTransform，需 `GetComponent<Image>` 缓存为 `_beamImage` 再改 sprite/color（踩坑：RectTransform 无 color/sprite）。
+
+验证：副本编译零 error；主烟测 PASS（夹具链/110mm/双点/自动帮助/复跑全过，许可证 Handshake 错误仅警告）；M1→M2 链路 PASS。M2ProbeShot 临时截图工具不稳定（线程断言）已删除，视觉以老板主编辑器目视为准。5 脚本 147/149/145/93/119 行；M2.unity SHA 保持 `ea4268…`。
+
+## 08-14 M2 PPTX 流程重构（焊缝目标 + 新素材，老板定稿）
+
+老板按 `文档/M2轨头顶面探测.pptx` 重新定稿 M2 流程：3 步 = 钢轨左侧中心线 0° 放置 → 定位尺向内偏 10° → 前移至入射点距本侧焊缝熔合线 110mm。核心变化：**110mm 目标从「红色损伤」改为「焊缝熔合线（WeldLine）」，红色损伤仅作透视可见缺陷；起始从「150mm 起点」改为「钢轨左侧中心线（startLocal）」。** 素材全部换新。
+
+实施（不新增脚本、不写冻结 Scene，全部运行时替换）：
+
+1. **素材 → Resources**：复制 `probeFootage.png`（直探头）、`railwayTracks_2/俯视角.png`（普通）、`俯视角透视.png`（透视）到 `Assets/Resources/`，手工生成 Single-mode meta（新 guid + spriteID）；尺子沿用已有 `尺子正面.png`。射线参照 `greenLight.png` 程序化生成锥形收窄 + 端点光晕。
+2. **M2ProbeDrag**：删 `damageUv`/`scanStartMm`，新增 `startLocal(-500,0)`；`WeldPointInRail` 取代 `DamagePointInRail`（经 `flow.rulerDrag.weldLineRt` 反推，兜底 `railViewport.Find("WeldLine")`）；`ScanStart=startLocal`、`HitPoint=weld-dir*110*ppm-EntryLocal`；`BeamGradient` 重做（32×128 锥形+端点光晕）；Bind 换 probeFootage sprite。
+3. **M2RulerDrag**：尺子换 `尺子正面`（0/110 底边 `(0.005,0.038)/(0.73,0.038)`、10°槽 `(0.005,0.136)`、measureSize 320×57、ppm≈2.109）；`CheckMeasure`/`OrientMeasure` 110 目标改 `WeldPointInRail`。
+4. **M2FlowController**：`SwapRailSprites` 运行时换 `俯视角`/`俯视角透视`；步骤文案改「入射点距焊缝 110mm」「110mm 对焊缝熔合线」。保留耦合剂 + 独立复测（②A③A）。
+5. **M2RuntimeSmoke**：素材/ppm 断言改为引用比较（尺子正面/probeFootage/俯视角 v2，ppm 2.109/232px）；150mm 起点断言改「起始在焊缝左侧」；110mm 断言改「距焊缝」。5 脚本 150/150/149/93/119 行。
+
+验收：代码静态一致（无残留 DamagePoint 引用）；**未跑 Unity 编译/烟测**（老板主编辑器占用中）。待老板编辑器内：重编译 → 跑 `M2.EditorTools.M2RuntimeSmoke.RunBatch` + `RunM1ToM2Batch` → 人工目视校准 `startLocal`/`probeEntryLocal`/尺子锚点/射线观感；确认后 M2.unity SHA 仍须等于基线 `ea4268…`。
+
+## 08-14 M2 第二轮反馈（射线瞄准损伤 + Scene 素材同步 + 模糊排查）
+
+老板截图反馈三点，全部处理：
+
+1. **射线目标回退「红色损伤」**（老板明确「瞄准红色损伤中间」，取代 PPTX「焊缝熔合线」口径）：`M2ProbeDrag` 删 `WeldPointInRail`，恢复 `DamagePointInRail`；`CalibrateTrack` 用实测 `damageUv=(0.4808,0.711)`（对 `俯视角透视.png` 2469×609 红椭圆做像素采样得到，替代旧 RailPerspective 的 `(0.4798,0.6875)`）。
+2. **射线水平发射 + 出发点抬高**：根因是 `ScanStart=startLocal` 未补偿 `EntryLocal`，导致入射点 y 偏离损伤中心线、射线斜向下。改 `ScanStart=(startLocal.x, damage.y)-EntryLocal`、`StartMm=distance((startLocal.x,damage.y),damage)/ppm`，使入射点全程保持在损伤水平线；`probeEntryLocal` 从 `(0.5,0)` 抬到 `(0.5,0.25)`（probeFootage 图里设备不在图底部，底边是空白）。
+3. **Scene 素材同步（老板授权写 Scene）**：把 M2.unity 序列化 `m_Sprite` 的 4 处 guid/fileID 改指向新素材（尺子→尺子正面 fileID 5987772278907439635、钢轨普通/透视→俯视角 v2/俯视角透视 v2 fileID 21300000、探头→probeFootage fileID 21300000），Scene 视图与 Game 视图一致。注意去掉 Set-Content 引入的 UTF8 BOM（否则首行 `%YAML` 带 BOM）。
+4. **模糊排查**：新素材 `probeFootage`(2610px)/`俯视角`(2469px) 超 `maxTextureSize 2048` 被降采样 + `textureCompression 1`（DXT 压缩）导致模糊。已把 3 个 Resources meta 改为 `maxTextureSize 4096` + `textureCompression 0`（无压缩）。
+
+M2.unity 新 SHA-256 = `4fd7a85ae8dcb8b448504aa82ae23d84eccdb07e4e9482faf8368793f769a074`（含老板数字人 x=-13 调整 + 本次 4 处 sprite 替换）。5 脚本 150/150/149/93/119 行。待老板编辑器内：Reload Scene（因我改了 Scene YAML）→ 重编译 → 目视校准 `probeEntryLocal`(约 0.25)/`damageUv`/`startLocal` 三个值。

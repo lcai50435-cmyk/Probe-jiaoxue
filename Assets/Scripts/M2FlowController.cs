@@ -1,12 +1,11 @@
 using System.Collections;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-
 namespace M2
 {
-    /// <summary>M2 四阶段流程唯一状态所有者，含检出、重置和出口。</summary>
     public class M2FlowController : MonoBehaviour
     {
         public enum Stage { Couplant, Positioning, Scanning, Measuring, Completed }
@@ -22,36 +21,25 @@ namespace M2
         public AudioSource sfx;
         public AudioClip beepClip, correctClip;
         public M2IdleHelp idleHelp;
-        public float couplantAnimDuration = 2f;
-        public float targetAngle = 10f, targetDistance = 110f, peakTolerance = 1f;
-        public string[] stepHints = { "请先涂抹耦合剂", "放置探头并调整偏角至 10°", "向前移动探头（150→100mm）", "拖动尺子：0 刻度对齐焊缝熔合线", "轨头顶面探测完成" };
-        public Color hitYellow = new Color(.9f, .5f, .1f);
+        public float couplantAnimDuration = 2f, targetAngle = 10f, targetDistance = 110f, distanceToleranceMm = 2f;
         public UnityEvent onCompleted;
         public Stage CurrentStage { get; private set; } = Stage.Couplant;
-        public bool CouplantApplied, Detected, Measured, PerspectiveOn;
-        private float _prevMm = 150f;
-        private bool _applying;
+        public bool CouplantApplied, Detected, Measured, PerspectiveOn, AngleVerifiedByRuler, RulerDocked;
+        private bool _applying; private float _timeScaleBeforeDialog = 1f;
+        private static readonly string[] DefaultHints = { "请先涂抹耦合剂", "放置探头，用定位尺把偏角校到 10°", "保持 10° 向前移动探头至入射点距红色损伤 110mm", "0mm 对准探头入射点，110mm 对准红色损伤", "轨头顶面探测完成" };
         private static readonly string[] StageNames = { "涂抹耦合剂", "探头定位与偏角", "移动探测", "尺子测距", "完成" };
-
         private void Awake()
         {
             Bind(applyButton, ApplyCouplant); Bind(resetButton, ShowResetDialog); Bind(enterNextButton, EnterNextModule); Bind(nextButton, NextToMeasure);
-            Bind(FindButton("ConfirmButton"), ResetAll); Bind(FindButton("CancelButton"), HideResetDialog);
-            Bind(FindButton("NormalButton"), SetNormalView); Bind(FindButton("PerspectiveButton"), SetPerspectiveView);
-            probeDrag?.Bind(this); rulerDrag?.Bind(this);
-            if (completionPanel != null && enterNextButton != null && enterNextButton.transform.parent != completionPanel.transform)
-                enterNextButton.transform.SetParent(completionPanel.transform, false);
-            ApplyView(false); waveform?.SetDistanceMm(150f); UpdateUi();
+            Bind(FindButton("ConfirmButton"), ResetAll); Bind(FindButton("CancelButton"), HideResetDialog); Bind(FindButton("NormalButton"), SetNormalView); Bind(FindButton("PerspectiveButton"), SetPerspectiveView);
+            rulerDrag?.Bind(this); probeDrag?.Bind(this);
+            if (completionPanel != null && enterNextButton != null && enterNextButton.transform.parent != completionPanel.transform) enterNextButton.transform.SetParent(completionPanel.transform, false);
+            SwapRailSprites(); ApplyView(false); waveform?.SetDistanceMm(150f); UpdateUi();
         }
-        private Button FindButton(string name)
-        {
-            foreach (var button in GetComponentsInChildren<Button>(true)) if (button.name == name) return button;
-            return null;
-        }
+        private Button FindButton(string name) => GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == name);
         private static void Bind(Button button, UnityAction action)
         {
-            if (button == null) return;
-            button.onClick.RemoveListener(action); button.onClick.AddListener(action);
+            if (button != null) { button.onClick.RemoveListener(action); button.onClick.AddListener(action); }
         }
         public void ApplyCouplant()
         {
@@ -76,29 +64,35 @@ namespace M2
             _applying = false; CouplantApplied = true; if (applyButtonText != null) applyButtonText.text = "已涂抹";
             probeDrag?.Unlock(); Go(Stage.Positioning);
         }
-        public void NotifyPlacementChanged() => TryEnterScanning();
-        public void NotifyAngleCorrect() => TryEnterScanning();
-        private void TryEnterScanning()
+        public void NotifyPlacementChanged() { if (CurrentStage == Stage.Positioning && probeDrag != null && probeDrag.Placed) rulerDrag?.ShowAngleGuide(); }
+        public void NotifyRulerAligned() { if (CurrentStage == Stage.Positioning) { RulerDocked = true; probeDrag?.SetAngleLocked(false); } }
+        public void NotifyAngleConfirmed()
         {
-            if (CurrentStage == Stage.Positioning && probeDrag != null && probeDrag.Placed && probeDrag.AngleCorrect) Go(Stage.Scanning);
+            if (CurrentStage != Stage.Positioning || !RulerDocked) return;
+            AngleVerifiedByRuler = true;
+            probeDrag?.SetAngleLocked(true);
+            if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip);
+            rulerDrag?.UnlockRetract();
         }
+        public void NotifyRulerRetracted() { if (CurrentStage == Stage.Positioning && AngleVerifiedByRuler) Go(Stage.Scanning); }
         public void NotifyDistance(float mm)
         {
             if (currentDistanceText != null) currentDistanceText.text = $"{mm:0}mm";
             waveform?.SetDistanceMm(mm);
-            if (!Detected && waveStateText != null)
-                waveStateText.text = waveform != null && mm <= waveform.growthStartMm ? "波峰生长" : "平直基线";
-            if (!Detected && CurrentStage == Stage.Scanning && ((_prevMm > targetDistance && mm <= targetDistance) || Mathf.Abs(mm - targetDistance) <= peakTolerance)) NotifyDetected();
-            _prevMm = mm;
+            if (!Detected && waveStateText != null && waveform != null) waveStateText.text = mm <= waveform.growthStartMm ? "波峰生长" : "平直基线";
         }
-        private void NotifyDetected()
+        public void NotifyDetected()
         {
             if (Detected || CurrentStage != Stage.Scanning) return;
             Detected = true;
-            if (detectionBanner != null) detectionBanner.SetActive(true); if (waveStateText != null) waveStateText.text = "峰值锁定";
-            if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip); if (nextButton != null) nextButton.gameObject.SetActive(true); idleHelp?.ResetIdle();
+            probeDrag?.SetInputLocked(true);
+            if (detectionBanner != null) detectionBanner.SetActive(true);
+            if (waveStateText != null) waveStateText.text = "峰值锁定";
+            if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip);
+            if (nextButton != null) nextButton.gameObject.SetActive(true);
+            idleHelp?.ResetIdle();
         }
-        public void NextToMeasure() { if (Detected && CurrentStage == Stage.Scanning) { rulerDrag?.Show(); Go(Stage.Measuring); } }
+        public void NextToMeasure() { if (!Detected || CurrentStage != Stage.Scanning) return; rulerDrag?.ShowMeasure(); Go(Stage.Measuring); }
         public void NotifyMeasured()
         {
             if (Measured) return;
@@ -108,42 +102,47 @@ namespace M2
         public void EnterNextModule() { rulerDrag?.ResetTool(); onCompleted?.Invoke(); }
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);
-        private void SetDialog(bool visible)
-        {
-            transform.Find("ModalLayer")?.gameObject.SetActive(visible);
-            idleHelp?.SetPaused(visible);
-        }
+        private void SetDialog(bool visible) { var modal = transform.Find("ModalLayer")?.gameObject; var wasOpen = modal != null && modal.activeSelf; if (visible && !wasOpen) { _timeScaleBeforeDialog = Time.timeScale; Time.timeScale = 0f; } else if (!visible && wasOpen) Time.timeScale = _timeScaleBeforeDialog; if (modal != null) modal.SetActive(visible); idleHelp?.SetPaused(visible); }
         public void SetNormalView() => ApplyView(false);
         public void SetPerspectiveView() => ApplyView(true);
+        private void SwapRailSprites() { SwapSprite(railBg != null ? railBg.GetComponentInChildren<Image>(true) : null, "俯视角"); SwapSprite(railPerspective != null ? railPerspective.GetComponentInChildren<Image>(true) : null, "俯视角透视"); }
+        private static void SwapSprite(Image image, string name) { if (image == null) return; var s = Resources.LoadAll<Sprite>(name); if (s != null && s.Length > 0) image.sprite = s[0]; }
         private void ApplyView(bool on)
         {
-            PerspectiveOn = on; if (railBg != null) railBg.gameObject.SetActive(!on);
-            if (railPerspective != null) railPerspective.SetActive(on);
-            if (beamLayer != null) beamLayer.SetActive(on);
-            var selected = new Color(.08f, .42f, .66f); var idle = new Color(.58f, .61f, .65f);
+            PerspectiveOn = on;
+            if (railBg != null) railBg.gameObject.SetActive(!on); if (railPerspective != null) railPerspective.SetActive(on);
+            Color selected = new Color(.08f, .42f, .66f), idle = new Color(.58f, .61f, .65f);
             if (normalBtnImg != null) { normalBtnImg.color = on ? idle : selected; SetButtonText(normalBtnImg, on ? new Color(.12f, .15f, .18f) : Color.white); }
             if (perspectiveBtnImg != null) { perspectiveBtnImg.color = on ? selected : idle; SetButtonText(perspectiveBtnImg, on ? Color.white : new Color(.12f, .15f, .18f)); }
         }
         private static void SetButtonText(Image image, Color color)
         {
-            var text = image != null ? image.GetComponentInChildren<TMP_Text>(true) : null;
+            if (image == null) return;
+            var text = image.GetComponentInChildren<TMP_Text>(true);
             if (text != null) text.color = color;
         }
         public void ResetAll()
         {
-            CouplantApplied = Detected = Measured = _applying = false; _prevMm = 150f; StopAllCoroutines();
+            CouplantApplied = Detected = Measured = AngleVerifiedByRuler = RulerDocked = _applying = false; StopAllCoroutines();
             if (couplantMask != null) couplantMask.SetActive(false); if (detectionBanner != null) detectionBanner.SetActive(false); if (measurementBubble != null) measurementBubble.SetActive(false);
             if (waveStateText != null) waveStateText.text = "平直基线"; if (nextButton != null) nextButton.gameObject.SetActive(false);
             if (applyButton != null) applyButton.interactable = true; if (applyButtonText != null) applyButtonText.text = "涂抹耦合剂";
-            probeDrag?.ResetTool(); rulerDrag?.Hide(); waveform?.SetDistanceMm(150f); idleHelp?.ResetAll(); ApplyView(false); SetDialog(false); Go(Stage.Couplant);
+            probeDrag?.ResetTool(); rulerDrag?.ResetTool(); waveform?.SetDistanceMm(150f); idleHelp?.ResetAll(); ApplyView(false); SetDialog(false); Go(Stage.Couplant);
         }
-        private void Go(Stage stage) { CurrentStage = stage; idleHelp?.ResetIdle(); UpdateUi(); }
+        private void Go(Stage stage)
+        {
+            CurrentStage = stage;
+            if (stage == Stage.Scanning) { probeDrag?.SetAngleLocked(true); probeDrag?.ShowBeam(); }
+            idleHelp?.ResetIdle(); UpdateUi();
+        }
         private void UpdateUi()
         {
-            var i = Mathf.Min((int)CurrentStage, 4); if (instructionText != null) instructionText.text = stepHints != null && i < stepHints.Length ? stepHints[i] : "";
+            var i = Mathf.Min((int)CurrentStage, 4);
+            if (instructionText != null) instructionText.text = DefaultHints[i];
             if (stepProgressText != null) stepProgressText.text = $"步骤 {Mathf.Min(i + 1, 4)}/4 · {StageNames[i]}";
             foreach (var panel in stepPanels) if (panel != null) panel.SetActive(i < stepPanels.Length && panel == stepPanels[i]);
-            var done = CurrentStage == Stage.Completed; if (completionPanel != null) completionPanel.SetActive(done); if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
+            var done = CurrentStage == Stage.Completed;
+            if (completionPanel != null) completionPanel.SetActive(done); if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
             if (done && completionText != null) completionText.text = onCompleted != null && onCompleted.GetPersistentEventCount() > 0 ? "轨头顶面探测完成" : "下一模块待接入";
         }
     }

@@ -1972,7 +1972,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 4aa8c50dc5faaa242a9c5319b30d0bed, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ef4c0ac88a8a9729e9624368c484b585, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2794,7 +2794,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -5478235104552325212, guid: 0588c18ab669a414db1d3357d812c20f, type: 3}
+  m_Sprite: {fileID: 5987772278907439635, guid: 7a99bd260df48484c936a5411d1c3183, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -8002,12 +8002,18 @@ MonoBehaviour:
   angleValueText: {fileID: 1142120342}
   angleStatusText: {fileID: 1181040906}
   okGreen: {r: 0.13, g: 0.67, b: 0.42, a: 1}
-  scanStartLocal: {x: 0.143, y: 0.68}
-  scanEndLocal: {x: 0.857, y: 0.68}
-  placementTolerance: {x: 0.08, y: 0.15}
-  scanStartMm: 150
-  scanEndMm: 100
+  scanDirection: {x: 1, y: 0}
+  probeEntryLocal: {x: 0.5, y: 0.6}
+  startLocal: {x: -500, y: 0}
+  damageUv: {x: 0.4808, y: 0.711}
+  placementTolerancePx: {x: 60, y: 40}
+  hitMm: 110
+  beamHitTolerancePx: 8
   visualTiltAtTarget: 10
+  probeBaseAngleDeg: 10
+  beamBaseAngleDeg: -95
+  settleDuration: 0.5
+  beamWidthPx: 14
   unlocked: 0
   currentDistanceMm: 150
 --- !u!224 &1438739841
@@ -8817,7 +8823,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -558466571640295740, guid: 6085e8414d15b1a40a6c7837721bf104, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ab5449e0078a1c4b7ea3d822e5091f0a, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -10478,14 +10484,7 @@ MonoBehaviour:
   couplantAnimDuration: 2
   targetAngle: 10
   targetDistance: 110
-  peakTolerance: 1
-  stepHints:
-  - "\u8BF7\u5148\u6D82\u62B9\u8026\u5408\u5242"
-  - "\u653E\u7F6E\u63A2\u5934\u5E76\u8C03\u6574\u504F\u89D2\u81F3 10\xB0"
-  - "\u5411\u524D\u79FB\u52A8\u63A2\u5934\uFF08150\u2192100mm\uFF09"
-  - "\u62D6\u52A8\u5C3A\u5B50\uFF1A0 \u523B\u5EA6\u5BF9\u9F50\u710A\u7F1D\u7194\u5408\u7EBF"
-  - "\u8F68\u5934\u9876\u9762\u63A2\u6D4B\u5B8C\u6210"
-  hitYellow: {r: 0.9, g: 0.5, b: 0.1, a: 1}
+  distanceToleranceMm: 2
   onCompleted:
     m_PersistentCalls:
       m_Calls: []
@@ -10493,6 +10492,8 @@ MonoBehaviour:
   Detected: 0
   Measured: 0
   PerspectiveOn: 0
+  AngleVerifiedByRuler: 0
+  RulerDocked: 0
 --- !u!82 &1757454279
 AudioSource:
   m_ObjectHideFlags: 0
@@ -10608,6 +10609,7 @@ MonoBehaviour:
   autoDemoButton: {fileID: 528972217}
   tryAgainButton: {fileID: 1742213290}
   probeDrag: {fileID: 1438739840}
+  rulerDrag: {fileID: 0}
   angleIdleTimeout: 30
   scanIdleTimeout: 60
   autoDemoDuration: 1
@@ -11362,7 +11364,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 6899720119236754836, guid: f29ea1b81bb118f4f81d201da3712b3e, type: 3}
+  m_Sprite: {fileID: 21300000, guid: bf227a02b4706ca2f554b19f1a1106cb, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -12207,10 +12209,14 @@ MonoBehaviour:
   rulerHome: {fileID: 1612217864}
   rulerImage: {fileID: 418471493}
   measureSize: {x: 420, y: 91}
+  angleGuideSize: {x: 240, y: 42}
   measureStartLocal: {x: 0.5, y: 0.78}
-  zeroAnchorLocal: {x: -210, y: 0}
-  snapTolerance: 24
-  lockAfterSnap: 1
+  zeroUv: {x: 0.005, y: 0.038}
+  ruler110Uv: {x: 0.73, y: 0.038}
+  slotUv: {x: 0.005, y: 0.136}
+  angleToleranceDeg: 6
+  pointTolerancePx: 24
+  retractTolerancePx: 80
   unlocked: 0
   aligned: 0
 --- !u!1 &2085148874
@@ -12250,7 +12256,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -124, y: -35}
+  m_AnchoredPosition: {x: -13, y: -35}
   m_SizeDelta: {x: 320, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2085148876

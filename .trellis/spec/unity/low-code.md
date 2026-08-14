@@ -67,6 +67,17 @@
 - 未冻结 Scene 的 Setup 只负责序列化对象引用、默认参数和层级；M2/M3 冻结 Scene 不再接受 Setup 写入。每个 runtime 组件必须在 `Awake` / `OnEnable` 由事件所有者执行幂等绑定：先 `RemoveListener` / `-=`，再 `AddListener` / `+=`。例如 Flow 绑定流程按钮，Probe 绑定角度滑块与距离事件，Ruler 绑定对齐事件，IdleHelp 绑定帮助按钮。
 - 验证必须包含“保存并重新打开场景后再进入 Play Mode”；`m_Calls: []` 对纯运行时绑定是预期结果，不能将其当作失效证据。
 
+### 5.4 冻结 Scene 的运行时文案与几何合同（2026-08-13 M2 重构）
+
+- **旧文案数组不能写回**：冻结 Scene 序列化的 `stepHints`（含“150→100mm”“0 刻度对齐焊缝”）等旧数组只能在冻结前改；运行时组件用代码静态默认数组（`DefaultHints`）覆盖 `instructionText`，Scene 反序列化对缺失字段直接忽略，不报错。
+- **唯一 mm 比例**：尺子 0→110 锚点标定跨度为唯一物理比例，`pixelsPerMm = distance(zero, ruler110) / 110`。两锚点必须位于正式尺同一条可见刻度基线上——M2 换用 `尺子正面.png`（1205×213）底边基线：0mm 左端底尖 `(0.005,0.038)`、110mm 竖刻线 `(0.73,0.038)`、10° 槽尖角 `(0.005,0.136)`，工作态 `measureSize=320×57`、`ppm≈2.109`（110mm 跨度≈232px）。再取 preserveAspect 渲染矩形中的二维欧氏距离；透明区域、字样位置或不同高度点均不是有效测量锚点。
+- **110mm 目标 = 红色损伤（2026-08-14 老板定稿，取代 PPTX「焊缝熔合线」口径）**：测量/检出/检测束目标为透视图中的红色损伤——`俯视角透视.png` 红椭圆，`M2ProbeDrag.CalibrateTrack` 用 `damageUv=(0.4808,0.711)`（底左 UV，实测红椭圆中心）从 `RailPerspective` Rect 换算 RailViewport 本地坐标；WeldLine 节点不再作目标。
+- **起始位置与射线跟随角度（2026-08-14 老板定稿）**：探头水平移动——`ScanStart = startLocal - EntryLocal`、`HitPoint = (damage.x - 110*ppm, startLocal.y) - EntryLocal`，入射点始终在钢轨中心线（y=0，`startLocal` 默认 `(-500,0)`），删旧 150mm 起点概念。**射线是直线、从探头发射面（老板图2 红色框框：连接器与主体交界处）垂直射出，跟随探头角度一起旋转**：共享滑条转角 `TiltAngle = (角度/targetAngle)*visualTiltAtTarget`；探头视觉 `probeVisual.localRotation = probeBaseAngleDeg + TiltAngle`、射线 `beamLine.localRotation = beamBaseAngleDeg + TiltAngle`，二者各自带独立基准角。`probeBaseAngleDeg`（探头图片基准角，老板称"初始图像角度偏高"）与 `beamBaseAngleDeg`（射线基准角，用来把射线转到垂直于发射面）均为 Inspector 可调；射线禁止固定朝损伤/朝右。
+- **检出条件**：Scanning 阶段 + 角度 10° 容差 + `|distance(entry, damage)/ppm - 110| ≤ distanceToleranceMm`；检出后探头位置硬锁定（`MoveToScan` 对 `flow.Detected` 直接 return）。
+- **素材替换（运行时 + Scene 序列化双写）**：探头 `probeFootage.png`、钢轨普通 `俯视角.png`/透视 `俯视角透视.png`（railwayTracks_2 v2）、尺子 `尺子正面.png` 复制到 `Assets/Resources/`（Single/Multiple Sprite meta 手工生成）运行时 `Resources.LoadAll` 换图；同时把 M2.unity 序列化 `m_Sprite` 的 guid/fileID 同步改指向新素材，使 Scene 视图与 Game 视图一致。新素材纹理 `maxTextureSize=4096` + `textureCompression=0` 避免大图被降采样/压缩导致模糊。射线参照 `greenLight.png` 程序化生成（锥形收窄 + 端点光晕，`M2ProbeDrag.BeamGradient`）。
+- **夹具式校角合同（2026-08-13 老板定稿，替代早期“吸附即归槽”）**：定位阶段操作链为 放探头(0°) → 拖尺子吸附成夹具（仅校验 10°槽对入射点 + 尺身平行，**不校验角度、吸附后保留现场不归槽**）→ 解锁 Slider → 玩家沿槽调角 → 角度 10° 稳定 0.5s（`M2ProbeDrag.Update` 用 `Time.deltaTime` 累积，QA 暂停不推进）→ 播放正确音效并锁定 10° → 解锁尺子 → 玩家拖回工具架（`CheckRetract` 以 `RulerHome` 位置为靶，容差内自动归槽）→ 撤尺事件触发进入 Scanning 并显示绿色检测束。角度锁与拖拽锁分离：`SetAngleLocked` 只控 Slider interactable，`SetInputLocked` 只控 `_inputLocked`（拖拽）。
+- **M1→M2 链路烟测**：M2 场景在 M1 通关音效播完后才加载（`LoadSceneAfterSfx` 用 `WaitForSecondsRealtime(passClip.length)`），链路烟测必须轮询场景名并设超时，禁止固定等待。
+
 ## 6. 目录与模块约定
 
 - `Assets/Scripts/` — runtime 脚本（薄、通用、配置驱动）。

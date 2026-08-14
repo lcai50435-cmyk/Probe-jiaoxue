@@ -89,7 +89,6 @@ namespace M2.EditorTools
             var savedRulerActive = rulerRt != null && rulerRt.gameObject.activeSelf;
             var savedRulerUnlocked = ruler != null && ruler.unlocked;
             var savedRulerAligned = ruler != null && ruler.aligned;
-            var savedZeroAnchor = ruler != null ? ruler.zeroAnchorLocal : Vector2.zero;
             var savedRulerColor = ruler != null && ruler.rulerImage != null ? ruler.rulerImage.color : Color.white;
 
             var camGo = new GameObject("M2ShotCam");
@@ -150,7 +149,7 @@ namespace M2.EditorTools
                     rulerRt.SetParent(savedRulerParent, false); rulerRt.anchorMin = savedRulerAnchorMin; rulerRt.anchorMax = savedRulerAnchorMax;
                     rulerRt.pivot = savedRulerPivot; rulerRt.anchoredPosition = savedRulerPosition; rulerRt.sizeDelta = savedRulerSize;
                     rulerRt.localScale = savedRulerScale; rulerRt.localRotation = savedRulerRotation; rulerRt.SetSiblingIndex(savedRulerSibling);
-                    ruler.unlocked = savedRulerUnlocked; ruler.aligned = savedRulerAligned; ruler.zeroAnchorLocal = savedZeroAnchor;
+                    ruler.unlocked = savedRulerUnlocked; ruler.aligned = savedRulerAligned;
                     if (ruler.rulerImage != null) ruler.rulerImage.color = savedRulerColor;
                     rulerRt.gameObject.SetActive(savedRulerActive);
                 }
