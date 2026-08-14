@@ -8004,14 +8004,15 @@ MonoBehaviour:
   okGreen: {r: 0.13, g: 0.67, b: 0.42, a: 1}
   scanDirection: {x: 1, y: 0}
   probeEntryLocal: {x: 0.5, y: 0.6}
-  startLocal: {x: -500, y: 0}
+  startLocal: {x: -500, y: -18}
   damageUv: {x: 0.4808, y: 0.711}
   placementTolerancePx: {x: 60, y: 40}
   hitMm: 110
   beamHitTolerancePx: 8
   visualTiltAtTarget: 10
-  probeBaseAngleDeg: 10
-  beamBaseAngleDeg: -95
+  probeBaseAngleDeg: 15
+  beamBaseAngleDeg: -90
+  beamLengthZeroMm: 237
   settleDuration: 0.5
   beamWidthPx: 14
   unlocked: 0

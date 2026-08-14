@@ -13,7 +13,7 @@ namespace M2
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
         public Vector2 scanDirection = new Vector2(1f, 0f), probeEntryLocal = new Vector2(.5f, .25f), startLocal = new Vector2(-500f, 0f), damageUv = new Vector2(.4808f, .711f), placementTolerancePx = new Vector2(60f, 40f);
-        public float hitMm = 110f, beamHitTolerancePx = 8f, visualTiltAtTarget = 10f, probeBaseAngleDeg = 0f, beamBaseAngleDeg = 0f, settleDuration = .5f, beamWidthPx = 14f;
+        public float hitMm = 110f, beamHitTolerancePx = 8f, visualTiltAtTarget = 10f, probeBaseAngleDeg = 0f, beamBaseAngleDeg = 0f, beamLengthZeroMm = 550f, settleDuration = .5f, beamWidthPx = 14f;
         public bool unlocked;
         public float currentDistanceMm = 150f;
         public event Action<float> OnDistanceChanged;
@@ -39,7 +39,7 @@ namespace M2
         public void Bind(M2FlowController owner)
         {
             flow = owner; if (probeRt == null) probeRt = transform as RectTransform; if (probeVisual == null) probeVisual = probeRt.Find("bg") as RectTransform; if (_probeSize == Vector2.zero) _probeSize = probeRt.sizeDelta;
-            var probeImage = probeVisual != null ? probeVisual.GetComponent<Image>() : null; if (probeImage != null) { var sprites = Resources.LoadAll<Sprite>("probeFootage"); if (sprites != null && sprites.Length > 0) probeImage.sprite = sprites[0]; if (probeImage.sprite != null) _spriteAspect = probeImage.sprite.rect.width / probeImage.sprite.rect.height; }
+            var probeImage = probeVisual != null ? probeVisual.GetComponent<Image>() : null; if (probeImage != null) { var sprites = Resources.LoadAll<Sprite>("probeFootage"); if (sprites != null && sprites.Length > 0) probeImage.sprite = sprites[0]; if (probeImage.sprite != null) _spriteAspect = probeImage.sprite.rect.width / probeImage.sprite.rect.height; var sh = probeImage.GetComponent<Shadow>() ?? probeImage.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0f, 0f, 0f, .48f); sh.effectDistance = new Vector2(7f, -7f); var ol = probeImage.GetComponent<Outline>() ?? probeImage.gameObject.AddComponent<Outline>(); ol.effectColor = new Color(.1f, .12f, .15f, .6f); ol.effectDistance = new Vector2(2f, -2f); }
             CalibrateTrack(); if (beamLine != null) _beamImage = beamLine.GetComponentInChildren<Image>(); if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition;
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
             if (angleSlider == null) return;
@@ -58,7 +58,7 @@ namespace M2
         }
         public void SetAngleSilently(float degrees) { _angleDeg = degrees; ApplyAngleVisual(degrees); }
         public void AutoMoveToMm(float mm) { if (!_placed) PlaceAtStart(); MoveToScan(Mathf.InverseLerp(StartMm, hitMm, mm)); }
-        public void PlaceAtStart() { _placed = true; Reparent(probeRt, railViewport, new Vector2(.5f, .5f)); MoveToScan(0f); flow?.NotifyPlacementChanged(); }
+        public void PlaceAtStart() { _placed = true; Reparent(probeRt, railViewport, new Vector2(.5f, .5f)); MoveToScan(0f); ShowBeam(); flow?.NotifyPlacementChanged(); }
         public void ResetTool()
         {
             unlocked = _inputLocked = _dragging = false; _beamVisible = false; currentDistanceMm = StartMm; _angleDeg = 0f;
@@ -110,7 +110,7 @@ namespace M2
             beamLine.anchorMin = beamLine.anchorMax = railViewport.pivot;
             beamLine.pivot = new Vector2(.5f, 0f);
             beamLine.anchoredPosition = ProbeEntryWorld();
-            beamLine.sizeDelta = new Vector2(beamWidthPx, hitMm * PixelsPerMm);
+            beamLine.sizeDelta = new Vector2(beamWidthPx, Mathf.Lerp(beamLengthZeroMm, hitMm, Mathf.Clamp01(_angleDeg / (flow != null && flow.targetAngle > 0f ? flow.targetAngle : 10f))) * PixelsPerMm);
             beamLine.localRotation = Quaternion.Euler(0f, 0f, beamBaseAngleDeg + TiltAngle);
         }
         private static Sprite _beamGradient;
