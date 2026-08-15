@@ -83,8 +83,8 @@ namespace M2.EditorTools
                 Require(_flow.rulerDrag.rulerImage != null && _flow.rulerDrag.rulerImage.sprite != null, "正式尺 Sprite/引用缺失");
                 var rulerSprites = Resources.LoadAll<Sprite>("尺子正面");
                 Require(rulerSprites != null && rulerSprites.Length > 0 && _flow.rulerDrag.rulerImage.sprite == rulerSprites[0], "正式尺未换成尺子正面素材");
-                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm - 2.109f) < .05f, "尺子 0→110 标定比例错误");
-                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm * 110f - 232f) < 2f, "尺子 0→110 跨度错误");
+                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm - 2.883f) < .05f, "尺子 0→110 标定比例错误"); // 待老板确认 Scene 锚点 ruler110Uv=0.76 为最终校准
+                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm * 110f - 317.1f) < 2f, "尺子 0→110 跨度错误");
                 Require(Mathf.Abs(_flow.rulerDrag.zeroUv.y - _flow.rulerDrag.ruler110Uv.y) < .001f && _flow.rulerDrag.zeroUv.y < .1f, "0/110 锚点未位于同一可见底边基线");
                 var probeImage = _flow.probeDrag.probeVisual != null ? _flow.probeDrag.probeVisual.GetComponent<Image>() : null;
                 var probeSprites = Resources.LoadAll<Sprite>("probeFootage");
@@ -129,12 +129,19 @@ namespace M2.EditorTools
                         Require(Mathf.Approximately(Time.timeScale, before), "QA 关闭未恢复 timeScale");
                         _flow.ShowResetDialog(); Require(Time.timeScale == 0f, "重置确认未暂停游戏");
                         _flow.HideResetDialog(); Require(Mathf.Approximately(Time.timeScale, before), "重置确认关闭未恢复 timeScale");
-                        _flow.couplantAnimDuration = 0f;
+                        _flow.couplantFx.animDuration = _flow.couplantFx.holdDuration = _flow.couplantFx.fadeDuration = 0f;
                         _flow.ApplyCouplant();
                         _nextAt = EditorApplication.timeSinceStartup + .4;
                         break;
                     case 1:
                         Require(_flow.CurrentStage == M2FlowController.Stage.Positioning, "耦合剂后未进入定位阶段");
+                        var fx = _flow.couplantFx;
+                        Require(fx != null && fx.film != null && fx.film.sprite != null, "薄膜未设置铁轨形状 sprite");
+                        Require(fx.film.type == Image.Type.Filled && fx.film.fillMethod == Image.FillMethod.Horizontal && fx.film.fillOrigin == 0, "薄膜未配置从左至右揭示");
+                        Require(fx.film.color.a < 1f, "薄膜应为半透明蓝");
+                        Require(Mathf.Abs(fx.maskRt.sizeDelta.x - _flow.railBg.sizeDelta.x * fx.coverRect.z) < 1f &&
+                            Mathf.Abs(fx.maskRt.sizeDelta.y - _flow.railBg.sizeDelta.y * fx.coverRect.w) < 1f, "薄膜覆盖区域与 coverRect 不符");
+                        Require(fx.film.fillAmount >= .99f, "动画完成后薄膜未铺满");
                         var probe = _flow.probeDrag;
                         probe.PlaceAtStart();                           // 钢轨左侧中心线 0° 放置
                         Require(probe.Placed, "探头未完成放置");
@@ -142,6 +149,7 @@ namespace M2.EditorTools
                         probe.OnAngleChanged(10f);
                         Require(_flow.CurrentStage == M2FlowController.Stage.Positioning, "无夹具时 Slider 单独 10° 不应进入扫描");
                         _flow.rulerDrag.ShowAngleGuide();
+                        Require(Vector2.Distance(_flow.rulerDrag.rulerRt.sizeDelta, _flow.rulerDrag.measureSize) < .01f, "校角态尺子尺寸未统一为 measureSize（PPT 两步骤同尺寸）");
                         _flow.rulerDrag.SetPoseAngleGuide();            // 摆到夹具姿态
                         _flow.rulerDrag.CheckAngleGuide();              // 几何吸附成夹具
                         Require(_flow.RulerDocked, "尺子未吸附成夹具");
@@ -159,10 +167,12 @@ namespace M2.EditorTools
                         _flow.rulerDrag.CheckRetract();                 // 撤尺
                         Require(_flow.CurrentStage == M2FlowController.Stage.Scanning, "撤尺后未进入扫描");
                         Require(_flow.rulerDrag.rulerRt.parent == _flow.rulerDrag.rulerHome, "撤尺后尺子未归槽");
-                        Require(Mathf.Abs(_flow.probeDrag.probeVisual.localEulerAngles.z - 10f) < .1f, "探头 10° 视觉反馈错误");
+                        Require(Mathf.Abs(_flow.probeDrag.probeVisual.localEulerAngles.z - (_flow.probeDrag.probeBaseAngleDeg + 10f)) < .1f, "探头 10° 视觉反馈错误");
                         var ppm = _flow.rulerDrag.PixelsPerMm;
                         var damage = _flow.probeDrag.DamagePointInRail;
-                        Require(_flow.probeDrag.ProbeEntryPointInRail.x < damage.x, "起始位置应在红色损伤左侧");
+                        var entry0 = _flow.probeDrag.ProbeEntryPointInRail;
+                        Require(Mathf.Abs(entry0.y - damage.y) < 1f, "150mm 起点入射点与损伤未同线（PPT 尺子水平前提）");
+                        Require(entry0.x < damage.x, "起始位置应在红色损伤左侧");
                         _flow.SetPerspectiveView();
                         Require(_flow.railPerspective.activeSelf, "透视模式未显示透明钢轨");
                         Require(_flow.beamLayer.activeSelf, "扫描阶段检测束层未激活");
@@ -175,6 +185,23 @@ namespace M2.EditorTools
                         var entry = _flow.probeDrag.ProbeEntryPointInRail;
                         Require(Mathf.Abs(Vector2.Distance(entry, damage) - 110f * ppm) < 1f, "110mm 检出间距错误（应距红色损伤）");
                         Require(Vector2.Distance(entry, damage) > 80f, "110mm 时探头入射点与损伤不应重合");
+                        Require(Mathf.Abs(entry.y - damage.y) < 1f, "110mm 检出点与损伤未同线");
+                        Require(_flow.waveStateText != null && !_flow.waveStateText.gameObject.activeSelf, "波形状态提示未隐藏（PPT 删提示词）");
+                        Require(_flow.currentDistanceText != null && !_flow.currentDistanceText.gameObject.activeSelf, "波形距离读数未隐藏");
+                        Require(_flow.waveformFx != null && _flow.waveform != null && !_flow.waveform.enabled, "新波形组件未挂载或旧组件未禁用");
+                        var areaRt = _flow.waveform.transform.parent as RectTransform;
+                        Require(areaRt != null && Mathf.Abs(areaRt.sizeDelta.x - 460f) < 1f && Mathf.Abs(areaRt.sizeDelta.y - 345f) < 1f, "波形窗口未改 4:3（460×345）");
+                        Require(areaRt != null && Mathf.Abs(areaRt.anchoredPosition.y - 172.5f) < 1f, "波形窗口下缘未贴屏幕底");
+                        var wfx = _flow.waveformFx;
+                        wfx.SetDistanceMm(150f);
+                        Require(Mathf.Abs(wfx.Strength - .08f) < .02f && Mathf.Abs(wfx.PeakU - .75f) < .01f, "150mm 短波初态错误（Strength/PeakU）");
+                        wfx.SetDistanceMm(115f);
+                        Require(Mathf.Abs(wfx.Strength - .78f) < .02f && Mathf.Abs(wfx.PeakU - .575f) < .01f, "115mm 最高波状态错误");
+                        wfx.SetDistanceMm(110f);
+                        Require(Mathf.Abs(wfx.Strength - .78f) < .02f && Mathf.Abs(wfx.PeakU - .55f) < .01f, "110mm 检出波状态错误");
+                        var lockedStrength = wfx.Strength; var lockedPeakU = wfx.PeakU;
+                        wfx.SetDistanceMm(100f);
+                        Require(wfx.Strength == lockedStrength && wfx.PeakU == lockedPeakU, "检出后波形应锁定不变");
                         var beamImg = _flow.probeDrag.beamLine.GetComponentInChildren<Image>();
                         Require(beamImg != null && beamImg.sprite != null && beamImg.sprite.rect.height >= 60f, "检测束渐变 Sprite 未绑定（旧粗矩形）");
                         var beamTex = beamImg.sprite.texture; var beamY = beamTex.height / 3;
@@ -191,6 +218,8 @@ namespace M2.EditorTools
                         Require(_flow.rulerDrag.rulerRt.parent == _flow.rulerDrag.railViewport &&
                             Vector2.Distance(_flow.rulerDrag.rulerRt.sizeDelta, _flow.rulerDrag.measureSize) < .01f,
                             "尺子测量态父级/尺寸错误");
+                        var rz = _flow.rulerDrag.rulerRt.localEulerAngles.z;
+                        Require(Mathf.Abs(rz) < .5f, "测量尺未水平放置（当前角度 " + rz + "°）");
                         Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - 1f) < .01f, "尺子工作态 bg 未归一化");
                         break;
                     case 3:
@@ -212,13 +241,13 @@ namespace M2.EditorTools
                         Require(Vector3.Distance(_flow.rulerDrag.rulerRt.position, _rulerStartWorld) < .01f &&
                             Vector2.Distance(_flow.rulerDrag.rulerRt.sizeDelta, _rulerStartSize) < .01f,
                             "重置后尺子未回到 Scene 起始布局");
-                        Require(Mathf.Abs(_flow.probeDrag.probeVisual.localEulerAngles.z) < .1f, "重置后探头角度非 0");
+                        Require(Mathf.Abs(_flow.probeDrag.probeVisual.localEulerAngles.z - _flow.probeDrag.probeBaseAngleDeg) < .1f, "重置后探头角度非 0");
                         Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - 1.3417f) < .01f, "重置后尺子 bg 未恢复 Scene 缩放");
                         Require(!_flow.AngleVerifiedByRuler && !_flow.Detected, "重置后流程状态未清空");
                         break;
                     case 4:
                         // Reset 后完整复跑
-                        _flow.couplantAnimDuration = 0f;
+                        _flow.couplantFx.animDuration = _flow.couplantFx.holdDuration = _flow.couplantFx.fadeDuration = 0f;
                         _flow.ApplyCouplant();
                         _nextAt = EditorApplication.timeSinceStartup + .4;
                         break;

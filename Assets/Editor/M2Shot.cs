@@ -42,30 +42,24 @@ namespace M2.EditorTools
             var savedSize = canvasRt.sizeDelta;
             var savedScalerEnabled = scaler != null && scaler.enabled;
 
-            // Editor 截图验证：手动触发 M2 波形初始绘制（无 Play 时 Awake 不执行）
+            // Editor 截图验证：模拟 M2FlowController.Awake 挂载新波形组件（无 Play 时 Awake 不执行）
             var waveGraphic = UnityEngine.Object.FindFirstObjectByType<M2WaveformGraphic>();
-            if (waveGraphic != null)
+            var savedWaveEnabled = waveGraphic != null && waveGraphic.enabled;
+            var waveArea = waveGraphic != null ? waveGraphic.transform.parent : null; // WaveformArea_B
+            var waveGrid = waveArea != null ? waveArea.Find("WaveGrid") : null; // RectTransform-only 节点，无 Graphic 冲突
+            var waveAreaRt = waveArea as RectTransform;
+            var savedWaveAreaSize = waveAreaRt != null ? waveAreaRt.sizeDelta : Vector2.zero;
+            var savedWaveAreaPos = waveAreaRt != null ? waveAreaRt.anchoredPosition : Vector2.zero;
+            var waveFx = (M2WaveformFx)null;
+            var extraRenderer = (CanvasRenderer)null;
+            if (waveGraphic != null) waveGraphic.enabled = false; // 禁用旧组件（先禁用防同帧双 Graphic）
+            if (waveGrid != null)
             {
-                waveGraphic.ResetWave(150f); // 强制重建（SetAllDirty）
-                // 直接调用 OnPopulateMesh 验证顶点产出（Editor 截图通道）
-                var helper = new VertexHelper();
-                var methods = waveGraphic.GetType().GetMethods(
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                System.Reflection.MethodInfo method = null;
-                foreach (var m in methods)
-                {
-                    if (m.Name == "OnPopulateMesh")
-                    {
-                        var ps = m.GetParameters();
-                        if (ps.Length == 1 && ps[0].ParameterType == typeof(VertexHelper)) { method = m; break; }
-                    }
-                }
-                if (method != null)
-                {
-                    method.Invoke(waveGraphic, new object[] { helper });
-                    Debug.Log($"[M2Shot] wave vertices={helper.currentVertCount}");
-                }
+                waveFx = waveGrid.gameObject.AddComponent<M2WaveformFx>();
+                if (waveFx.GetComponent<CanvasRenderer>() == null) extraRenderer = waveFx.gameObject.AddComponent<CanvasRenderer>(); // Editor 非 Play 下 RequireComponent 不自动添加
+                waveFx.SetDistanceMm(150f); // 初始 150mm 短波（SetAllDirty）
             }
+            if (waveAreaRt != null) { waveAreaRt.sizeDelta = new Vector2(460f, 345f); var ap = waveAreaRt.anchoredPosition; ap.y = 172.5f; waveAreaRt.anchoredPosition = ap; } // 模拟 Flow.Awake 窗口 4:3 保下缘贴底
 
             // Editor 未播放时数字人 RawImage 无视频帧（LumaKey 材质下显示为白块）：
             // 截图期间临时禁用该 Graphic，finally 中恢复；不替换组件、素材或保存场景。
@@ -109,6 +103,21 @@ namespace M2.EditorTools
 
             try
             {
+                if (waveFx != null)
+                {
+                    waveFx.Rebuild(CanvasUpdate.PreRender); // 非播放模式显式上传 mesh，保证 Canvas 渲染新波形
+                    var helper = new VertexHelper();
+                    System.Reflection.MethodInfo method = null;
+                    foreach (var m in waveFx.GetType().GetMethods(
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance))
+                    {
+                        var ps = m.GetParameters();
+                        if (m.Name == "OnPopulateMesh" && ps.Length == 1 && ps[0].ParameterType == typeof(VertexHelper)) { method = m; break; }
+                    }
+                    method?.Invoke(waveFx, new object[] { helper });
+                    Debug.Log($"[M2Shot] wave vertices={helper.currentVertCount}");
+                    Debug.Log($"[M2Shot] waveFx canvas={(waveFx.canvas != null ? waveFx.canvas.name : "NULL")} cr={(waveFx.canvasRenderer != null ? "yes" : "no")} rect={waveFx.rectTransform.rect}");
+                }
                 foreach (var t in Targets)
                 {
                     var widthScale = t.w / scaler.referenceResolution.x;
@@ -143,6 +152,10 @@ namespace M2.EditorTools
             }
             finally
             {
+                if (waveFx != null) UnityEngine.Object.DestroyImmediate(waveFx);
+                if (extraRenderer != null) UnityEngine.Object.DestroyImmediate(extraRenderer);
+                if (waveGraphic != null) waveGraphic.enabled = savedWaveEnabled;
+                if (waveAreaRt != null) { waveAreaRt.sizeDelta = savedWaveAreaSize; waveAreaRt.anchoredPosition = savedWaveAreaPos; }
                 if (stageRaw != null) stageRaw.enabled = savedRawEnabled;
                 if (rulerRt != null)
                 {
