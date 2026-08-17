@@ -1,0 +1,8 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/unity/low-code.md", "reason": "冻结Scene规则与M2波形/射线/测量合同"}
+{"file": ".trellis/spec/unity/module-flow-contract.md", "reason": "M2流程合同，M3复用清单"}
+{"file": ".trellis/spec/unity/ugui-module-template.md", "reason": "M3 UGUI模板与冻结约束"}
+{"file": "Assets/Scripts/M2WaveformFx.cs", "reason": "复用的M2波形绘制组件"}
+{"file": "Assets/Scripts/M3FlowController.cs", "reason": "当前M3流程状态机"}
+{"file": "Assets/Scripts/M3ProbeDrag.cs", "reason": "当前M3探头/射线几何"}
+{"file": "Assets/Scripts/M3RulerDrag.cs", "reason": "当前M3尺子/测量逻辑"}

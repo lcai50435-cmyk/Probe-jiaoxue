@@ -133,6 +133,26 @@ namespace M2
             cache = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0f, .5f), 100f);
             return cache;
         }
+        /// <summary>竖椭圆 Sprite（长轴垂直，实心 + 柔和边缘）：钢轨红椭圆（伤损）变橙的检出标记（老板 2026-08-16 定稿：半透明橙、竖向贴合红椭圆）。
+        /// 颜色可带 alpha（半透明橙 ≈ (1, .55, .1, .45)）。</summary>
+        public static Sprite GetEllipseSprite(Color color, ref Sprite cache)
+        {
+            if (cache != null) return cache;
+            const int w = 32, h = 64; var tex = new Texture2D(w, h, TextureFormat.RGBA32, false); // 竖椭圆：宽 32 高 64
+            var cx = (w - 1) * .5f; var cy = (h - 1) * .5f;
+            for (var y = 0; y < h; y++)
+            {
+                for (var x = 0; x < w; x++)
+                {
+                    var d = Mathf.Sqrt(Mathf.Pow((x - cx) / (w * .5f), 2f) + Mathf.Pow((y - cy) / (h * .5f), 2f));
+                    var a = Mathf.Clamp01((1f - d) * 3f) * color.a; // 边缘柔和 + 外部半透明
+                    tex.SetPixel(x, y, new Color(color.r, color.g, color.b, a));
+                }
+            }
+            tex.Apply();
+            cache = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(.5f, .5f), 100f);
+            return cache;
+        }
         private void ApplyAngleVisual(float degrees)
         {
             if (probeVisual == null) return;

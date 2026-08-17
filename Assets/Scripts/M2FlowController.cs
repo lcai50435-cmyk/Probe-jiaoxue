@@ -28,6 +28,7 @@ namespace M2
         public bool CouplantApplied, Detected, Measured, PerspectiveOn, AngleVerifiedByRuler, RulerDocked;
         private bool _applying; private float _timeScaleBeforeDialog = 1f;
         private TMP_Text _bubbleText;
+        private Image _damageMarker; private Sprite _damageMarkerSprite; // 伤损橙标记（运行时椭圆，检出时显示）
         private static readonly string[] DefaultHints = { "请先涂抹耦合剂", "放置探头，用定位尺把偏角校到 10°", "保持 10° 向前移动探头至入射点距红色损伤 110mm", "0mm 对准探头入射点，110mm 对准红色损伤", "轨头顶面探测完成" };
         private static readonly string[] StageNames = { "涂抹耦合剂", "探头定位与偏角", "移动探测", "尺子测距", "完成" };
         private void Awake()
@@ -78,8 +79,31 @@ namespace M2
             if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip);
             if (nextButton != null) nextButton.gameObject.SetActive(false); // 老板定稿：检出即测距，无"下一步"门控（与 M3 一致）
             rulerDrag?.ShowMeasure(); // 直接解锁尺子，玩家可拖 0→110 双点测量
+            ShowDamageMarker(); // 老板 2026-08-16 定稿：射线保持绿色，钢轨红椭圆（伤损）变橙
             Go(Stage.Measuring);
             idleHelp?.ResetIdle();
+        }
+        /// <summary>检出反馈：钢轨红椭圆（伤损）变橙色——竖椭圆、半透明橙、对齐伤损中心（老板 2026-08-16 定稿）。</summary>
+        private void ShowDamageMarker()
+        {
+            var probe = probeDrag; if (probe == null || probe.railViewport == null) return;
+            if (_damageMarker == null)
+            {
+                var go = new GameObject("~M2DamageMarker", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.hideFlags = HideFlags.DontSave;
+                go.transform.SetParent(probe.railViewport, false);
+                var rt = (RectTransform)go.transform;
+                rt.anchorMin = rt.anchorMax = probe.railViewport.pivot; rt.pivot = new Vector2(.5f, .5f);
+                rt.sizeDelta = new Vector2(16f, 36f); // 竖椭圆（贴合红椭圆竖向形状）
+                _damageMarker = go.GetComponent<Image>();
+                _damageMarker.raycastTarget = false;
+            }
+            _damageMarker.sprite = M2ProbeDrag.GetEllipseSprite(new Color(1f, .55f, .1f, .45f), ref _damageMarkerSprite); // 半透明橙
+            _damageMarker.color = Color.white;
+            var rt2 = (RectTransform)_damageMarker.transform;
+            rt2.localScale = Vector3.one;
+            rt2.anchoredPosition = probe.DamagePointInRail; // 对齐伤损中心
+            _damageMarker.gameObject.SetActive(true);
         }
         public void NotifyMeasured()
         {
@@ -115,6 +139,7 @@ namespace M2
             CouplantApplied = Detected = Measured = AngleVerifiedByRuler = RulerDocked = _applying = false; StopAllCoroutines();
             couplantFx?.Reset();
             if (couplantMask != null) couplantMask.SetActive(false); if (detectionBanner != null) detectionBanner.SetActive(false); if (measurementBubble != null) measurementBubble.SetActive(false);
+            if (_damageMarker != null) _damageMarker.gameObject.SetActive(false);
             if (nextButton != null) nextButton.gameObject.SetActive(false);
             if (applyButton != null) applyButton.interactable = true; if (applyButtonText != null) applyButtonText.text = "涂抹耦合剂";
             probeDrag?.ResetTool(); rulerDrag?.ResetTool(); waveformFx?.ResetWave(150f); idleHelp?.ResetAll(); ApplyView(false); SetDialog(false); Go(Stage.Couplant);
