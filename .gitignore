@@ -110,3 +110,10 @@ InitTestScene*.unity*
 
 # 本地备份目录（不入库）
 /_backup/
+
+# M4 临时 PPT 目录（不入库）
+/.tmp_ppt_m4/
+
+# Unity 崩溃恢复目录（不入库）
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta
