@@ -944,6 +944,7 @@ MonoBehaviour:
   targetAngle: 13
   targetDistance: 120
   peakTolerance: 1
+  waveformSpeed: 2
   stepHints:
   - "\u653E\u7F6E\u63A2\u5934\u5E76\u8C03\u6574\u504F\u89D2\u81F3\u5411\u4E0B 13\xB0"
   - "\u5411\u524D\u79FB\u52A8\u63A2\u5934\uFF08150\u2192100mm\uFF09"
@@ -5112,14 +5113,14 @@ MonoBehaviour:
   rulerImage: {fileID: 463674090}
   measureSize: {x: 420, y: 91}
   positioningStart: {x: 0.30296475, y: 0.662013}
-  measureStartLocal: {x: 0.42028847, y: 0.7038961}
+  measureStartLocal: {x: 0.4213, y: 0.7011}
   zeroUv: {x: 0.005, y: 0.038}
   ruler120Uv: {x: 0.807, y: 0.038}
   slotUv: {x: 0.005, y: 0.136}
   snapTolerance: 24
   positioningAngle: 174.35
   positionedAngleDeg: 0
-  measureAngleDeg: -12.7
+  measureAngleDeg: -13.42
   angleToleranceDeg: 6
   pointTolerancePx: 24
   measureProjectTolerancePx: 30
