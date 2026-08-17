@@ -39,6 +39,14 @@ namespace M2
             if (completionPanel != null && enterNextButton != null && enterNextButton.transform.parent != completionPanel.transform) enterNextButton.transform.SetParent(completionPanel.transform, false);
             SwapRailSprites(); ApplyView(false);
             waveformFx?.SetDistanceMm(150f); UpdateUi(); // 波形窗口已 Scene 直做（4:3/刻度/点状网格/序列化挂载）
+            if (waveformFx != null)
+            {
+                // 老板 2026-08-16：M2 参照 M3 制作波纹移动——初态即有 150mm 短波伤损波；
+                // 伤损波 150mm 短波出现 → 115mm 最高 → 110mm 停止；最高时与始波同高（peakStrength=startPeakHeight）。
+                waveformFx.appearMm = 150f; waveformFx.peakMm = 115f; waveformFx.stopMm = 110f; // M2 合同（与 Scene 序列化一致，防御覆盖）
+                waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度（与 M3 同款）
+                waveformFx.SetDistanceMm(150f);
+            }
             _bubbleText = measurementBubble != null ? measurementBubble.GetComponentInChildren<TMP_Text>(true) : null;
             if (couplantMask != null && couplantOverlay != null)
             {

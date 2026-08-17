@@ -31,7 +31,7 @@ namespace M2
         public bool OutOfBounds { get; private set; } // Play 实测：任一绘制顶点超出窗口 rect（烟测断言用）
         private float _strength = .08f, _peakU = .8f;
 
-        protected override void Awake() { raycastTarget = false; SetDistanceMm(160f); }
+        protected override void Awake() { raycastTarget = false; SetDistanceMm(appearMm); } // 初态=appear 处短波（M2 150 / M3 160，跟随 Scene 序列化参数）
 
         // 距离联动：>160 无伤损波；160→123 短波长高；123→120 保持最高左移；<120 检出锁定
         public void SetDistanceMm(float mm)

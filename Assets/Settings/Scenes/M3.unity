@@ -3196,7 +3196,7 @@ MonoBehaviour:
   peakMm: 123
   stopMm: 120
   startStrength: 0.08
-  peakStrength: 0.78
+  peakStrength: 0.85
   pulseWidth: 0.075
   startPeakHeight: 0.85
   startColor: {r: 0.35, g: 0.95, b: 0.5, a: 1}

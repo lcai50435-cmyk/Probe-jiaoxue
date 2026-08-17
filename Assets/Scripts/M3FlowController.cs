@@ -23,6 +23,8 @@ namespace M3
         public AudioClip beepClip, correctClip;
         public M3IdleHelp idleHelp;
         public float introDuration = 2f, targetAngle = 13f, targetDistance = 120f, peakTolerance = 1f;
+        /// <summary>伤损波移动速度倍率：2 = 探头移动 1mm 伤损波在波形 X 轴移动 2mm（老板 2026-08-16 定稿，可调）。</summary>
+        public float waveformSpeed = 2f;
         public string[] stepHints = { "放置探头并调整偏角至向下 13°", "向前移动探头（55→40mm）", "拖动尺子：0 刻度对齐探头入射点，120mm 对齐伤损" };
         public UnityEvent onCompleted;
         public Stage CurrentStage { get; private set; } = Stage.Positioning;
@@ -52,8 +54,10 @@ namespace M3
             if (waveformFx != null)
             {
                 waveformFx.scanMinMm = 0f; waveformFx.scanMaxMm = 200f;
-                // 老板 2026-08-16 最终定稿：伤损波 160mm 短波出现 → 122-123mm 最高 → 120mm 停止；初态即 160mm 短波小波形，扫描平移时随距离变化。
+                // 老板 2026-08-16 最终定稿：伤损波 160mm 短波出现 → 122-123mm 最高 → 120mm 停止；
+                // 伤损波最高时与始波同高（peakStrength = startPeakHeight）；初态即 160mm 短波小波形，扫描平移时随距离变化。
                 waveformFx.appearMm = 160f; waveformFx.peakMm = 123f; waveformFx.stopMm = 120f;
+                waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度
                 waveformFx.SetDistanceMm(160f);
                 foreach (Transform child in waveformFx.transform) child.gameObject.SetActive(false);
             }
@@ -97,10 +101,12 @@ namespace M3
         public void NotifyDistance(float mm)
         {
             // 老板 2026-08-16 定稿：波形只在扫描平移阶段变化（放置/校角阶段保持初态）；
-            // 波形 mm 与扫描 mm 解耦——扫描起点对应波形 160mm 短波、扫描终点对应 120mm 停止（不触碰扫描/探头/尺子 Scene 值）。
+            // 波形 mm 与扫描 mm 解耦——扫描起点对应波形 160mm 短波、扫描终点对应 120mm 停止；
+            // 伤损波移动速度 = waveformSpeed 倍于探头移动（不触碰扫描/探头/尺子 Scene 值）。
             if (CurrentStage == Stage.Scanning && probeDrag != null && waveformFx != null)
             {
-                var wmm = Mathf.Lerp(160f, 120f, Mathf.InverseLerp(probeDrag.scanStartMm, probeDrag.scanEndMm, mm));
+                var t = Mathf.InverseLerp(probeDrag.scanStartMm, probeDrag.scanEndMm, mm) * waveformSpeed;
+                var wmm = Mathf.Lerp(160f, 120f, Mathf.Clamp01(t));
                 waveformFx.SetDistanceMm(wmm);
             }
             // 检出 = 扫描中 && 角度正确 && 射线末端实际照射到伤损点（末端照到伤损才触发蜂鸣）。
