@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/unity/low-code.md", "reason": "M2 脚本参数化需遵守冻结 Scene 与低代码边界"}
+{"file": ".trellis/spec/unity/module-flow-contract.md", "reason": "M2 流程合同，复用尺子/射线/几何教训"}
+{"file": ".trellis/spec/unity/ugui-module-template.md", "reason": "M4 页面骨架与 Setup/验收合同"}
+{"file": ".trellis/tasks/08-16-m4-ppt-flow-align/research/ppt-m4-text.md", "reason": "PPT 文字提取（小文件便于注入）"}

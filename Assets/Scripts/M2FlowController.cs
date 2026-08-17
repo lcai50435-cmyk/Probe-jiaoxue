@@ -24,6 +24,8 @@ namespace M2
         public M2IdleHelp idleHelp;
         public float targetAngle = 10f, targetDistance = 110f, distanceToleranceMm = 2f;
         public UnityEvent onCompleted;
+        [Tooltip("点击下一模块加载的场景名（Inspector 可配置；空则不跳转，保持占位）")]
+        public string nextSceneName = "M3"; // M2 通关 → M3（老板 2026-08-16）
         public Stage CurrentStage { get; private set; } = Stage.Couplant;
         public bool CouplantApplied, Detected, Measured, PerspectiveOn, AngleVerifiedByRuler, RulerDocked;
         private bool _applying; private float _timeScaleBeforeDialog = 1f;
@@ -121,7 +123,12 @@ namespace M2
             Measured = true; // 老板 2026-08-16：M2 通过后不显示“测量完成”提示气泡（measurementBubble 不再激活）
             if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); Go(Stage.Completed);
         }
-        public void EnterNextModule() { rulerDrag?.ResetTool(); onCompleted?.Invoke(); }
+        public void EnterNextModule()
+        {
+            rulerDrag?.ResetTool();
+            onCompleted?.Invoke();
+            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // 老板 2026-08-16：M2 通关 → 进入 M3
+        }
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);
         private void SetDialog(bool visible) { var modal = transform.Find("ModalLayer")?.gameObject; var wasOpen = modal != null && modal.activeSelf; if (visible && !wasOpen) { _timeScaleBeforeDialog = Time.timeScale; Time.timeScale = 0f; } else if (!visible && wasOpen) Time.timeScale = _timeScaleBeforeDialog; if (modal != null) modal.SetActive(visible); idleHelp?.SetPaused(visible); }
@@ -167,7 +174,7 @@ namespace M2
             foreach (var panel in stepPanels) if (panel != null) panel.SetActive(i < stepPanels.Length && panel == stepPanels[i]);
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done); if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
-            if (done && completionText != null) completionText.text = onCompleted != null && onCompleted.GetPersistentEventCount() > 0 ? "轨头顶面探测完成" : "下一模块待接入";
+            if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "轨头顶面探测完成" : "下一模块待接入";
         }
     }
 }

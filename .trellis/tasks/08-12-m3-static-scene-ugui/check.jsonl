@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"检查 Setup 幂等、Scene 结构来源、中文字体、无 runtime Assets 路径加载及无非持久 Editor 委托"}
+{"file":".trellis/tasks/08-12-m3-static-scene-ugui/prd.md","reason":"逐项核对静态里程碑范围和三视口验收标准"}
+{"file":".trellis/tasks/08-12-m3-static-scene-ugui/design.md","reason":"核对层级、1920 基准布局、静态显隐和 M1/M2 隔离"}
+{"file":".trellis/tasks/08-12-m3-readiness-audit/audit.md","reason":"复核素材判定、13°/120mm 文案与最终视觉阻塞项标注"}

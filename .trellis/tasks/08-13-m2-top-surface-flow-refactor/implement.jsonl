@@ -1,0 +1,3 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"约束 M2 冻结 Scene、低代码优先、runtime 150 行、运行时事件绑定和 QA 暂停合同"}
+{"file":".trellis/spec/unity/ugui-module-template.md","reason":"约束冻结 M2 视觉、工具 Home/工作态、波形和 Play Mode 验收合同"}
+{"file":".trellis/tasks/08-13-m2-top-surface-flow-refactor/research/pdf-and-code-audit.md","reason":"提供 PDF 流程、老板最新测量方向、现有代码差距与可复用节点证据"}

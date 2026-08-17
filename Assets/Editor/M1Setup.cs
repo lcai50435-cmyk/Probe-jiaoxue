@@ -31,6 +31,9 @@ namespace M1.EditorTools
         private const string IntroDimName = "半黑遮罩";
         private const string IntroVideoName = "引导视频";
         private const string IntroSkipName = "跳过引导";
+        // 引导期间需要暂停的常驻数字人视频（VideoPlayer 不受 timeScale 影响）
+        private const string StageName = "DigitalHumanStage";
+        private const string FullBodyName = "FullBodyView";
         private const string IntroBasePath =
             "Assets/DigitalHuman/A-04 引导动画/引导动画-1/引导动画-1（有音轨版）/引导动画-1（有音轨版）";
         private const float IntroDimAlpha = 0.8f;          // 半黑遮罩黑度（与视频纯黑底视觉融合）
@@ -94,6 +97,8 @@ namespace M1.EditorTools
             comp.m2ItemsPath = "白板背景/M2物品";
             comp.correctProbeName = "K2.5";
             comp.startButtonPath = "开始探测";
+            // M1→M2 串联：开始探测默认加载 M2（幂等规范化；Inspector 可改，空则不跳转）
+            comp.nextSceneName = "M2";
             comp.probeIdleTimeout = 20f;
             comp.textM2Initial = "请选择探头";
             comp.textProbeWrong = "请选择K2.5探头";
@@ -281,7 +286,17 @@ namespace M1.EditorTools
                 // 幂等路径：修复历史生成的 RectTransform（早期版本未拉伸全屏，导致引导只显示 100x100），
                 // 并只补全缺失的 VideoClip / 引用，不重建
                 StretchFullScreen(root.GetComponent<RectTransform>());
+                // 自愈：引导遮罩必须是 Overlay + sortingOrder 100，才能盖过主画板内所有 UI（含数字人舞台）
+                var selfCanvas = root.GetComponent<Canvas>();
+                if (selfCanvas.renderMode != RenderMode.ScreenSpaceOverlay || selfCanvas.sortingOrder != 100)
+                {
+                    selfCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    selfCanvas.sortingOrder = 100;
+                    EditorUtility.SetDirty(root);
+                    Debug.Log("[M1Setup] 引导遮罩 Canvas 已修复为 Overlay/sortingOrder 100（盖过数字人舞台）。");
+                }
                 var m1 = root.GetComponent<M1IntroVideo>();
+                InjectIntroPause(m1, board);
                 var player = FindIncludingInactive(root, IntroVideoName);
                 var vp = player != null ? player.GetComponent<VideoPlayer>() : null;
                 if (clip != null && vp != null && vp.clip == null) vp.clip = clip;
@@ -298,7 +313,9 @@ namespace M1.EditorTools
             var canvasGo = new GameObject(IntroCanvasName, typeof(Canvas), typeof(GraphicRaycaster));
             canvasGo.transform.SetParent(board.transform, false);
             StretchFullScreen(canvasGo.GetComponent<RectTransform>()); // 关键：嵌套 Canvas 必须全屏拉伸，否则内容只有 100x100
-            canvasGo.GetComponent<Canvas>().sortingOrder = 100;
+            var introCanvas = canvasGo.GetComponent<Canvas>();
+            introCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            introCanvas.sortingOrder = 100;
 
             // --- 半黑遮罩：全屏 Image，挡点击（游戏 UI 不可交互），点击=跳过（非首次）---
             var dim = new GameObject(IntroDimName, typeof(RectTransform), typeof(CanvasRenderer),
@@ -369,6 +386,7 @@ namespace M1.EditorTools
             intro.player = vp2;
             intro.videoImage = raw;
             intro.skipButton = sBtn;
+            InjectIntroPause(intro, board);
             dim.GetComponent<Button>().onClick.AddListener(intro.Skip);
             sBtn.onClick.AddListener(intro.Skip);
             EditorUtility.SetDirty(canvasGo);
@@ -378,7 +396,25 @@ namespace M1.EditorTools
             return "已创建";
         }
 
-        /// <summary>
+        /// <summary>注入引导期间需要暂停的视频（常驻数字人待机）：仅当字段为空时赋值，不覆盖用户配置。</summary>
+        private static void InjectIntroPause(M1IntroVideo intro, GameObject board)
+        {
+            if (intro == null) return;
+            if (intro.pauseWhilePlaying != null && intro.pauseWhilePlaying.Length > 0 && intro.pauseWhilePlaying[0] != null)
+                return; // 已有配置，保留
+            var dh = FindDeep(board.transform, StageName + "/" + FullBodyName);
+            var dhVp = dh != null ? dh.GetComponent<VideoPlayer>() : null;
+            if (dhVp == null)
+            {
+                Debug.LogWarning("[M1Setup] 未找到常驻数字人视频（" + StageName + "/" + FullBodyName + "），" +
+                                 "引导期间数字人将不会自动暂停（可稍后重跑 Setup 补全）。");
+                return;
+            }
+            intro.pauseWhilePlaying = new[] { dhVp };
+            EditorUtility.SetDirty(intro);
+            Debug.Log("[M1Setup] 引导期间将暂停常驻数字人视频：" + dhVp.gameObject.name);
+        }
+
         /// 加载/创建黑底抠像材质（UI/LumaKey）。幂等：材质资产已存在则直接加载。
         /// </summary>
         private static Material EnsureLumaKeyMaterial()

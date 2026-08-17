@@ -1,0 +1,29 @@
+{
+  "id": "m4-module-delivery",
+  "name": "m4-module-delivery",
+  "title": "M4 轨腰探测模块交付",
+  "description": "先完成 M4 静态 Scene 与 UGUI 线框并冻结视觉基线，再基于真实节点编写 M4 运行时实现规划",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "lcai",
+  "assignee": "lcai",
+  "createdAt": "2026-08-13",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-13-m4-static-scene-ugui",
+    "08-13-m4-runtime-planning"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

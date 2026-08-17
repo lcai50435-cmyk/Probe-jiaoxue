@@ -1,0 +1,5 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"M3 Scene 结构必须由幂等 Setup 管理，禁止复制 runtime 逻辑，字体与事件绑定遵循 Unity 低代码契约"}
+{"file":".trellis/spec/unity/video-intro.md","reason":"静态数字人舞台需遵守全身预览、层级与一个节点一个 Graphic 的视频 UI 预留契约"}
+{"file":".trellis/tasks/08-12-m3-readiness-audit/prd.md","reason":"M3 业务目标、13°/120mm 参数和素材就绪结论"}
+{"file":".trellis/tasks/08-12-m3-readiness-audit/audit.md","reason":"正视钢轨、探头、尺子和数字人素材可用性证据及文档冲突裁决"}
+{"file":".trellis/tasks/08-12-m3-readiness-audit/design.md","reason":"独立 M3 Scene 的 UGUI 层级、尺寸与遮挡顺序基线"}

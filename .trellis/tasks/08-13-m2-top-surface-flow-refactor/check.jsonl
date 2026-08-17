@@ -1,0 +1,3 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"检查冻结 Scene 未写回、低代码边界、runtime 行数、事件与暂停行为"}
+{"file":".trellis/spec/unity/ugui-module-template.md","reason":"检查 M2 视觉无回归、尺子双状态、三视口与 Play Mode 验收"}
+{"file":".trellis/tasks/08-13-m2-top-surface-flow-refactor/research/pdf-and-code-audit.md","reason":"逐项核对定位尺校角、10°保持、检测束命中和 0/110 双点测量证据"}

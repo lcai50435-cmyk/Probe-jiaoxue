@@ -1,0 +1,28 @@
+{
+  "id": "m2-top-surface-flow-refactor",
+  "name": "m2-top-surface-flow-refactor",
+  "title": "M2 轨头顶面探测流程重构",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lcai",
+  "assignee": "lcai",
+  "createdAt": "2026-08-13",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "description": "按M2详细流程重构尺子校角、10度前移检测束命中与0到110mm双点测量，保留Slider并遵守冻结Scene边界"
+  }
+}

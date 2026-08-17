@@ -31,6 +31,12 @@ namespace M1
         [Tooltip("PlayerPrefs 首次进入标记 key")]
         public string seenPrefsKey = "M1_Intro_Seen";
 
+        [Tooltip("引导播放期间需要一并暂停的视频（如常驻数字人待机，VideoPlayer 不受 timeScale 影响），结束/跳过时恢复")]
+        public VideoPlayer[] pauseWhilePlaying;
+
+        [Tooltip("运行时兜底：pauseWhilePlaying 未配置时按此路径自动发现常驻数字人视频（Setup 注入后此项失效；M2 无此路径自动跳过）")]
+        public string digitalHumanPath = "画板/DigitalHumanStage/FullBodyView";
+
         [Tooltip("预解码超时兜底（秒）：超过仍未准备好则直接播放")]
         public float prepareTimeout = 5f;
 
@@ -41,6 +47,22 @@ namespace M1
 
         private void Awake()
         {
+            // 运行时自愈：引导遮罩必须 Overlay + sortingOrder 100 才能盖过主画板内所有 UI（含数字人舞台）；
+            // 防场景被误存为 WorldSpace/sortingOrder 0（此时 effective=0 与画板同层，Stage 按兄弟顺序浮于遮罩之上）
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null && (canvas.renderMode != RenderMode.ScreenSpaceOverlay || canvas.sortingOrder != 100))
+            {
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 100;
+            }
+            // 运行时兜底：Setup 未注入暂停列表时，按路径自动发现常驻数字人视频（防引导期间数字人继续播放）
+            if ((pauseWhilePlaying == null || pauseWhilePlaying.Length == 0) && !string.IsNullOrEmpty(digitalHumanPath))
+            {
+                var dh = GameObject.Find(digitalHumanPath);
+                var vp = dh != null ? dh.GetComponent<VideoPlayer>() : null;
+                if (vp != null) pauseWhilePlaying = new[] { vp };
+            }
+
             _firstTime = PlayerPrefs.GetInt(seenPrefsKey, 0) == 0;
             var clip = player != null ? player.clip : null;
             if (clip == null)
@@ -60,6 +82,14 @@ namespace M1
             Time.timeScale = 0f;
             player.Prepare();
             StartCoroutine(PrepareTimeout());
+        }
+
+        /// <summary>引导播放期间强制冻结附带视频：VideoPlayer 不受 timeScale=0 影响，Presenter 可能在 Start 后重新播放，故每帧保持暂停。</summary>
+        private void Update()
+        {
+            if (_finished || pauseWhilePlaying == null) return;
+            foreach (var p in pauseWhilePlaying)
+                if (p != null && p.isPlaying) p.Pause();
         }
 
         private void Start()
@@ -114,6 +144,10 @@ namespace M1
         private void FinishIntro()
         {
             player.Stop();
+            // 恢复引导期间被冻结的视频（数字人等）：从暂停位置继续播放
+            if (pauseWhilePlaying != null)
+                foreach (var p in pauseWhilePlaying)
+                    if (p != null && p.isPaused) p.Play();
             overlay.SetActive(false);
             Time.timeScale = 1f; // 恢复游戏
         }
