@@ -27,6 +27,14 @@
   新模块只换 VideoClip；调参走材质 Inspector）。H.264 `yuv420p` 黑底视频无 Alpha，仍需 LumaKey；视频 UI 节点只放一个 Graphic，点击由 RawImage 自身或独立子节点承载。常驻数字人（小尺寸）用独立 LumaKey 材质资产收窄 KeySmooth + RT 开 mipmap（关闭 autoGenerateMips 后在 VideoPlayer.frameReady 中显式 GenerateMips），不碰开场引导材质。详见 `.trellis/spec/unity/video-intro.md`。
 - **问答面板打开即全局暂停**（`M1QAPanel.pauseGameOnOpen` 默认开）：`Time.timeScale=0` 含模块计时/拖拽/动画，关闭时恢复打开前值；问答链路组件必须走 unscaled 计时（长按/滑入/逐字/请求/视频）。详见 `.trellis/spec/unity/low-code.md` 8.1。
 - **探测模块统一采用 M3 验收的 UGUI 基线**：1920x1080/Match0.5，浅灰页面与白色教学面、左上局部工具架、右上全身数字人、右下 460x240 深色波形、左下 364x64 视图分段、底部 176px 浅色操作带；M2 仅做保留业务合同的视觉迁移，M4/M5 只替换模块专属流程/参数/素材，禁止复制其他模块状态机。详见 `.trellis/spec/unity/ugui-module-template.md`。
+- **冻结 Scene 的运行时文案与几何合同**（详见 low-code.md 5.4）：旧文案数组（如 stepHints）用代码默认数组覆盖不写回；尺子 0→110 锚点必须位于同一可见刻度基线并作为唯一 mm 比例（二维欧氏距离）；入射点锚点偏置必须在扫描端点反推补偿，否则欧氏距离合同失效；M1→M2 链路烟测须轮询等待场景加载。
+- **2026-08-14 PPT 四要点**：校角与测量统一尺子尺寸（420×91，ppm≈2.768）；测量尺水平放置（localRotation=0），扫描轨迹线与损伤点同线（scanLineY=damage.y）为前提；波形简化参考「焊筋轮廓波」——深底/网格/橙红基线+尖峰，隐藏 WaveStateText/CurrentDistanceText 等提示词，MeasurementBubble 的 110mm 字样改「测量完成」。
+- **2026-08-14 视觉反馈二轮（探头遮挡/悬空）**：探头发射面锚点 `probeEntryLocal=(0.89,0.04)`（probeFootage 右下楔形），校角发射面卡槽、测量与尺子平行无遮挡；损伤点 `damageUv.y=0.711→0.63`（红椭圆下部/下缘）使扫描线/探头下移贴普通视图钢轨踏面；均为运行时覆盖 Scene 旧值不写回。详见 low-code.md 5.4。
+- **2026-08-15 M2 波形探伤仪屏化（二轮定稿，Scene 直做）**：老板授权直接改 `M2.unity` 波形窗口区域——4:3（460×345，y=172.5）；删 WaveHeader 提示词与旧 M2WaveformGraphic；WaveGrid 全 stretch 挂 `M2WaveformFx`（序列化）；新增横轴 0~200mm/纵轴 0~100 刻度文字；`M2WaveformFx` 必须有 `RequireComponent(CanvasRenderer)`（否则 Play 不渲染）；点状"+"网格 + 常驻绿色始波（脉冲尖峰，不画竖线）+ 底部绿色锯齿噪声线；伤损波同形同色，150mm 短波（8%/X≈75%）→ 115mm 最高（78%/X≈57.5%）→ 110mm（X≈55%）检出锁定；纯状态驱动，暂停天然冻结。`M2WaveformFx` 代码默认值已更新为 160/123/120 供后续新场景，M2 Scene 仍序列化 150/115/110。M3 旧样式零改动。详见 low-code.md 5.4。
+- **2026-08-16 M2 检出视觉反馈**：探测到损伤时报警蜂鸣的同时，射线由绿色变橙色（`M2ProbeDrag.beamDetectedColor` Inspector 可调；独立橙色渐变 Sprite），Reset 恢复绿色；烟测新增橙色纹理断言。详见 low-code.md 5.4。
+- **2026-08-16 M3 按 PPT 对齐**：老板授权同步 M3 Scene/Play；扫描 160→120mm（Bind 运行时覆盖，Scene 旧 120.96 会使一放就检出）、到达 120 检出锁定；波形复用 `M2WaveformFx`（160 短波→123 最高→120 停止）；目标以伤损为主，测距 0/120 双点；射线绿→橙复用 M2；进入时不再播放自动耦合剂 Intro，直接定位避免开场延迟。射线：默认 200mm（Bind 覆盖）前 ~5° 长度不变，仅当射线会碰到/超出**红椭圆（伤损）下边缘**才缩到刚好碰下边缘（`min(默认, drop/sin)` 连续无突变）；**检出=射线末端实际到达/越过伤损**（`BeamLenPx ≥ 沿射线到伤损距离`）。详见 low-code.md 5.4 与 module-flow-contract.md §9。
+- **2026-08-16 M3 拖动按钮样式同步 M2**：老板确认 M3 角度滑块视觉采用 M2 同款——`AngleTrack` 深灰圆角粗条、`Handle` 32×48 细长圆角条且初始左端对齐、`Fill`/`Handle` 圆角 Sprite 与 M2 一致。详见 low-code.md 5.4。
+- **2026-08-16 M2 检出即测距**：M2 与 M3 一致——检出瞬间锁定探头并直接解锁尺子测量，无"下一步"按钮门控（`NextToMeasure` 已删，nextButton 不再激活）；`M2RulerDrag.Awake` 强制测量尺水平放置（measureAngleDeg=0/measureOffset=0，Scene 旧值 9.55/(19,28) 不写回）。尺子工作态 localScale 保持 1，禁止折算 PixelsPerMm（会改变探头初始放置位置）。详见 low-code.md 5.4 与 module-flow-contract.md §10。
 - 细节规范见 `.trellis/spec/unity/`（low-code.md / video-intro.md / ugui-module-template.md；改规范先改它，再同步本摘要）。
 
 <!-- TRELLIS:START -->

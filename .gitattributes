@@ -7,3 +7,7 @@
 # picking either side (task state lives in task.json, not index.md). See
 # .trellis/spec/cli/backend/directory-structure.md for details.
 .trellis/workspace/*/journal-*.md merge=union
+
+# Unity 场景 YAML 对空字符串序列化为 "m_Name: "（带尾随空格），是引擎标准格式，
+# 不视为 whitespace 错误，避免 git diff --check 误报。
+*.unity whitespace=-trailing-space

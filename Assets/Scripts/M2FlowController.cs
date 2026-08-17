@@ -12,12 +12,11 @@ namespace M2
         public M2ProbeDrag probeDrag;
         public M2RulerDrag rulerDrag;
         [System.NonSerialized] public M2CouplantFx couplantFx; // 运行时挂载，防止 Unity 写回冻结 Scene
-        public M2WaveformGraphic waveform;
-        [System.NonSerialized] public M2WaveformFx waveformFx; // 运行时挂载，防止 Unity 写回冻结 Scene
+        public M2WaveformFx waveformFx; // Scene 序列化引用（波形窗口区域已解冻直做）
         public GameObject couplantMask, beamLayer, railPerspective, detectionBanner, completionPanel, measurementBubble;
         public RectTransform couplantOverlay, railBg;
         public Image normalBtnImg, perspectiveBtnImg;
-        public TMP_Text waveStateText, currentDistanceText, instructionText, stepProgressText, applyButtonText, completionText;
+        public TMP_Text instructionText, stepProgressText, applyButtonText, completionText;
         public Button applyButton, enterNextButton, resetButton, nextButton;
         public GameObject[] stepPanels;
         public AudioSource sfx;
@@ -33,21 +32,12 @@ namespace M2
         private static readonly string[] StageNames = { "涂抹耦合剂", "探头定位与偏角", "移动探测", "尺子测距", "完成" };
         private void Awake()
         {
-            Bind(applyButton, ApplyCouplant); Bind(resetButton, ShowResetDialog); Bind(enterNextButton, EnterNextModule); Bind(nextButton, NextToMeasure);
+            Bind(applyButton, ApplyCouplant); Bind(resetButton, ShowResetDialog); Bind(enterNextButton, EnterNextModule);
             Bind(FindButton("ConfirmButton"), ResetAll); Bind(FindButton("CancelButton"), HideResetDialog); Bind(FindButton("NormalButton"), SetNormalView); Bind(FindButton("PerspectiveButton"), SetPerspectiveView);
             rulerDrag?.Bind(this); probeDrag?.Bind(this);
             if (completionPanel != null && enterNextButton != null && enterNextButton.transform.parent != completionPanel.transform) enterNextButton.transform.SetParent(completionPanel.transform, false);
             SwapRailSprites(); ApplyView(false);
-            if (waveform != null) waveform.enabled = false; // 禁用旧 M2WaveformGraphic（M3 节点不受影响）
-            var waveArea = waveform != null ? waveform.transform.parent : null; // WaveGraphic 直接父为 WaveformArea_B
-            var waveGrid = waveArea != null ? waveArea.Find("WaveGrid") : null; // RectTransform-only 节点，无 Graphic 冲突
-            if (waveform != null && waveGrid == null) Debug.LogError("[M2Flow] 未找到 WaveGrid 节点，波形不可用");
-            waveformFx = waveGrid != null ? waveGrid.gameObject.AddComponent<M2WaveformFx>() : null; // 运行时挂载新波形（不写回冻结 Scene）
-            var areaRt = waveArea as RectTransform; // WaveformArea_B
-            if (areaRt != null) { areaRt.sizeDelta = new Vector2(460f, 345f); var ap = areaRt.anchoredPosition; ap.y = 172.5f; areaRt.anchoredPosition = ap; } // 波形窗口 4:3 保下缘贴底
-            waveformFx?.SetDistanceMm(150f); UpdateUi();
-            if (waveStateText != null) waveStateText.gameObject.SetActive(false); // 波形提示词隐藏（2026-08-14 PPT 要求）
-            if (currentDistanceText != null) currentDistanceText.gameObject.SetActive(false);
+            waveformFx?.SetDistanceMm(150f); UpdateUi(); // 波形窗口已 Scene 直做（4:3/刻度/点状网格/序列化挂载）
             _bubbleText = measurementBubble != null ? measurementBubble.GetComponentInChildren<TMP_Text>(true) : null;
             if (couplantMask != null && couplantOverlay != null)
             {
@@ -85,12 +75,12 @@ namespace M2
             if (Detected || CurrentStage != Stage.Scanning) return;
             Detected = true;
             probeDrag?.SetInputLocked(true);
-            if (detectionBanner != null) detectionBanner.SetActive(true);
             if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip);
-            if (nextButton != null) nextButton.gameObject.SetActive(true);
+            if (nextButton != null) nextButton.gameObject.SetActive(false); // 老板定稿：检出即测距，无"下一步"门控（与 M3 一致）
+            rulerDrag?.ShowMeasure(); // 直接解锁尺子，玩家可拖 0→110 双点测量
+            Go(Stage.Measuring);
             idleHelp?.ResetIdle();
         }
-        public void NextToMeasure() { Debug.Log($"[M2Flow] NextToMeasure: Detected={Detected} Stage={CurrentStage}"); if (!Detected || CurrentStage != Stage.Scanning) return; rulerDrag?.ShowMeasure(); Go(Stage.Measuring); }
         public void NotifyMeasured()
         {
             if (Measured) return;

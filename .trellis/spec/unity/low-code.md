@@ -71,12 +71,40 @@
 
 - **旧文案数组不能写回**：冻结 Scene 序列化的 `stepHints`（含“150→100mm”“0 刻度对齐焊缝”）等旧数组只能在冻结前改；运行时组件用代码静态默认数组（`DefaultHints`）覆盖 `instructionText`，Scene 反序列化对缺失字段直接忽略，不报错。
 - **唯一 mm 比例**：尺子 0→110 锚点标定跨度为唯一物理比例，`pixelsPerMm = distance(zero, ruler110) / 110`。两锚点必须位于正式尺同一条可见刻度基线上——M2 换用 `尺子正面.png`（1205×213）底边基线：0mm 左端底尖 `(0.005,0.038)`、110mm 竖刻线 `(0.73,0.038)`、10° 槽尖角 `(0.005,0.136)`，工作态 `measureSize=320×57`、`ppm≈2.109`（110mm 跨度≈232px）。再取 preserveAspect 渲染矩形中的二维欧氏距离；透明区域、字样位置或不同高度点均不是有效测量锚点。
-- **110mm 目标 = 红色损伤（2026-08-14 老板定稿，取代 PPTX「焊缝熔合线」口径）**：测量/检出/检测束目标为透视图中的红色损伤——`俯视角透视.png` 红椭圆，`M2ProbeDrag.CalibrateTrack` 用 `damageUv=(0.4808,0.711)`（底左 UV，实测红椭圆中心）从 `RailPerspective` Rect 换算 RailViewport 本地坐标；WeldLine 节点不再作目标。
+- **110mm 目标 = 红色损伤（2026-08-14 老板定稿，取代 PPTX「焊缝熔合线」口径）**：测量/检出/检测束目标为透视图中的红色损伤——`俯视角透视.png` 红椭圆，`M2ProbeDrag.CalibrateTrack` 用 `damageUv=(0.4808,0.63)`（底左 UV，2026-08-14 老板反馈「探头初始位置太高」后由红椭圆质心 `0.711` 下移至椭圆下部/下缘，视口本地约 `(-24,+93)`，使扫描线/探头下移贴普通视图钢轨踏面；110mm 刻线视觉上仍贴着红椭圆底部）从 `RailPerspective` Rect 换算 RailViewport 本地坐标；WeldLine 节点不再作目标。
+- **探头发射面锚点（2026-08-14 老板反馈「校角/测量探头与尺子遮挡」）**：`probeFootage.png`（2610×906）为「左上电缆 → 右下楔形发射面」结构，发射面底左 UV≈`(0.89,0.04)`（像素验证）；`probeEntryLocal` 必须锚定发射面——`(0.5,0.6)` 旧值使入射点在探头中部，校角时探头主体盖住尺子左端、测量时尺子 0mm 端压探头。改为 `(0.89,0.04)` 后：校角时发射面卡入尺子 10°槽、主体在尺子左侧无遮挡；测量时尺子水平 0mm 端轻触发射面、探头与尺子平行无遮挡；检测束起点（`ProbeEntryWorld`）从发射面视觉位置发出。运行时 `Bind` 覆盖 Scene 旧值不写回。
 - **起始位置与射线跟随角度（2026-08-14 老板定稿）**：探头水平移动——`ScanStart = startLocal - EntryLocal`、`HitPoint = (damage.x - 110*ppm, startLocal.y) - EntryLocal`，入射点始终在钢轨中心线（y=0，`startLocal` 默认 `(-500,0)`），删旧 150mm 起点概念。**射线是直线、从探头发射面（老板图2 红色框框：连接器与主体交界处）垂直射出，跟随探头角度一起旋转**：共享滑条转角 `TiltAngle = (角度/targetAngle)*visualTiltAtTarget`；探头视觉 `probeVisual.localRotation = probeBaseAngleDeg + TiltAngle`、射线 `beamLine.localRotation = beamBaseAngleDeg + TiltAngle`，二者各自带独立基准角。`probeBaseAngleDeg`（探头图片基准角，老板称"初始图像角度偏高"）与 `beamBaseAngleDeg`（射线基准角，用来把射线转到垂直于发射面）均为 Inspector 可调；射线禁止固定朝损伤/朝右。
 - **检出条件**：Scanning 阶段 + 角度 10° 容差 + `|distance(entry, damage)/ppm - 110| ≤ distanceToleranceMm`；检出后探头位置硬锁定（`MoveToScan` 对 `flow.Detected` 直接 return）。
-- **素材替换（运行时 + Scene 序列化双写）**：探头 `probeFootage.png`、钢轨普通 `俯视角.png`/透视 `俯视角透视.png`（railwayTracks_2 v2）、尺子 `尺子正面.png` 复制到 `Assets/Resources/`（Single/Multiple Sprite meta 手工生成）运行时 `Resources.LoadAll` 换图；同时把 M2.unity 序列化 `m_Sprite` 的 guid/fileID 同步改指向新素材，使 Scene 视图与 Game 视图一致。新素材纹理 `maxTextureSize=4096` + `textureCompression=0` 避免大图被降采样/压缩导致模糊。射线参照 `greenLight.png` 程序化生成（锥形收窄 + 端点光晕，`M2ProbeDrag.BeamGradient`）。
+- **检出视觉反馈（2026-08-16 老板确认）**：检出瞬间在报警蜂鸣同时，射线由绿色变为橙色（`M2ProbeDrag.beamDetectedColor` Inspector 可调；橙色使用独立渐变 Sprite，避免对绿色 Sprite 直接 tint 成暗橄榄色），Reset 后恢复绿色。
+- **素材替换（运行时 + Scene 序列化双写）**：探头 `probeFootage.png`、钢轨普通 `俯视角.png`/透视 `俯视角透视.png`（railwayTracks_2 v2）、尺子 `尺子正面.png` 复制到 `Assets/Resources/`（Single/Multiple Sprite meta 手工生成）运行时 `Resources.LoadAll` 换图；同时把 M2.unity 序列化 `m_Sprite` 的 guid/fileID 同步改指向新素材，使 Scene 视图与 Game 视图一致。新素材纹理 `maxTextureSize=4096` + `textureCompression=0` 避免大图被降采样/压缩导致模糊。射线参照 `greenLight.png` 程序化生成（锥形收窄 + 端点光晕，`M2ProbeDrag.GetBeamSprite`）。
 - **夹具式校角合同（2026-08-13 老板定稿，替代早期“吸附即归槽”）**：定位阶段操作链为 放探头(0°) → 拖尺子吸附成夹具（仅校验 10°槽对入射点 + 尺身平行，**不校验角度、吸附后保留现场不归槽**）→ 解锁 Slider → 玩家沿槽调角 → 角度 10° 稳定 0.5s（`M2ProbeDrag.Update` 用 `Time.deltaTime` 累积，QA 暂停不推进）→ 播放正确音效并锁定 10° → 解锁尺子 → 玩家拖回工具架（`CheckRetract` 以 `RulerHome` 位置为靶，容差内自动归槽）→ 撤尺事件触发进入 Scanning 并显示绿色检测束。角度锁与拖拽锁分离：`SetAngleLocked` 只控 Slider interactable，`SetInputLocked` 只控 `_inputLocked`（拖拽）。
 - **M1→M2 链路烟测**：M2 场景在 M1 通关音效播完后才加载（`LoadSceneAfterSfx` 用 `WaitForSecondsRealtime(passClip.length)`），链路烟测必须轮询场景名并设超时，禁止固定等待。
+- **2026-08-14 PPT 四要点（M2 待修改部分.pptx 定稿）**：
+  - **尺子双步骤统一尺寸**：校角（`ShowAngleGuide`）与测量（`ShowMeasure`）统一使用 `measureSize=420x91`；`angleGuideSize` 字段保留但运行时不再使用；`M2RulerDrag.measureSize` 代码默认值即 `420x91`（ppm≈2.768，0→110 跨度≈304.5px）。
+  - **测量尺水平放置**：测量模式 `localRotation = 0`（与探头移动方向/钢轨平行），禁止按 `zero→110` 与 `ProbeEntryPoint→DamagePoint` 向量自动斜定向；前提是**扫描轨迹线与损伤点同线**（`scanLineY = damage.y`，2026-08-14 老板确认），150mm 起点由 `damage - scanDirection*150*ppm` 反算，`startLocal` 不再作为几何距离依据（旧值 `(-500,-18)` 与 damage 欧氏距离 182mm，150mm 合同从未真正成立）。冻结 Scene 旧值 `measureAngleDeg=9.55` / `measureOffset=(19,28)` 会覆盖代码默认 0/zero 导致尺子斜置与 0mm 锚点偏移（烟测「测量尺未水平」「复跑测量失败」失败根因）：`M2RulerDrag.Awake` 运行时覆盖为 `0 / Vector2.zero`（PPT 合同，不写回）。
+  - **波形简化合同**：参考「焊筋轮廓波」仪器屏——深灰底 + 浅黄绿主网格/青次网格 + 橙红波形（平直基线 + 110mm 尖峰，检出后锁峰）；运行时隐藏 `WaveStateText`/`CurrentDistanceText` 并删除 `waveStateText` 写入逻辑，界面不得出现「峰值锁定/目标 110mm/平直基线/112mm/当前距离」提示词；`M2WaveformGraphic.Awake` 强制橙红 `(0.898,0.322,0.2)`（冻结 Scene 旧绿被覆盖，不写回）；`MeasurementBubble` 序列化「110mm」字样运行时改为「测量完成」；`M2WaveformGraphic.peakTargetMm` 目标 110mm，X 轴窗口 150→100，玩法 110mm 检出即锁峰，无峰后下降段。
+  - **波形契约分叉（2026-08-15 二轮定稿，Scene 直做）**：M2 迁移到真实探伤仪屏风格，**2026-08-15 老板授权直接改 `M2.unity` 波形窗口区域**（首轮运行时挂载方案因 `M2WaveformFx` 缺 `RequireComponent(CanvasRenderer)` 导致 Play 下不渲染被否决）：
+    - Scene：`WaveformArea_B` 4:3（sizeDelta 460×345、anchoredPosition.y=172.5 保下缘贴底）；删 `WaveHeader`（提示词节点 WaveStateText/CurrentDistanceText/TargetDistanceText）与 `WaveGraphic`（旧 M2WaveformGraphic）；`WaveGrid` 全 stretch 并序列化挂载 `M2WaveformFx`；新增 `ScaleTexts`（横轴 0.0/40.0/80.0/120.0/160.0/200.0mm 6 个 + 纵轴 0.0/20.0/40.0/60.0/80.0/100.0 6 个 TMP；纵轴 pivot 必须 (0,0.5) 文字在窗口内，pivot (1,0.5) 会被裁）。
+    - 绘制（`M2WaveformFx`，[RequireComponent(CanvasRenderer)] 必须有）：深色底 + **点状"+"网格**（5 等分交叉点画"+"，参考图风格，无连续线）+ 常驻绿色始波（发射脉冲尖峰 X 0~7.5% 宽，不画青绿竖线）+ 底部绿色锯齿噪声基线（固定正弦叠加种子，无闪烁）；伤损波与始波同形同色（共用 `DrawPulse`：陡升 20% + 指数衰减，不振荡；纹波钳制在波形区内），X 轴按 0~200mm 映射（150mm→75%、115mm→57.5%、110mm→55%），`SetDistanceMm` 三区间：>150 无波 / 150→115 短波长高（峰高 8%→78%）/ 115→110 保持最高左移 / <110 检出锁定不再变；纯状态驱动无协程，QA/Modal 暂停时无距离输入天然冻结。
+    - `M2FlowController`：`waveformFx` 为 Scene 序列化引用；`NotifyDistance`/`ResetAll` 走 `waveformFx.SetDistanceMm/ResetWave`；旧 `waveform`（M2WaveformGraphic）字段与 WaveStateText/CurrentDistanceText 字段删除。M3 的 `M2WaveformGraphic` 旧样式与配置零改动。
+    - `M2WaveformFx` 代码默认值已更新为 `appearMm=160 / peakMm=123 / stopMm=120`（后续新场景/新组件默认按此生成）；M2 Scene 仍序列化 150/115/110，M3/M4 在 Scene/Flow 中显式配置。
+  - **烟测断言**：新增「校角/测量同尺寸」「入射点与损伤同线」「测量尺水平」「波形提示词隐藏」「波形橙红」断言；ppm 断言为 2.768/304.5px（420×91 基准）。
+- **2026-08-16 M3 轨头侧面按 PPT 对齐（老板授权 Scene/Play 同步）**：
+  - 流程不再播放自动耦合剂 Intro，进入 M3 直接定位（无 2 秒耦合剂薄膜/开场延迟）；定位→扫描→测距→完成；扫描距离 `160→120mm`，到达 120mm 检出并锁定，不再走到 100mm。
+  - 目标点以伤损为主；测量阶段为尺子 `0→120mm` 双点校验：0 对齐探头入射点，120 对齐伤损。
+  - M3 波形复用 `M2WaveformFx`，参数 `appearMm=160`、`peakMm=123`、`stopMm=120`；初态 160mm 短波，123mm 最高，120mm 锁定。
+  - 射线复用 M2 绿→橙检出反馈；`M2ProbeDrag.GetBeamSprite` 改为 public static 供 M3 复用。
+  - **M3 射线长度/检出合同（2026-08-16 老板三轮定稿）**：
+    - **目标线 = 红椭圆（伤损）下边缘**（正视角透明.png 2292×740 采样红椭圆 y 194/740，rail 局部 (0.5-194/740)×323≈76.8，世界 y≈52.8），不是 red 条上边缘（69=伤损中心线）——用上边缘 drop=34.4 使临界角 2.3° 起就缩、前 4° 变化剧烈。
+    - **射线长度**：`长度 = min(默认, (entryY - 椭圆下边缘Y)/sin(角度))`；默认 `beamLengthZeroMm` **运行时覆盖 200mm**（Scene 旧值 300 会使临界角 2.3° 起缩）→ 临界角 ≈5.2°，**前 ~5° 长度完全不变**，之后平滑缩到 13° 末端精确落在红椭圆下边缘；min 语义天然连续无突变（仅留 sin≤0.001 / drop≤1 防除零）。
+    - **检出 = 射线末端实际到达/越过伤损**（不是方向对准就算）：`BeamHitsDamage` = 伤损在射线前方且横向距离≤束宽，**且 `BeamLenPx(角度) ≥ 入射点到伤损的沿射线距离 - 束宽容差`**——射线没长到伤损就不会蜂鸣。
+    - **扫描起点恢复 160→120mm**：`Bind` 运行时覆盖 `scanStartMm=160`（Scene 旧值 120.96 使探头一放下就在检出位、一拖就蜂鸣）。
+  - M3 Scene 波形区按 M2 定稿同步：460×345、`WaveGrid` 挂 `M2WaveformFx`、新增 `ScaleTexts`、删除旧 WaveHeader/WaveLine/TargetMarker/Scale150/Scale100；尺子换 `尺子正面.png`。
+  - M3 拖动按钮样式同步 M2：`AngleTrack` 改为深灰圆角粗条（300×48、Sprite 10905/Type=Sliced），`Fill` 与 `Handle` 使用同款圆角 Sprite；`Handle` 改为 M2 同款细长圆角条（32×48、锚点 y 0→1、初始 x=0），视觉与 M2 `AngleSlider` 一致。
+- **2026-08-16 M2 检出即测距（老板定稿，与 M3 一致）**：
+  - **检出即测距**：射线照到伤损检出瞬间探头锁定，**直接** `rulerDrag.ShowMeasure() + Go(Measuring)`，玩家可直接拖尺测量——无"下一步"按钮门控；`nextButton` 不再激活且 `NextToMeasure()` 删除，`M2FlowController` 不再绑定 nextButton，ResetAll 仍隐藏该节点。
+  - **测量姿态合同补缺**：`M2RulerDrag.Awake` 运行时强制 `measureAngleDeg=0`、`measureOffset=Vector2.zero`（PPT 合同：测量尺水平放置、0mm 锚点贴入射点；冻结 Scene 旧序列化 9.55/(19,28) 会破坏"测量尺未水平"烟测断言，不写回）。
+  - **警告（2026-08-16 返工教训）**：尺子工作态 `localScale` 一律保持 `Vector3.one`（`EnterWorkMode` 强制），**禁止**为适配 Scene 根缩放（如 0.8）而折算 `PixelsPerMm`——ppm 是探头扫描起点/命中点几何（`damage - mm*ppm`）的唯一依据，ppm 变化会改变探头初始放置位置（老板硬性要求保持不变）。Scene 中 Ruler 根 `localScale` 仅影响工具架（Home）显示；工作态尺寸由 `measureSize` 决定。
 
 ## 6. 目录与模块约定
 

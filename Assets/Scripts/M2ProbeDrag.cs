@@ -123,6 +123,16 @@ namespace M2
             _beamGradient = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(.5f, 0f), 100f);
             return _beamGradient;
         }
+        /// <summary>横向版射线 Sprite：渐变沿长度方向（左亮右光晕），供 M3 入射/反射束复用（2026-08-16 M2 回退后保留的公共工具方法，M3 依赖）。</summary>
+        public static Sprite GetBeamSpriteHorizontal(Color color, ref Sprite cache)
+        {
+            if (cache != null) return cache;
+            const int w = 128, h = 32; var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (var y = 0; y < h; y++) { for (var x = 0; x < w; x++) { var u = x / (float)(w - 1); var half = Mathf.Lerp(6f, 1.5f, u); var endGlow = Mathf.Exp(-Mathf.Pow((u - 1f) / .14f, 2f)); var g = Mathf.Exp(-Mathf.Pow((y - 15.5f) / (half * .6f), 2f)); var a = Mathf.Lerp(.9f, .3f, u) * g + endGlow * .85f; tex.SetPixel(x, y, new Color(Mathf.Min(1f, color.r + .4f * endGlow), color.g, Mathf.Min(1f, color.b + .2f * endGlow), Mathf.Clamp01(a))); } }
+            tex.Apply();
+            cache = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0f, .5f), 100f);
+            return cache;
+        }
         private void ApplyAngleVisual(float degrees)
         {
             if (probeVisual == null) return;

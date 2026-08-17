@@ -10,9 +10,9 @@ namespace M2
         public M2FlowController flow;
         public RectTransform rulerRt, railViewport, weldLineRt, rulerHome;
         public Image rulerImage;
-        public Vector2 measureSize = new Vector2(320f, 57f), angleGuideSize = new Vector2(240f, 42f), measureStartLocal = new Vector2(.5f, .78f);
+        public Vector2 measureSize = new Vector2(320f, 57f), angleGuideSize = new Vector2(240f, 42f), measureStartLocal = new Vector2(.5f, .78f), measureOffset = Vector2.zero;
         public Vector2 zeroUv = new Vector2(.005f, .038f), ruler110Uv = new Vector2(.73f, .038f), slotUv = new Vector2(.005f, .136f);
-        public float angleToleranceDeg = 6f, pointTolerancePx = 24f, retractTolerancePx = 80f;
+        public float angleToleranceDeg = 6f, pointTolerancePx = 24f, retractTolerancePx = 80f, measureAngleDeg = 0f, measureProjectTolerancePx = 30f;
         public event Action OnAngleAligned, OnDistanceAligned, OnAngleRetracted;
         public bool unlocked, aligned;
         public Mode ModeNow { get; private set; } = Mode.Home;
@@ -22,7 +22,11 @@ namespace M2
         private Vector2 _homeAnchorMin, _homeAnchorMax, _homePosition, _homeSize, _homePivot, _bgPos;
         private Vector3 _homeScale, _bgScale;
         private Quaternion _homeRotation;
-        private void Awake() => CacheSceneHome();
+        private void Awake()
+        {
+            CacheSceneHome();
+            measureAngleDeg = 0f; measureOffset = Vector2.zero; // PPT 合同：测量尺水平放置、0mm 锚点贴入射点（冻结 Scene 旧序列化 9.55/(19,28) 不写回）
+        }
         public void Bind(M2FlowController owner)
         {
             flow = owner; CacheSceneHome(); if (rulerImage != null) { var sprites = Resources.LoadAll<Sprite>("尺子正面"); if (sprites != null && sprites.Length > 0) rulerImage.sprite = sprites[0]; }
@@ -55,10 +59,10 @@ namespace M2
             if (rulerRt == null || railViewport == null) return false;
             rulerRt.SetParent(railViewport, false);
             rulerRt.anchorMin = rulerRt.anchorMax = railViewport.pivot;
-            rulerRt.pivot = new Vector2(.5f, .5f); rulerRt.localRotation = Quaternion.identity; rulerRt.localScale = Vector3.one;
+            rulerRt.pivot = new Vector2(.5f, .5f); rulerRt.localRotation = Quaternion.identity; // 尺子大小以 Scene 手工值（0.8）为准，不再强制 1（老板 2026-08-16）
             rulerRt.sizeDelta = size;
             rulerRt.anchoredPosition = new Vector2((measureStartLocal.x - railViewport.pivot.x) * railViewport.rect.width, (measureStartLocal.y - railViewport.pivot.y) * railViewport.rect.height);
-            if (rulerImage != null) { rulerImage.rectTransform.localScale = Vector3.one; rulerImage.rectTransform.anchoredPosition = Vector2.zero; } // 工作态按 Sprite 原比例渲染，锚点与画面一致
+            // bg 同以 Scene 值（scale 0.8 / pos 不变）为准，不覆盖（老板 2026-08-16）
             ComputeAnchors(); rulerRt.gameObject.SetActive(true);
             return true;
         }
@@ -73,7 +77,8 @@ namespace M2
             var size = rulerRt != null && rulerRt.sizeDelta.y > 0f ? rulerRt.sizeDelta : measureSize;
             _zero = AnchorAt(size, zeroUv); _r110 = AnchorAt(size, ruler110Uv); _slot = AnchorAt(size, slotUv);
             var mz = AnchorAt(measureSize, zeroUv); var m110 = AnchorAt(measureSize, ruler110Uv);
-            PixelsPerMm = Vector2.Distance(mz, m110) / 110f;
+            // 尺子视觉缩放（老板定稿 0.8）：ppm 按实际渲染比例折算，保证探头扫描/射线/尺子刻度视觉一致（2026-08-16）
+            PixelsPerMm = Vector2.Distance(mz, m110) / 110f * Mathf.Max(.01f, rulerRt.localScale.x);
         }
         public void OnBeginDrag(PointerEventData eventData) => _dragging = unlocked && !aligned;
         public void OnDrag(PointerEventData eventData)
@@ -81,7 +86,8 @@ namespace M2
             if (!_dragging || rulerRt == null || railViewport == null ||
                 !RectTransformUtility.ScreenPointToLocalPointInRectangle(railViewport, eventData.position, eventData.pressEventCamera, out var local)) return;
             flow?.idleHelp?.ResetIdle();
-            var grab = ModeNow == Mode.AngleGuide ? _slot : _zero; var offset = rulerRt.localRotation * (Vector3)grab;
+            var s = Mathf.Max(.01f, rulerRt.localScale.x); // 尺子视觉缩放（Scene 0.8）：锚点世界偏移 = 局部 × s
+            var grab = ModeNow == Mode.AngleGuide ? _slot : _zero; var offset = rulerRt.localRotation * (Vector3)(grab * s);
             rulerRt.anchoredPosition = local - new Vector2(offset.x, offset.y);
             if (ModeNow == Mode.AngleGuide) { if (flow != null && flow.AngleVerifiedByRuler) { CheckRetract(); return; } CheckAngleGuide(); }
             else CheckMeasure();
@@ -95,7 +101,7 @@ namespace M2
             if (Mathf.Abs(Vector2.SignedAngle(rulerRt.TransformVector(Vector2.right), railViewport.TransformVector(probe.scanDirection))) > angleToleranceDeg) return;
             aligned = true; _dragging = false;
             rulerRt.localRotation = Quaternion.identity;
-            rulerRt.anchoredPosition = probe.ProbeEntryPointInRail - _slot;
+            rulerRt.anchoredPosition = probe.ProbeEntryPointInRail - _slot * Mathf.Max(.01f, rulerRt.localScale.x);
             OnAngleAligned?.Invoke(); // 吸附成夹具，保留现场
         }
         public void CheckMeasure()
@@ -115,9 +121,12 @@ namespace M2
         }
         public void SetPoseMeasure()
         {
-            if (flow?.probeDrag == null || rulerRt == null) return; OrientMeasure(); var zero = rulerRt.localRotation * (Vector3)_zero; rulerRt.anchoredPosition = flow.probeDrag.ProbeEntryPointInRail - new Vector2(zero.x, zero.y);
+            if (flow?.probeDrag == null || rulerRt == null) return; OrientMeasure();
+            var s = Mathf.Max(.01f, rulerRt.localScale.x);
+            var zero = rulerRt.localRotation * (Vector3)(_zero * s);
+            rulerRt.anchoredPosition = flow.probeDrag.ProbeEntryPointInRail - new Vector2(zero.x, zero.y);
         }
-        public void SetPoseAngleGuide() { if (flow?.probeDrag == null || rulerRt == null) return; rulerRt.localRotation = Quaternion.identity; rulerRt.anchoredPosition = flow.probeDrag.ProbeEntryPointInRail - _slot; }
+        public void SetPoseAngleGuide() { if (flow?.probeDrag == null || rulerRt == null) return; rulerRt.localRotation = Quaternion.identity; rulerRt.anchoredPosition = flow.probeDrag.ProbeEntryPointInRail - _slot * Mathf.Max(.01f, rulerRt.localScale.x); }
         public void SetPoseRetract() { if (rulerRt == null || rulerHome == null || railViewport == null) return; rulerRt.anchoredPosition = railViewport.InverseTransformPoint(rulerHome.position); }
         public void CheckRetract() { if (rulerRt == null || rulerHome == null || railViewport == null) return; if (Vector2.Distance(rulerRt.anchoredPosition, railViewport.InverseTransformPoint(rulerHome.position)) > retractTolerancePx) return; ResetTool(); OnAngleRetracted?.Invoke(); }
         private void CacheSceneHome()

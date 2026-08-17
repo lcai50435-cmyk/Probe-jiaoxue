@@ -86,10 +86,32 @@ ol.effectColor = new Color(.1f,.12f,.15f,.6f); ol.effectDistance = new Vector2(2
 | 能力 | 位置 | 复用点 |
 |---|---|---|
 | 运行时素材换图 | `Resources.LoadAll<Sprite>` + `Bind` | 探头/钢轨/尺子换素材 |
-| 程序化射线/阴影贴图 | `BeamGradient()` / 柔边椭圆 | 射线、阴影、光效 |
+| 程序化射线/阴影贴图 | `GetBeamSprite()`（绿色/检出橙色） / 柔边椭圆 | 射线、阴影、光效 |
 | 角度模型 | `probeBaseAngleDeg`/`beamBaseAngleDeg` + `TiltAngle` | 探头+射线同步旋转 |
 | 射线长度插值 | `Lerp(beamLengthZeroMm, hitMm, 角度/10°)` | 随角度变长的射线 |
 | 阴影+描边 | `Shadow`+`Outline` 组件 | 设备与背景区分 |
 | 几何合同 | `startLocal`/`probeEntryLocal`/`damageUv`/`PixelsPerMm` | 起点/入射点/目标点 |
 | 像素级标定 | 对素材 PNG 采样红像素中心 | 标定目标 UV |
 | 冻结 Scene 双写 | runtime LoadAll + 序列化 guid 改 | Scene/Game 视图一致 |
+
+---
+
+## 9. M3 轨头侧面流程合同（2026-08-16）
+
+- 流程：Positioning(13°定位，直接进入，无 Intro/耦合剂) → Scanning(160→120mm 检出锁定) → Measuring(尺子 0/120 双点) → Completed。
+- 目标点：**伤损**（不是焊缝线）。
+- 扫描：`scanStartMm=160`、`scanEndMm=120`；到达 120mm 检出后探头锁定，不再继续向 100mm。
+- 波形：复用 `M2WaveformFx`，`appearMm=160`、`peakMm=123`、`stopMm=120`；初态 160mm 短波，123mm 最高，120mm 锁定。
+- 测量：0 刻度对齐探头入射点，120mm 刻度对齐伤损，完成测量。
+- 检出即测距（2026-08-16 老板追加）：射线照到伤损检出瞬间探头锁定，**直接** `rulerDrag.Show() + Go(Measuring)`，玩家可直接拖尺测量——**无"下一步"按钮门控**（M3 曾用运行时创建的 NextButton 门控，已删除）。
+- 检出无视觉标记（2026-08-16 老板追加）：**不显示**橙色损伤方块（DamageMarker 永久 `SetActive(false)`）与"伤损检出"横幅（DetectionBanner 不激活）；检出反馈仅剩报警蜂鸣 + 射线绿→橙。
+- 射线：正常绿色，检出后橙色（复用 `M2ProbeDrag.GetBeamSprite`）。
+- Scene：波形窗口按 M2 风格同步；尺子使用 `尺子正面.png`；探头起始按 PPT 左侧轨头侧面。
+
+---
+
+## 10. M2 检出即测距合同（2026-08-16）
+
+老板在 M3 验收后要求 M2 同步：**检出即测距，无"下一步"门控**。`NotifyDetected()` 检出瞬间探头锁定 + 报警蜂鸣后**直接** `rulerDrag.ShowMeasure() + Go(Measuring)`；`nextButton` 不再激活，`NextToMeasure()` 已删除（`M2FlowController` 不绑定该按钮）。烟测断言改为：检出后 nextButton 未激活、阶段直接为 Measuring 且尺子解锁。
+
+**返工教训（2026-08-16）**：尺子工作态 `localScale` 必须保持 `Vector3.one`，禁止为适配 Scene 根缩放（0.8）而折算 `PixelsPerMm`——`PixelsPerMm` 是 M2ProbeDrag/M3ProbeDrag 扫描起点/命中点几何（`damage - mm*ppm`）的唯一依据，ppm 变化会改变探头初始放置位置（老板硬性要求不变）。Scene Ruler 根 `localScale` 只影响工具架显示。另：`M2RulerDrag.Awake` 强制 `measureAngleDeg=0`、`measureOffset=zero`（PPT 水平放置合同，Scene 旧值 9.55/(19,28) 不写回）。

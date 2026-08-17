@@ -83,8 +83,8 @@ namespace M2.EditorTools
                 Require(_flow.rulerDrag.rulerImage != null && _flow.rulerDrag.rulerImage.sprite != null, "正式尺 Sprite/引用缺失");
                 var rulerSprites = Resources.LoadAll<Sprite>("尺子正面");
                 Require(rulerSprites != null && rulerSprites.Length > 0 && _flow.rulerDrag.rulerImage.sprite == rulerSprites[0], "正式尺未换成尺子正面素材");
-                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm - 2.883f) < .05f, "尺子 0→110 标定比例错误"); // 待老板确认 Scene 锚点 ruler110Uv=0.76 为最终校准
-                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm * 110f - 317.1f) < 2f, "尺子 0→110 跨度错误");
+                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm - 2.214f) < .05f, "尺子 0→110 标定比例错误"); // ruler110Uv=0.73 × 尺子视觉 0.8（2026-08-16 ppm 按渲染比例折算）
+                Require(Mathf.Abs(_flow.rulerDrag.PixelsPerMm * 110f - 243.5f) < 2f, "尺子 0→110 跨度错误");
                 Require(Mathf.Abs(_flow.rulerDrag.zeroUv.y - _flow.rulerDrag.ruler110Uv.y) < .001f && _flow.rulerDrag.zeroUv.y < .1f, "0/110 锚点未位于同一可见底边基线");
                 var probeImage = _flow.probeDrag.probeVisual != null ? _flow.probeDrag.probeVisual.GetComponent<Image>() : null;
                 var probeSprites = Resources.LoadAll<Sprite>("probeFootage");
@@ -186,10 +186,9 @@ namespace M2.EditorTools
                         Require(Mathf.Abs(Vector2.Distance(entry, damage) - 110f * ppm) < 1f, "110mm 检出间距错误（应距红色损伤）");
                         Require(Vector2.Distance(entry, damage) > 80f, "110mm 时探头入射点与损伤不应重合");
                         Require(Mathf.Abs(entry.y - damage.y) < 1f, "110mm 检出点与损伤未同线");
-                        Require(_flow.waveStateText != null && !_flow.waveStateText.gameObject.activeSelf, "波形状态提示未隐藏（PPT 删提示词）");
-                        Require(_flow.currentDistanceText != null && !_flow.currentDistanceText.gameObject.activeSelf, "波形距离读数未隐藏");
-                        Require(_flow.waveformFx != null && _flow.waveform != null && !_flow.waveform.enabled, "新波形组件未挂载或旧组件未禁用");
-                        var areaRt = _flow.waveform.transform.parent as RectTransform;
+                        Require(UnityEngine.GameObject.Find("WaveStateText") == null && UnityEngine.GameObject.Find("CurrentDistanceText") == null, "波形提示词节点应已从 Scene 删除（Scene 直做）");
+                        Require(_flow.waveformFx != null, "M2WaveformFx 未挂载（Scene 直做）");
+                        var areaRt = _flow.waveformFx.transform.parent as RectTransform;
                         Require(areaRt != null && Mathf.Abs(areaRt.sizeDelta.x - 460f) < 1f && Mathf.Abs(areaRt.sizeDelta.y - 345f) < 1f, "波形窗口未改 4:3（460×345）");
                         Require(areaRt != null && Mathf.Abs(areaRt.anchoredPosition.y - 172.5f) < 1f, "波形窗口下缘未贴屏幕底");
                         var wfx = _flow.waveformFx;
@@ -202,25 +201,27 @@ namespace M2.EditorTools
                         var lockedStrength = wfx.Strength; var lockedPeakU = wfx.PeakU;
                         wfx.SetDistanceMm(100f);
                         Require(wfx.Strength == lockedStrength && wfx.PeakU == lockedPeakU, "检出后波形应锁定不变");
+                        Require(!wfx.OutOfBounds, "波形绘制顶点超出窗口边界（Play 实测）");
                         var beamImg = _flow.probeDrag.beamLine.GetComponentInChildren<Image>();
                         Require(beamImg != null && beamImg.sprite != null && beamImg.sprite.rect.height >= 60f, "检测束渐变 Sprite 未绑定（旧粗矩形）");
                         var beamTex = beamImg.sprite.texture; var beamY = beamTex.height / 3;
                         Require(beamTex.GetPixel(beamTex.width / 2, beamY).a > beamTex.GetPixel(0, beamY).a * 4f, "检测束仍是等宽实心矩形");
+                        var beamCenter = beamTex.GetPixel(beamTex.width / 2, beamY);
+                        Require(beamCenter.r > beamCenter.g && beamCenter.g > beamCenter.b, "检出后射线未变成橙色");
                         Require(_flow.probeDrag.beamLine.sizeDelta.x <= 16f, "检测束宽度过宽");
                         Require(Vector2.Distance(_flow.probeDrag.beamLine.anchoredPosition, entry) < 1f, "检测束起点不在探头入射点");
-                        Require(_flow.nextButton.gameObject.activeSelf, "检出后未显示下一步按钮");
+                        Require(!_flow.nextButton.gameObject.activeSelf, "检出后不应显示下一步按钮（老板定稿：检出即测距）");
+                        Require(_flow.CurrentStage == M2FlowController.Stage.Measuring && _flow.rulerDrag.unlocked, "检出后未直接解锁尺子测量");
                         var posBefore = _flow.probeDrag.probeRt.anchoredPosition;
                         _flow.probeDrag.AutoMoveToMm(110f);
                         Require(_flow.probeDrag.probeRt.anchoredPosition == posBefore, "检出后探头未锁定");
                         Require(_flow.Detected, "重复触发改变了检出状态");
-                        _flow.NextToMeasure();
-                        Require(_flow.CurrentStage == M2FlowController.Stage.Measuring && _flow.rulerDrag.unlocked, "尺子测量阶段未解锁");
                         Require(_flow.rulerDrag.rulerRt.parent == _flow.rulerDrag.railViewport &&
                             Vector2.Distance(_flow.rulerDrag.rulerRt.sizeDelta, _flow.rulerDrag.measureSize) < .01f,
                             "尺子测量态父级/尺寸错误");
                         var rz = _flow.rulerDrag.rulerRt.localEulerAngles.z;
                         Require(Mathf.Abs(rz) < .5f, "测量尺未水平放置（当前角度 " + rz + "°）");
-                        Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - 1f) < .01f, "尺子工作态 bg 未归一化");
+                        Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - .8f) < .01f, "尺子工作态 bg 未保持 Scene 缩放(0.8)");
                         break;
                     case 3:
                         var drag = _flow.rulerDrag;
@@ -242,7 +243,7 @@ namespace M2.EditorTools
                             Vector2.Distance(_flow.rulerDrag.rulerRt.sizeDelta, _rulerStartSize) < .01f,
                             "重置后尺子未回到 Scene 起始布局");
                         Require(Mathf.Abs(_flow.probeDrag.probeVisual.localEulerAngles.z - _flow.probeDrag.probeBaseAngleDeg) < .1f, "重置后探头角度非 0");
-                        Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - 1.3417f) < .01f, "重置后尺子 bg 未恢复 Scene 缩放");
+                        Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - .8f) < .01f, "重置后尺子 bg 未恢复 Scene 缩放(0.8)");
                         Require(!_flow.AngleVerifiedByRuler && !_flow.Detected, "重置后流程状态未清空");
                         break;
                     case 4:
@@ -261,10 +262,9 @@ namespace M2.EditorTools
                         Require(_flow.rulerDrag.rulerRt.parent == _flow.rulerDrag.rulerHome, "自动帮助后尺子未归槽");
                         _flow.probeDrag.AutoMoveToMm(110f);
                         Require(_flow.Detected, "复跑检出失败");
-                        _flow.NextToMeasure();
                         _flow.rulerDrag.SetPoseMeasure(); _flow.rulerDrag.CheckMeasure();
                         Require(_flow.Measured && _flow.CurrentStage == M2FlowController.Stage.Completed, "复跑测量失败");
-                        Pass("QA 暂停、门控、110mm 几何、检出锁定、双点测量、自动帮助、重置复跑均通过。");
+                        Pass("QA 暂停、检出即测距、110mm 几何、检出锁定、双点测量、自动帮助、重置复跑均通过。");
                         break;
                 }
             }
