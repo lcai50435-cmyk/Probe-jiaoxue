@@ -88,7 +88,7 @@ namespace M2
             probeDrag?.SetInputLocked(true);
             if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip);
             if (nextButton != null) nextButton.gameObject.SetActive(false); // 老板定稿：检出即测距，无"下一步"门控（与 M3 一致）
-            rulerDrag?.ShowMeasure(); // 直接解锁尺子，玩家可拖 0→110 双点测量
+            rulerDrag?.PrepareMeasure(); // 老板 2026-08-16：尺子不自动出架，玩家自己从工具架拖到测量放置位置吸附
             ShowDamageMarker(); // 老板 2026-08-16 定稿：射线保持绿色，钢轨红椭圆（伤损）变橙
             Go(Stage.Measuring);
             idleHelp?.ResetIdle();
@@ -118,8 +118,7 @@ namespace M2
         public void NotifyMeasured()
         {
             if (Measured) return;
-            Measured = true; if (measurementBubble != null) measurementBubble.SetActive(true);
-            if (_bubbleText != null) _bubbleText.text = "测量完成"; // 删序列化「110mm」字样（2026-08-14 老板确认，不写回）
+            Measured = true; // 老板 2026-08-16：M2 通过后不显示“测量完成”提示气泡（measurementBubble 不再激活）
             if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); Go(Stage.Completed);
         }
         public void EnterNextModule() { rulerDrag?.ResetTool(); onCompleted?.Invoke(); }

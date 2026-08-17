@@ -8260,6 +8260,7 @@ MonoBehaviour:
   beamLengthZeroMm: 350
   settleDuration: 0.5
   beamWidthPx: 14
+  beamHitRadiusPx: 20
   unlocked: 0
   currentDistanceMm: 150
 --- !u!224 &1438739841
@@ -12890,15 +12891,15 @@ MonoBehaviour:
   rulerImage: {fileID: 418471493}
   measureSize: {x: 420, y: 91}
   angleGuideSize: {x: 240, y: 42}
-  measureStartLocal: {x: 0.5, y: 0.78}
+  measureStartLocal: {x: 0.402, y: 0.58}
   measureOffset: {x: 0, y: 0}
-  zeroUv: {x: 0.005, y: 0.038}
+  zeroUv: {x: -0.08, y: 0.038}
   ruler110Uv: {x: 0.73, y: 0.038}
   slotUv: {x: -0.05, y: 0.35}
   angleToleranceDeg: 6
   pointTolerancePx: 24
   retractTolerancePx: 80
-  measureAngleDeg: 0
+  measureAngleDeg: 9.98
   measureProjectTolerancePx: 30
   unlocked: 0
   aligned: 0

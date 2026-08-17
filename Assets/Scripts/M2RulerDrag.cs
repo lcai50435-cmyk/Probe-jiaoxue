@@ -25,7 +25,7 @@ namespace M2
         private void Awake()
         {
             CacheSceneHome();
-            measureAngleDeg = 0f; measureOffset = Vector2.zero; // PPT 合同：测量尺水平放置、0mm 锚点贴入射点（冻结 Scene 旧序列化 9.55/(19,28) 不写回）
+            // 老板 2026-08-16：测量角度/偏移以 Scene/Inspector 值为准（可在 Scene 定稿固定），不再 Awake 强制归零
         }
         public void Bind(M2FlowController owner)
         {
@@ -39,6 +39,8 @@ namespace M2
         public void Unlock() { unlocked = true; aligned = false; if (rulerImage != null) rulerImage.color = Color.white; }
         public void UnlockRetract() => aligned = false;
         public void ShowAngleGuide() { if (EnterWorkMode(measureSize)) { ModeNow = Mode.AngleGuide; Unlock(); } } // 校角与测量统一 measureSize（PPT 合同，与 M3 一致）
+        /// <summary>检出后进入测量待拖态：尺子留在工具架（不自动出架），玩家自己拖出到测量放置位置吸附并应用测量角度（老板 2026-08-16，与 M3 一致）。</summary>
+        public void PrepareMeasure() { ModeNow = Mode.DistanceMeasure; aligned = false; unlocked = true; if (rulerImage != null) rulerImage.color = Color.white; }
         public void ShowMeasure() { if (EnterWorkMode(measureSize)) { ModeNow = Mode.DistanceMeasure; OrientMeasure(); Unlock(); } }
         public void ResetTool()
         {
@@ -80,7 +82,28 @@ namespace M2
             // 尺子视觉缩放（老板定稿 0.8）：ppm 按实际渲染比例折算，保证探头扫描/射线/尺子刻度视觉一致（2026-08-16）
             PixelsPerMm = Vector2.Distance(mz, m110) / 110f * Mathf.Max(.01f, rulerRt.localScale.x);
         }
-        public void OnBeginDrag(PointerEventData eventData) => _dragging = unlocked && !aligned;
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            _dragging = unlocked && !aligned && rulerRt != null && railViewport != null;
+            if (_dragging && rulerRt.parent != railViewport &&
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(railViewport, eventData.position, eventData.pressEventCamera, out var local))
+            {
+                EnterWorkFromPointer(local); // 从工具架拖出进入工作态（老板 2026-08-16：测量尺需玩家手动拖出）
+            }
+        }
+        private void EnterWorkFromPointer(Vector2 local)
+        {
+            if (rulerRt == null || railViewport == null) return;
+            rulerRt.SetParent(railViewport, false);
+            rulerRt.anchorMin = rulerRt.anchorMax = railViewport.pivot;
+            rulerRt.pivot = new Vector2(.5f, .5f);
+            rulerRt.sizeDelta = measureSize;
+            rulerRt.localRotation = Quaternion.Euler(0f, 0f, ModeNow == Mode.DistanceMeasure ? measureAngleDeg : 0f); // 测量态应用测量角度（老板 measureAngleDeg）
+            rulerRt.anchoredPosition = local; // 尺子中心跟指针（OnDrag 继续）
+            if (rulerImage != null) rulerImage.color = Color.white; // 工作态不置灰
+            rulerRt.gameObject.SetActive(true);
+            ComputeAnchors();
+        }
         public void OnDrag(PointerEventData eventData)
         {
             if (!_dragging || rulerRt == null || railViewport == null ||
@@ -88,9 +111,8 @@ namespace M2
             flow?.idleHelp?.ResetIdle();
             var s = Mathf.Max(.01f, rulerRt.localScale.x); // 尺子视觉缩放（Scene 0.8）：锚点世界偏移 = 局部 × s
             var grab = ModeNow == Mode.AngleGuide ? _slot : _zero; var offset = rulerRt.localRotation * (Vector3)(grab * s);
-            rulerRt.anchoredPosition = local - new Vector2(offset.x, offset.y);
-            if (ModeNow == Mode.AngleGuide) { if (flow != null && flow.AngleVerifiedByRuler) { CheckRetract(); return; } CheckAngleGuide(); }
-            else CheckMeasure();
+            if (ModeNow == Mode.AngleGuide) { rulerRt.anchoredPosition = local - new Vector2(offset.x, offset.y); if (flow != null && flow.AngleVerifiedByRuler) { CheckRetract(); return; } CheckAngleGuide(); }
+            else { rulerRt.anchoredPosition = local; CheckMeasurePlacement(); } // 测量：中心跟手，拖到 measureStartLocal 吸附（老板 2026-08-16）
         }
         public void CheckAngleGuide()
         {
@@ -105,6 +127,23 @@ namespace M2
             flow?.PlayCorrect(); // 校角吸附成功提示音（与 M3 一致，2026-08-16 老板）
             OnAngleAligned?.Invoke(); // 吸附成夹具，保留现场
         }
+        /// <summary>拖到测量放置位置（measureStartLocal）吸附：位置固定、角度变为 measureAngleDeg，吸附即完成（老板 2026-08-16：最终吸附位置 = measureStartLocal + measureAngleDeg）。</summary>
+        private void CheckMeasurePlacement()
+        {
+            if (rulerRt == null || railViewport == null || aligned) return;
+            var target = NormalizedToRailLocal(measureStartLocal);
+            if (Vector2.Distance(rulerRt.anchoredPosition, target) > pointTolerancePx) return;
+            rulerRt.anchoredPosition = target;
+            rulerRt.localRotation = Quaternion.Euler(0f, 0f, measureAngleDeg);
+            aligned = true; unlocked = _dragging = false;
+            OnDistanceAligned?.Invoke(); // 触发完成（蜂鸣 + Completed）
+        }
+        /// <summary>归一化 (0~1) 坐标 → 轨道本地像素（以 railViewport pivot 为原点）。</summary>
+        private Vector2 NormalizedToRailLocal(Vector2 normalized)
+        {
+            return new Vector2((normalized.x - railViewport.pivot.x) * railViewport.rect.width,
+                (normalized.y - railViewport.pivot.y) * railViewport.rect.height);
+        }
         public void CheckMeasure()
         {
             if (flow == null || flow.probeDrag == null) return;
@@ -118,7 +157,8 @@ namespace M2
         }
         private void OrientMeasure()
         {
-            if (flow?.probeDrag != null && rulerRt != null) rulerRt.localRotation = Quaternion.FromToRotation(_r110 - _zero, flow.probeDrag.DamagePointInRail - flow.probeDrag.ProbeEntryPointInRail);
+            // 老板 2026-08-16：测量角度由 measureAngleDeg 控制（默认 0=水平，Play 调试器可实时调）；不再自动斜定向（FromToRotation）
+            if (rulerRt != null) rulerRt.localRotation = Quaternion.Euler(0f, 0f, measureAngleDeg);
         }
         public void SetPoseMeasure()
         {
@@ -128,6 +168,14 @@ namespace M2
             rulerRt.anchoredPosition = flow.probeDrag.ProbeEntryPointInRail - new Vector2(zero.x, zero.y);
         }
         public void SetPoseAngleGuide() { if (flow?.probeDrag == null || rulerRt == null) return; rulerRt.localRotation = Quaternion.identity; rulerRt.anchoredPosition = flow.probeDrag.ProbeEntryPointInRail - _slot * Mathf.Max(.01f, rulerRt.localScale.x); }
+        /// <summary>调试器用：按当前模式重摆尺子姿态（位置/角度实时生效，PlayDebugger 调整时调用；老板 2026-08-16）。</summary>
+        public void RefreshPose()
+        {
+            if (rulerRt == null || railViewport == null) return;
+            if (ModeNow == Mode.DistanceMeasure) { if (aligned) SetPoseMeasure(); else ShowMeasure(); }        // 测量：吸附后重摆 zero 位置；测量中重摆初始位+角度
+            else if (ModeNow == Mode.AngleGuide) { if (aligned) SetPoseAngleGuide(); else ShowAngleGuide(); } // 校角：吸附后重摆 slot 位置；校角中重摆初始位
+            else ShowAngleGuide();                                                                             // Home：默认校角工作态
+        }
         public void SetPoseRetract() { if (rulerRt == null || rulerHome == null || railViewport == null) return; rulerRt.anchoredPosition = railViewport.InverseTransformPoint(rulerHome.position); }
         public void CheckRetract() { if (rulerRt == null || rulerHome == null || railViewport == null) return; if (Vector2.Distance(rulerRt.anchoredPosition, railViewport.InverseTransformPoint(rulerHome.position)) > retractTolerancePx) return; ResetTool(); OnAngleRetracted?.Invoke(); }
         private void CacheSceneHome()
