@@ -13,12 +13,25 @@ namespace M2
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
         public Vector2 scanDirection = new Vector2(1f, 0f), probeEntryLocal = new Vector2(.5f, .25f), startLocal = new Vector2(-500f, 0f), damageUv = new Vector2(.4808f, .711f), placementTolerancePx = new Vector2(60f, 40f);
-        public float hitMm = 110f, beamHitTolerancePx = 8f, visualTiltAtTarget = 10f, probeBaseAngleDeg = 0f, beamBaseAngleDeg = 0f, beamLengthZeroMm = 550f, settleDuration = .5f, beamWidthPx = 14f;
+        public float hitMm = 110f, beamHitTolerancePx = 8f, visualTiltAtTarget = 10f, probeBaseAngleDeg = 0f, beamBaseAngleDeg = 0f, beamLengthZeroMm = 550f, settleDuration = .5f, beamWidthPx = 14f, beamHitRadiusPx = 30f; // beamHitRadiusPx：射线末端命中伤损容差（老板 2026-08-16 A 方案：射线实际碰到伤损即检出；默认 30px 覆盖 10° 时末端与伤损最小距离 ~20px）
         public bool unlocked;
         public float currentDistanceMm = 150f;
         public event Action<float> OnDistanceChanged;
         public bool Placed => _placed;
         public bool AngleCorrect => flow != null && Mathf.Abs(_angleDeg - flow.targetAngle) < .5f;
+        /// <summary>射线末端是否实际碰到伤损点（老板 2026-08-16 A 方案）：射线末端（entry + 方向×当前长度）到伤损距离 ≤ beamHitRadiusPx。</summary>
+        public bool BeamHitsDamage
+        {
+            get
+            {
+                if (!_placed || railViewport == null || beamLine == null) return false;
+                var entry = ProbeEntryWorld();
+                var rot = (beamBaseAngleDeg + TiltAngle) * Mathf.Deg2Rad;
+                var dir = new Vector2(-Mathf.Sin(rot), Mathf.Cos(rot)); // 与 UpdateBeam 同一方向（-90 基准 + tilt）
+                var lenMm = Mathf.Lerp(beamLengthZeroMm, hitMm, Mathf.Clamp01(_angleDeg / (flow != null && flow.targetAngle > 0f ? flow.targetAngle : 10f)));
+                return Vector2.Distance(_damage, entry + dir * (lenMm * PixelsPerMm)) <= beamHitRadiusPx;
+            }
+        }
         public float CurrentDistanceMm => currentDistanceMm;
         public Vector2 DamagePointInRail => _damage;
         public Vector2 ProbeEntryPointInRail => ProbeEntryWorld();
@@ -100,7 +113,8 @@ namespace M2
         private void CheckHit()
         {
             if (flow == null || flow.Detected || flow.CurrentStage != M2FlowController.Stage.Scanning) return;
-            if (!AngleCorrect || Mathf.Abs(currentDistanceMm - hitMm) > flow.distanceToleranceMm) return;
+            // 老板 2026-08-16 A 方案：射线末端实际碰到伤损点即检出（替代旧的距离 110mm 判定）；角度保持校角流程（10°）前提。
+            if (!AngleCorrect || !BeamHitsDamage) return;
             flow.NotifyDetected();
         }
         private void UpdateBeam()

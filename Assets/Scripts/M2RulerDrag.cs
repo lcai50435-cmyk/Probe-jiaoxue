@@ -38,7 +38,7 @@ namespace M2
         }
         public void Unlock() { unlocked = true; aligned = false; if (rulerImage != null) rulerImage.color = Color.white; }
         public void UnlockRetract() => aligned = false;
-        public void ShowAngleGuide() { if (EnterWorkMode(angleGuideSize)) { ModeNow = Mode.AngleGuide; Unlock(); } }
+        public void ShowAngleGuide() { if (EnterWorkMode(measureSize)) { ModeNow = Mode.AngleGuide; Unlock(); } } // 校角与测量统一 measureSize（PPT 合同，与 M3 一致）
         public void ShowMeasure() { if (EnterWorkMode(measureSize)) { ModeNow = Mode.DistanceMeasure; OrientMeasure(); Unlock(); } }
         public void ResetTool()
         {
@@ -102,6 +102,7 @@ namespace M2
             aligned = true; _dragging = false;
             rulerRt.localRotation = Quaternion.identity;
             rulerRt.anchoredPosition = probe.ProbeEntryPointInRail - _slot * Mathf.Max(.01f, rulerRt.localScale.x);
+            flow?.PlayCorrect(); // 校角吸附成功提示音（与 M3 一致，2026-08-16 老板）
             OnAngleAligned?.Invoke(); // 吸附成夹具，保留现场
         }
         public void CheckMeasure()

@@ -69,6 +69,8 @@ namespace M2
         }
         public void NotifyPlacementChanged() { if (CurrentStage == Stage.Positioning && probeDrag != null && probeDrag.Placed) rulerDrag?.ShowAngleGuide(); }
         public void NotifyRulerAligned() { if (CurrentStage == Stage.Positioning) { RulerDocked = true; probeDrag?.SetAngleLocked(false); } }
+        /// <summary>正确提示音（尺子校角吸附 / 校角确认 / 测量完成共用，与 M3 一致）。</summary>
+        public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); }
         public void NotifyAngleConfirmed()
         {
             if (CurrentStage != Stage.Positioning || !RulerDocked) return;
