@@ -1,152 +1,80 @@
-# M4 轨腰探测流程对齐 PPT + 复用 M2 —— 技术设计
+# Design：M4 轨腰探测 = M3 复制基线 + 参数替换
 
-## 1. 目标
+## 1. 总策略
 
-在不复制 M2/M3 状态机的前提下，通过参数化复用 M2 组件族，搭建 M4 轨腰探测模块。M2 冻结 Scene 行为保持不变，M4 使用新建 Scene。
+老板定稿：**M4 以 M3 为基线整体复制**（Scene、runtime、Editor 工具三套全复制改名），随后只改四类差异：波形参数、探头几何/角度、尺子几何、射线几何。这与旧"参数化复用 M2"方案不同——M3 已验证行为（伤损变橙、无耦合剂、检出即测距、防卡死、QA 暂停）全部免费继承，风险最低。
 
-## 2. 组件复用策略
+```
+M3.unity ──复制──> M4.unity（改模块标题/脚本引用 guid/波形/几何参数）
+M3*.cs  ──复制──> M4*.cs（namespace M3→M4，改波形/几何参数）
+M3 Editor──复制──> M4 Editor（Setup/RuntimeSmoke/Shot/FinalCloseout）
+```
 
-| 组件 | 用途 | M4 处理 |
+## 2. Scene 复制（M4.unity）
+
+1. `cp Assets/Settings/Scenes/M3.unity Assets/Settings/Scenes/M4.unity` + 生成 .meta（复制 M3.unity.meta 改名，guid 由 Unity 重新导入生成——手工改 YAML 时用新的 meta guid）。
+2. YAML 内所有 `M3FlowController` 脚本引用 guid（`059f97c6...`）替换为 `M4FlowController.cs` 的 guid；`M3ProbeDrag`/`M3RulerDrag`/`M3IdleHelp`/`M3DigitalHumanVideo` 同理。
+3. 模块标题文本 "M3 轨头侧面探测" → "M4 轨腰部位探测"（ModuleTitle、completionText 等）。
+4. 波形区：
+   - `WaveformArea_B` 4:3（460×345、anchoredPosition.y=172.5）不变（M3 已是 M2 风格）。
+   - `WaveGrid` 上 `M2WaveformFx` 序列化参数改为 `appearMm=55/peakMm=45/stopMm=40`（与 M3 的 160/123/120 不同）。M2WaveformFx 脚本本身零改动（M3 已用）。
+   - `ScaleTexts` 横轴 0/40/80/120/160/200mm、纵轴 0/20/40/60/80/100 不变（M4 PPT 波形图确认横轴 0~200、纵轴 0~100，与 M2/M3 一致）。
+5. 钢轨/探头/尺子 Sprite 引用不动（M3 已用 railwayTracks_2 / probeFootage / 尺子正面，与 M4 要求一致）。
+6. 探头/尺子/RulerHome/ProbeHome 的 Scene 初态锚点/位置按 M4 几何标定结果微调（老板 PPT：轨腰左侧接近轨腰最上端、无偏角）。
+
+## 3. Runtime 脚本复制（M4*.cs）
+
+复制清单（均 namespace M4、类名 M4Xxx，逻辑零改动，仅参数/文案）：
+
+| 源 | 复制为 | 改动 |
 |---|---|---|
-| `M2FlowController` | 流程状态唯一所有者 | 参数化：`autoCouplant`、`scanStartMm`、文案数组、素材名、完成文案 |
-| `M2ProbeDrag` | 放置、角度、扫描、检测束、几何距离 | 配置 M4 参数：`startMm=80`（视觉起点反算）、`hitMm=40`、正面视角 `damageUv`、向上 10° 视觉 |
-| `M2RulerDrag` | 同一把尺：10° 校角 + 0/40mm 复测 | 增加 `rulerTargetUv` + `rulerTargetMm`；M4 用 40mm 锚点 |
-| `M2WaveformFx` | 波形窗口/始波/伤损波 | 不改代码；M4 Scene 配置 `appearMm=55, peakMm=45, stopMm=40` |
-| `M2CouplantFx` | 2s 耦合剂薄膜动画 | 由 `M2FlowController.autoCouplant` 自动触发 |
-| `M2IdleHelp` | 30s/60s 防卡死自动演示 | 帮助文案参数化，M4 用 10°/40mm |
+| `M3FlowController.cs` | `M4FlowController.cs` | `targetAngle=10`、`targetDistance=40`；`waveformFx.appearMm=55/peakMm=45/stopMm=40`；`NotifyDistance` 波形映射 `Lerp(160,120)→Lerp(55,40)`（波形窗口 55→40mm）；DefaultHints/StageNames 文案改 M4（轨腰）；completionText "轨腰部位探测完成" |
+| `M3ProbeDrag.cs` | `M4ProbeDrag.cs` | `scanStartMm=55`、`scanEndMm=40`；`scanStartY`=轨腰上端标定值；`visualTiltAtTarget=10`；**向上偏转**（角度视觉方向反转）；`beamLengthZeroMm` 按射线合同；damageUv 沿用（同一红椭圆伤损） |
+| `M3RulerDrag.cs` | `M4RulerDrag.cs` | `ruler120Uv → ruler40Uv`（40mm 刻度标定，UV≈(0.284,0.038) 待像素验证）；`PixelsPerMm = dist(zero,ruler40)/40`；`measureAngleDeg=0`（水平）；`positioningAngle=0`（水平放置） |
+| `M3IdleHelp.cs` | `M4IdleHelp.cs` | 自动演示改 55→40mm、10° |
+| `M3DigitalHumanVideo.cs` | `M4DigitalHumanVideo.cs` | 仅改名 |
 
-## 3. 流程状态
+### 3.1 探头向上 10° 的视觉方向
 
-```text
-Intro(auto 2s couplant)
-→ Positioning
-   ProbePlacedAt0
-   RulerAngleAligned(10°槽 + 平行)
-   AngleVerified(10° 稳定)
-   RulerRetracted
-→ Scanning
-   BeamGreen
-   Waveform 55→45→40
-   DetectAt40
-→ Measuring
-   Ruler0@ProbeEntry && Ruler40@DamagePoint
-→ Completed
+M3 是向下 13°（`probeVisual.localRotation = probeBaseAngleDeg - tilt`、`beamLine = -degrees`）。M4 向上 10°，符号取反：
+
+```
+tilt = degrees / targetAngle * visualTiltAtTarget        // visualTiltAtTarget=10
+probeVisual.localRotation = probeBaseAngleDeg + tilt      // 向上
+beamLine.localRotation   = degrees                        // 向上（相对探头 90°，方向反转）
 ```
 
-M4 步骤显示为 3 步：
+`probeBaseAngleDeg`（探头图片基准角）与 `beamBaseAngleDeg` 独立可调，与 M3 合同一致。
 
-```text
-1/3 探头定位与偏角
-2/3 移动探测
-3/3 尺子测距
-```
+### 3.2 射线几何（不能穿透到轨头）
 
-## 4. M2FlowController 参数化设计
+M4 PPT：光线只能打到轨腰最顶部，不能穿透到轨头。目标线 = 红椭圆（伤损）**下边缘**（伤损在轨腰最上端，y 约在正视角透明.png 的 142~183px，质心 (0.4711, 0.2194)）。射线长度 `min(默认, (entryY - 椭圆下边缘Y)/sin(角度))`，与 M3 合同同构（M3 目标线=红椭圆下边缘 194/740），仅方向相反（向上），`drop = entryY - redBottomY` 取负/反号。检出 = 射线末端实际到达/越过伤损（复用 M3 的 `BeamHitsDamage` 逻辑，方向适配向上）。
 
-新增/调整字段，默认值保持 M2 现有行为：
+### 3.3 尺子 40mm 标定
 
-```csharp
-public bool autoCouplant;                 // false=M2 按钮涂抹，true=M4 自动 2s
-public float scanStartMm = 150f;          // M2=150，M4 由轨腰左上端反算（初始 80）
-public string[] stepHints;                // 为空时使用 M2 默认文案
-public string[] stageNames;               // 为空时使用 M2 默认阶段名
-public string completionMessage = "轨头顶面探测完成";
-public string normalSpriteName = "俯视角";
-public string perspectiveSpriteName = "俯视角透视";
-public int visibleStepCount = 4;          // M2=4，M4=3（不显示 Couplant 步骤）
-```
+- `尺子正面.png`（1205×213）底边基线：0mm 左端底尖 UV≈(0.005,0.038)（沿用 M3/M2）；40mm 刻度线像素采样确认（初步识别 x≈342px → UV≈0.284，实现时像素验证）。
+- `PixelsPerMm = distance(zero, ruler40) / 40`（M3 是 /120；M4 的 40mm 跨度更短，ppm 会更大——几何按此标定）。
+- 测量 0/40 双点：0 对齐探头入射点、40 对齐伤损。
 
-- `Awake` 初始化 `waveformFx?.SetDistanceMm(scanStartMm)`。
-- `ResetAll` 使用 `waveformFx?.ResetWave(scanStartMm)`。
-- `autoCouplant=true` 时 `Awake` 自动调用 `couplantFx.Play(OnCouplantDone)`，`applyButton` 可不绑定/隐藏。
-- `SwapRailSprites` 使用 `normalSpriteName/perspectiveSpriteName`。
-- `UpdateUi` 使用 `stepHints/stageNames/visibleStepCount`。
+## 4. Editor 工具复制
 
-## 5. M2RulerDrag 40mm 参数化
+| 源 | 复制为 | 说明 |
+|---|---|---|
+| `M3Setup.cs` | `M4Setup.cs` | M4 未冻结：保留只读打开器形态（M3 已冻结，M4 基线复制后无需 Setup 生成）；或最小化 Ensure。以 M3Setup 只读形态为准，避免漂移。 |
+| `M3RuntimeSmoke.cs` | `M4RuntimeSmoke.cs` | 断言改 55→40、10° 向上、波形 55/45/40、尺子 40mm、射线橙色、伤损橙色 |
+| `M3Shot.cs` | `M4Shot.cs` | 三视口截图（1920x1080 / 1280x720 / 2436x1125），哈希记录 |
+| `M3FinalCloseout.cs` | `M4FinalCloseout.cs` | 若 M3 有 closeout 验收则复制改名 |
 
-保持 M2 字段兼容，新增：
+## 5. 复用与边界
 
-```csharp
-public Vector2 rulerTargetUv = Vector2.zero;  // 0 表示使用旧 ruler110Uv
-public float rulerTargetMm = 110f;
-```
+- `M2WaveformFx` 脚本零改动（M3/M4 共用）；M2ProbeDrag 的 `GetBeamSprite`/`GetEllipseSprite` 公共静态方法复用。
+- M4 不新增独立波形/射线/尺子脚本——全部继承 M3 复制件。
+- M3.unity / M3*.cs / M3 Editor 三套文件**只读不写**；实施前后校验 M3.unity SHA-256。
+- M4 Scene 未冻结，允许运行时 Bind 覆盖 Scene 旧值（沿用 M3 模式）。
 
-- `ComputeAnchors()`：
-  - `targetUv = rulerTargetUv == Vector2.zero ? ruler110Uv : rulerTargetUv`
-  - `_rTarget = AnchorAt(size, targetUv)`
-  - `PixelsPerMm = distance(_zero, _rTarget) / rulerTargetMm`
-- `CheckMeasure()` 使用 `_rTarget.x - _zero.x` 作为目标跨度。
-- M4 配置：
-  - `rulerTargetUv ≈ (0.267, 0.038)`（`尺子正面.png` 的 40mm 竖刻线底端，实施时像素复核）
-  - `rulerTargetMm = 40`
-  - `measureAngleDeg = 0`
-  - `measureOffset = Vector2.zero`
+## 6. 风险
 
-## 6. M2ProbeDrag M4 配置
-
-```text
-startMm = 80            // 初始值，最终按轨腰左上端反算
-hitMm   = 40
-damageUv = 正面视角红色损伤中心 UV（与 M3 正面视角同图，实施时复核）
-visualTiltAtTarget = 10 或 -10，以“向上 10°”视觉为准
-probeBaseAngleDeg / beamBaseAngleDeg 按 M4 探头发射面标定
-```
-
-- 射线颜色机制不动：`beamColor` 绿色、`beamDetectedColor` 橙色。
-- 检出后 Flow 负责将伤损颜色改为橙色；Reset 恢复红色。
-
-## 7. 伤损变色
-
-- M4 需要独立 `DamageMarker` 或运行时可直接改色的伤损 Image。
-- 未检出：红色。
-- 检出：橙色。
-- Reset：红色。
-- 该逻辑放在 `M2FlowController`（或 M4 配置的 `damageMarker` 引用）中，不写回 M4 Scene 序列化状态。
-
-## 8. 波形
-
-- M4 Scene 的 `WaveformArea_B` 结构复制 M2 的 4:3 波形窗口。
-- `M2WaveformFx` 序列化参数：
-  ```text
-  scanMinMm=0
-  scanMaxMm=200
-  appearMm=55
-  peakMm=45
-  stopMm=40
-  startStrength=0.08
-  peakStrength=0.78
-  pulseWidth=0.075
-  ```
-- `M2FlowController.NotifyDistance(mm)` 直接驱动 `waveformFx.SetDistanceMm(mm)`。
-- 40mm 检出后不再更新，锁定波形。
-
-## 9. 素材与 Scene
-
-- 钢轨：`Assets/railwayTracks_2/正视角.png` / `Assets/railwayTracks_2/正视角透明.png`
-- 探头：`Assets/probeFootage/probeFootage.png`
-- 尺子：`尺子正面.png`
-- 波形：M2 风格深色仪器屏 + 0~200mm / 0~100 刻度
-- 新建 `Assets/Settings/Scenes/M4.unity`
-- 新建 `Assets/Editor/M4Setup.cs`：幂等生成 M4 静态 Scene + 挂载 M2 组件族
-- 新建 `Assets/Editor/M4Shot.cs`：三视口截图
-- 新建 `Assets/Editor/M4RuntimeSmoke.cs`：Play Mode 烟测
-
-## 10. 兼容与风险
-
-- M2 脚本新增字段必须带 M2 默认值，M2 Scene 不重新序列化也能保持现状。
-- 不修改 `M2.unity` / `M3.unity`，实施前后校验 SHA-256。
-- M2RuntimeSmoke 必须继续通过，防止参数化破坏 M2。
-- 40mm 尺子锚点需在 `尺子正面.png` 上做像素级标定；不能靠目测。
-- “轨腰左上端”起点以 PPT 视觉为准；最终 `startMm` 由几何反算后写进 M4 Scene/配置。
-
-## 11. 验收工具
-
-- `M4RuntimeSmoke` 覆盖：
-  - 自动耦合剂进入定位
-  - 0° 放置 + 10° 校角 + 撤尺
-  - 波形 55/45/40 状态
-  - 40mm 检出后射线橙色、伤损橙色、探头锁定
-  - 尺子 0/40 双点测量
-  - Reset 复跑
-  - QA/Modal 暂停
-- `M4Shot` 覆盖 1920x1080 / 1280x720 / 2436x1125。
+- 向上偏转是方向反转（M3 向下），视觉验证需老板目视确认探头贴轨腰。
+- 尺子 40mm 刻度 UV 标定若不准，ppm 错误会导致扫描起点/命中点偏差——像素验证 + 烟测断言。
+- M4 扫描起点"轨腰左侧不超出轨道"需几何标定 scanStartY / scanStartLocal，可能与 M3 的 damageUv 换算冲突，以老板目视为准微调。
+- 波形 55→40mm 在 0~200mm 窗口内位于左端 20%~27.5% 区间（始波附近），视觉上与 M3（160~120 在右侧 60%~80%）不同——符合 PPT（伤损波靠近始波）。

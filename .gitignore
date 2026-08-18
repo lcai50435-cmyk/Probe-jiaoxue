@@ -117,3 +117,6 @@ InitTestScene*.unity*
 # Unity 崩溃恢复目录（不入库）
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
+
+# M5 临时 PPT 截图目录（不提交）
+.tmp_m5_ppt/
