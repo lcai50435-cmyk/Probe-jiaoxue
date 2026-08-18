@@ -37,6 +37,15 @@ namespace M1
         [Tooltip("运行时兜底：pauseWhilePlaying 未配置时按此路径自动发现常驻数字人视频（Setup 注入后此项失效；M2 无此路径自动跳过）")]
         public string digitalHumanPath = "画板/DigitalHumanStage/FullBodyView";
 
+        [Tooltip("引导播放期间隐藏、结束/跳过时恢复的对象（如常驻数字人全身）：优先禁用 Graphic（视频继续播放、恢复无停帧），无 Graphic 才 SetActive(false)")]
+        public GameObject[] hideWhilePlaying;
+
+        [Tooltip("运行时兜底：hideWhilePlaying 未配置时按此路径自动发现（Setup 注入后此项失效）")]
+        public string hideStagePath = "画板/DigitalHumanStage/FullBodyView";
+
+        private bool[] _hiddenActive;
+        private bool[] _hiddenGraphicEnabled;
+
         [Tooltip("预解码超时兜底（秒）：超过仍未准备好则直接播放")]
         public float prepareTimeout = 5f;
 
@@ -61,6 +70,12 @@ namespace M1
                 var dh = GameObject.Find(digitalHumanPath);
                 var vp = dh != null ? dh.GetComponent<VideoPlayer>() : null;
                 if (vp != null) pauseWhilePlaying = new[] { vp };
+            }
+            // 运行时兜底：Setup 未注入隐藏列表时，按路径自动发现（防引导期间右侧数字人透出遮罩）
+            if ((hideWhilePlaying == null || hideWhilePlaying.Length == 0) && !string.IsNullOrEmpty(hideStagePath))
+            {
+                var stage = GameObject.Find(hideStagePath);
+                if (stage != null) hideWhilePlaying = new[] { stage };
             }
 
             _firstTime = PlayerPrefs.GetInt(seenPrefsKey, 0) == 0;
@@ -104,7 +119,12 @@ namespace M1
             var overlayButton = overlay.GetComponent<Button>();
             if (overlayButton != null) overlayButton.interactable = canSkip;
 
-            TryPlay(); // 若已准备好立即播放；否则等 prepareCompleted
+            // 视频可播放才隐藏常驻数字人（避免半黑遮罩两侧透出）；缺失时不隐藏，防止播放逻辑不触发导致永久消失
+            if (player != null && player.clip != null)
+            {
+                HideWhilePlaying();
+                TryPlay(); // 若已准备好立即播放；否则等 prepareCompleted
+            }
         }
 
         private void OnPrepared(VideoPlayer vp)
@@ -148,8 +168,40 @@ namespace M1
             if (pauseWhilePlaying != null)
                 foreach (var p in pauseWhilePlaying)
                     if (p != null && p.isPaused) p.Play();
+            RestoreWhilePlaying(); // 引导结束：恢复常驻数字人显示
             overlay.SetActive(false);
             Time.timeScale = 1f; // 恢复游戏
+        }
+
+        /// <summary>隐藏引导期间需暂隐的对象：优先禁用 Graphic（视频继续后台播放，恢复无停帧），无 Graphic 才 SetActive(false)。</summary>
+        private void HideWhilePlaying()
+        {
+            if (hideWhilePlaying == null) return;
+            _hiddenActive = new bool[hideWhilePlaying.Length];
+            _hiddenGraphicEnabled = new bool[hideWhilePlaying.Length];
+            for (int i = 0; i < hideWhilePlaying.Length; i++)
+            {
+                var go = hideWhilePlaying[i];
+                if (go == null) continue;
+                _hiddenActive[i] = go.activeSelf;
+                var g = go.GetComponent<Graphic>();
+                if (g != null) { _hiddenGraphicEnabled[i] = g.enabled; g.enabled = false; }
+                else go.SetActive(false);
+            }
+        }
+
+        /// <summary>恢复引导前被隐藏的对象（还原原状态）。</summary>
+        private void RestoreWhilePlaying()
+        {
+            if (hideWhilePlaying == null) return;
+            for (int i = 0; i < hideWhilePlaying.Length; i++)
+            {
+                var go = hideWhilePlaying[i];
+                if (go == null) continue;
+                var g = go.GetComponent<Graphic>();
+                if (g != null) g.enabled = _hiddenGraphicEnabled != null && i < _hiddenGraphicEnabled.Length && _hiddenGraphicEnabled[i];
+                else if (_hiddenActive != null && i < _hiddenActive.Length && _hiddenActive[i]) go.SetActive(true);
+            }
         }
 
         private void OnDestroy()

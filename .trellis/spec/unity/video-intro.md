@@ -32,6 +32,8 @@
 
 `TryPlay()` 必须幂等（`_started` 标志），防 `prepareCompleted` 与超时双重触发。
 
+**引导期间隐藏常驻数字人（2026-08-18）**：半黑遮罩 alpha=0.8 是半透明的，竖屏视频两侧留黑会透出下方常驻数字人 → `M1IntroVideo.hideWhilePlaying`（GameObject[]，Setup 注入 `DigitalHumanStage/FullBodyView`，运行时兜底路径 `hideStagePath` 自动 Find）在 `Start` 显示遮罩后隐藏、`FinishIntro`（播完/跳过）恢复。隐藏方式**优先禁用 Graphic（RawImage.enabled=false）而非 SetActive(false)**：数字人 VideoPlayer 被 `pauseWhilePlaying` 暂停但未 Stop，禁用 Graphic 保持其运行态，恢复瞬间立即显示动画无停帧；无 Graphic 的对象才 SetActive(false)。视频缺失（clip==null）时不隐藏，防止播放链路不触发导致数字人永久消失。
+
 ## 3. 黑底抠像（LumaKey）契约
 
 **适用前提**：视频背景纯黑（sRGB 亮度 ≤ 2）、主体亮色。本项目引导视频背景 0~2、人物暗部 8~40，阈值 0.02/羽化 0.015 分离清晰。

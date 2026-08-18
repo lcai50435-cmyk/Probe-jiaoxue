@@ -31,6 +31,7 @@ namespace M1.EditorTools
         private const string IntroDimName = "半黑遮罩";
         private const string IntroVideoName = "引导视频";
         private const string IntroSkipName = "跳过引导";
+        private const string IntroHidePath = "DigitalHumanStage/FullBodyView"; // 引导播放期间隐藏的常驻数字人全身
         // 引导期间需要暂停的常驻数字人视频（VideoPlayer 不受 timeScale 影响）
         private const string StageName = "DigitalHumanStage";
         private const string FullBodyName = "FullBodyView";
@@ -297,6 +298,7 @@ namespace M1.EditorTools
                 }
                 var m1 = root.GetComponent<M1IntroVideo>();
                 InjectIntroPause(m1, board);
+                InjectIntroHide(m1, board);
                 var player = FindIncludingInactive(root, IntroVideoName);
                 var vp = player != null ? player.GetComponent<VideoPlayer>() : null;
                 if (clip != null && vp != null && vp.clip == null) vp.clip = clip;
@@ -387,6 +389,7 @@ namespace M1.EditorTools
             intro.videoImage = raw;
             intro.skipButton = sBtn;
             InjectIntroPause(intro, board);
+            InjectIntroHide(intro, board);
             dim.GetComponent<Button>().onClick.AddListener(intro.Skip);
             sBtn.onClick.AddListener(intro.Skip);
             EditorUtility.SetDirty(canvasGo);
@@ -413,6 +416,21 @@ namespace M1.EditorTools
             intro.pauseWhilePlaying = new[] { dhVp };
             EditorUtility.SetDirty(intro);
             Debug.Log("[M1Setup] 引导期间将暂停常驻数字人视频：" + dhVp.gameObject.name);
+        }
+
+        /// <summary>注入引导期间需隐藏的对象（常驻数字人全身）：仅当字段为空时赋值，不覆盖用户配置。</summary>
+        private static void InjectIntroHide(M1IntroVideo intro, GameObject board)
+        {
+            if (intro == null || (intro.hideWhilePlaying != null && intro.hideWhilePlaying.Length > 0)) return;
+            var fb = FindDeep(board.transform, IntroHidePath);
+            if (fb == null)
+            {
+                Debug.LogWarning("[M1Setup] 未找到引导期间隐藏对象（" + IntroHidePath + "），" +
+                                 "引导期间数字人将透出遮罩（可稍后重跑 Setup 补全）。");
+                return;
+            }
+            intro.hideWhilePlaying = new[] { fb.gameObject };
+            Debug.Log("[M1Setup] 引导期间将隐藏常驻数字人：" + fb.gameObject.name);
         }
 
         /// 加载/创建黑底抠像材质（UI/LumaKey）。幂等：材质资产已存在则直接加载。
