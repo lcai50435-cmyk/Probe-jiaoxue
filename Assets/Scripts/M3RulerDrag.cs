@@ -11,6 +11,8 @@ namespace M3
         public M3FlowController flow;
         public RectTransform rulerRt, railViewport, weldLineRt, rulerHome, positioningTarget;
         public Image rulerImage;
+        public Sprite positioningSprite; // 定位（校角）阶段尺子素材；null = 跟随 Scene 序列化 sprite
+        public Sprite measureSprite;     // 测量阶段尺子素材；null = 跟随 Scene 序列化 sprite
         public Vector2 measureSize = new Vector2(420f, 91f);
         public Vector2 positioningStart = new Vector2(.22f, .78f), measureStartLocal = new Vector2(.5f, .78f);
         public Vector2 zeroUv = new Vector2(.005f, .038f), ruler120Uv = new Vector2(.807f, .038f), slotUv = new Vector2(.005f, .136f);
@@ -24,6 +26,7 @@ namespace M3
         private Vector2 _homeAnchorMin, _homeAnchorMax, _homePosition, _homeSize, _homePivot;
         private Vector3 _homeScale;
         private Quaternion _homeRotation;
+        private Sprite _homeSprite; // Scene 初态 sprite（归槽恢复用）
 
         private void Awake() => CacheSceneHome();
 
@@ -33,8 +36,13 @@ namespace M3
             CacheSceneHome();
             if (rulerImage != null)
             {
-                var sprites = Resources.LoadAll<Sprite>("尺子正面");
-                if (sprites != null && sprites.Length > 0) rulerImage.sprite = sprites[0];
+                _homeSprite = rulerImage.sprite; // Scene 序列化 sprite 是视觉权威（老板可手工换图）
+                // 两个阶段素材都未配置：优先沿用 Scene 序列化 sprite；Scene 也空才用 Resources 兜底（历史素材替换合同）
+                if (positioningSprite == null && measureSprite == null && _homeSprite == null)
+                {
+                    var sprites = Resources.LoadAll<Sprite>("尺子正面");
+                    if (sprites != null && sprites.Length > 0) positioningSprite = measureSprite = sprites[0];
+                }
             }
             OnPositioned -= flow.NotifyRulerPositioned; OnPositioned += flow.NotifyRulerPositioned;
             OnAligned -= flow.NotifyMeasured; OnAligned += flow.NotifyMeasured;
@@ -58,7 +66,23 @@ namespace M3
             _homePosition = rulerRt.anchoredPosition; _homeSize = rulerRt.sizeDelta; _homePivot = rulerRt.pivot;
             _homeScale = rulerRt.localScale; _homeRotation = rulerRt.localRotation;
             if (rulerImage == null) rulerImage = rulerRt.Find("bg")?.GetComponent<Image>();
+            _homeSprite = rulerImage != null ? rulerImage.sprite : null;
             _homeCached = true;
+        }
+
+        /// <summary>应用当前阶段尺子素材并重算锚点（阶段切换内部用；sprite 为 null 时保持现有图）。</summary>
+        private void SetPhaseSprite(bool measuring)
+        {
+            var sp = measuring ? measureSprite : positioningSprite;
+            if (sp != null && rulerImage != null) rulerImage.sprite = sp;
+            ComputeAnchors();
+        }
+
+        /// <summary>调试器用：按当前模式应用阶段素材并重摆姿态（赋值后实时生效）。</summary>
+        public void ApplyPhaseSprite()
+        {
+            SetPhaseSprite(_measuring || (positioned && aligned));
+            RefreshPose();
         }
 
         public void Unlock()
@@ -87,10 +111,11 @@ namespace M3
         }
 
         /// <summary>检出后进入测量待拖态：尺子留在工具架（不自动出架），玩家拖出后拖到测量初始位吸附并应用调整角度（老板 2026-08-16 定稿）。</summary>
-        public void PrepareMeasure() { _measuring = true; positioned = aligned = false; unlocked = true; if (rulerImage != null) rulerImage.color = Color.white; }
+        public void PrepareMeasure() { _measuring = true; positioned = aligned = false; unlocked = true; if (rulerImage != null) rulerImage.color = Color.white; SetPhaseSprite(true); }
 
         public void ShowPositioning()
         {
+            SetPhaseSprite(false); // 定位阶段素材
             MoveToWork(positioningStart); _measuring = false; positioned = aligned = false; unlocked = true;
             if (rulerRt != null) rulerRt.localRotation = Quaternion.Euler(0f, 0f, positioningAngle);
             ComputeAnchors();
@@ -103,6 +128,7 @@ namespace M3
         {
             if (rulerRt == null || railViewport == null) return;
             if (flow == null || flow.probeDrag == null) return;
+            SetPhaseSprite(false); // 定位阶段素材
             if (rulerRt.parent != railViewport) MoveToWork(positioningStart);
             rulerRt.localRotation = Quaternion.Euler(0f, 0f, positioningAngle); // 校角角度自动应用（以调试器预设为准）
             rulerRt.anchoredPosition = NormalizedToRailLocal(positioningStart); // 白色点 = 校角尺子放置位置：尺子中心对准
@@ -111,6 +137,7 @@ namespace M3
 
         public void Show()
         {
+            SetPhaseSprite(true); // 测量阶段素材
             MoveToWork(measureStartLocal); _measuring = true; positioned = true; aligned = false; unlocked = true;
             if (rulerRt != null) rulerRt.localRotation = Quaternion.Euler(0f, 0f, measureAngleDeg);
             ComputeAnchors();
@@ -155,6 +182,7 @@ namespace M3
             }
             ComputeAnchors();
             if (rulerImage != null) rulerImage.color = new Color(.55f, .57f, .6f, .62f);
+            if (_homeSprite != null && rulerImage != null) rulerImage.sprite = _homeSprite; // 归槽恢复 Scene 初态图
         }
 
         private Vector2 AnchorAt(Vector2 size, Vector2 uv)
@@ -194,8 +222,7 @@ namespace M3
             {
                 // 测量：尺子中心跟指针，拖到测量初始位起点吸附并应用调整角度（老板定稿：最终位置=测量初始位起点）
                 rulerRt.anchoredPosition = local;
-                CheckMeasurePlacement();
-                CheckAlign();
+                CheckMeasurePlacement(); // 老板 2026-08-16 定稿：测量只保留位置吸附（measureStartLocal），不依赖 0/120 几何对齐（CheckAlign 已从拖动链路移除，仅烟测反射调用保留）
             }
             else
             {
@@ -213,6 +240,7 @@ namespace M3
             rulerRt.pivot = new Vector2(.5f, .5f);
             rulerRt.sizeDelta = measureSize;
             rulerRt.localRotation = Quaternion.Euler(0f, 0f, _measuring ? measureAngleDeg : positioningAngle); // 测量阶段用测量角度，校角用校角角度
+            SetPhaseSprite(_measuring); // 拖入工作态即按阶段应用素材
             if (rulerImage != null) rulerImage.color = Color.white; // 工作态不置灰（老板 2026-08-16：拖出来的尺子不能半透明）
             rulerRt.anchoredPosition = local; // 尺子中心跟指针（与 OnDrag 校角一致）
             rulerRt.gameObject.SetActive(true);
