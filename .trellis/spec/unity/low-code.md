@@ -105,6 +105,14 @@
   - **检出即测距**：射线照到伤损检出瞬间探头锁定，**直接** `rulerDrag.ShowMeasure() + Go(Measuring)`，玩家可直接拖尺测量——无"下一步"按钮门控；`nextButton` 不再激活且 `NextToMeasure()` 删除，`M2FlowController` 不再绑定 nextButton，ResetAll 仍隐藏该节点。
   - **测量姿态合同补缺**：`M2RulerDrag.Awake` 运行时强制 `measureAngleDeg=0`、`measureOffset=Vector2.zero`（PPT 合同：测量尺水平放置、0mm 锚点贴入射点；冻结 Scene 旧序列化 9.55/(19,28) 会破坏"测量尺未水平"烟测断言，不写回）。
   - **警告（2026-08-16 返工教训）**：尺子工作态 `localScale` 一律保持 `Vector3.one`（`EnterWorkMode` 强制），**禁止**为适配 Scene 根缩放（如 0.8）而折算 `PixelsPerMm`——ppm 是探头扫描起点/命中点几何（`damage - mm*ppm`）的唯一依据，ppm 变化会改变探头初始放置位置（老板硬性要求保持不变）。Scene 中 Ruler 根 `localScale` 仅影响工具架（Home）显示；工作态尺寸由 `measureSize` 决定。
+- **2026-08-18 M3/M4 数字人与 AI 问答（参照 M2，冻结 Scene 零改动）**：
+  - 背景：M3/M4 场景只有静态 `FullBodyPreview` 与空 `QAPanel` 壳（仅一个 Placeholder 子节点），无任何 QA/数字人组件；M2 则是场景序列化的 `M1QAPanel`+`M1DeepSeekClient`+`M1DigitalHumanPresenter` 全套。
+  - 方案：`M3DigitalHumanBootstrap`（`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` + `SceneManager.sceneLoaded` 订阅，场景名 M3/M4 时装配）——**复用 M1 全套组件零改动**，运行时动态构建：QAPanel 壳下建 Header/MessageList/InputRow（M1QAPanel 路径依赖）、Stage 下建 FullBodyView（RawImage+AspectRatioFitter+VideoPlayer+M1PressDetector）/AvatarView（Image+M1PressDetector），隐藏 FullBodyPreview，Blocker 补 Button，SafeArea 挂 M1QAPanel/M1DeepSeekClient，Stage 先 inactive 再 AddComponent<M1DigitalHumanPresenter> 注入后激活（保证 Awake 时引用就绪）。
+  - 素材走 `Assets/Resources/DigitalHuman/`（待机/思考/讲解动画2 三 mp4 + 折叠头像，meta 手写照抄原素材）；LumaKey 材质运行时 `Shader.Find("UI/LumaKey")` + `_KeyThreshold=0.02/_KeySmooth=0.006` 创建（不复制 .mat 资产）。
+  - 交互合同与 M2 一致：三态动画（待机/思考/讲解随 QA 问答状态切换）、短按全身/头像、长按打开对话框；`pauseGameOnOpen` 默认全局暂停；cnFont 从场景现有 TMP 复制（M3/M4 唯一字体 guid 1e7b8a18...）；apiKey 运行时组件无法持久填写（演示为"尚未配置 API Key"提示），如需真实 AI 回复由 M4Setup 后续 Scene 化注入。
+  - FullBodyView/AvatarView 共用视觉中心 `StageCenterOffsetY=30`（2026-08-18 老板定稿：M3/M4 数字人 Y=30，不用 M1 的 -248；Stage 本体 320 宽 + scale 0.74 为 M3 视觉权威）。
+  - 装配器超 150 行（335 行）理由：M3 冻结无法序列化组件，M1QASetup 的 Editor 结构需运行时镜像构建，属 M3/M4 共享装配胶水；全部内存态修改，M3/M4 Scene 哈希不变。
+  - **M3→M4 完成出口（2026-08-18 老板追加）**：`M3FlowController` 加 `nextSceneName="M4"`（场景未序列化，代码默认生效）+ `EnterNextModule` 内 `LoadScene`（与 M2 同款），完成文案判断同步；M3 脚本变更属老板明确授权。
 
 ## 6. 目录与模块约定
 

@@ -27,6 +27,8 @@ namespace M3
         public float waveformSpeed = 2f;
         public string[] stepHints = { "放置探头并调整偏角至向下 13°", "向前移动探头（55→40mm）", "拖动尺子：0 刻度对齐探头入射点，120mm 对齐伤损" };
         public UnityEvent onCompleted;
+        /// <summary>M3 通关 → M4（老板 2026-08-18；M3 冻结 Scene 未序列化，代码默认生效）。</summary>
+        public string nextSceneName = "M4";
         public Stage CurrentStage { get; private set; } = Stage.Positioning;
         public bool Detected, Measured, PerspectiveOn, RulerDocked, AngleVerifiedByRuler;
         public float distanceToleranceMm = 2f;
@@ -152,7 +154,12 @@ namespace M3
         }
         /// <summary>正确提示音（探头放置成功 / 尺子校角吸附 / 测量完成共用，与 M2 一致）。</summary>
         public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); }
-        public void EnterNextModule() { rulerDrag?.ResetTool(); onCompleted?.Invoke(); }
+        public void EnterNextModule()
+        {
+            rulerDrag?.ResetTool();
+            onCompleted?.Invoke();
+            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // M3 通关 → 进入 M4（与 M2 同款）
+        }
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);
         private void SetDialog(bool visible)
@@ -203,7 +210,7 @@ namespace M3
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
-            if (done && completionText != null) completionText.text = onCompleted != null && onCompleted.GetPersistentEventCount() > 0 ? "轨头侧面探测完成" : "下一模块待接入";
+            if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "轨头侧面探测完成" : "下一模块待接入";
         }
     }
 }

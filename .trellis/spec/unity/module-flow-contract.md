@@ -105,6 +105,7 @@ ol.effectColor = new Color(.1f,.12f,.15f,.6f); ol.effectDistance = new Vector2(2
 - 测量：0 刻度对齐探头入射点，120mm 刻度对齐伤损，完成测量。
 - 检出即测距（2026-08-16 老板追加）：射线照到伤损检出瞬间探头锁定，**直接** `rulerDrag.Show() + Go(Measuring)`，玩家可直接拖尺测量——**无"下一步"按钮门控**（M3 曾用运行时创建的 NextButton 门控，已删除）。
 - 检出无视觉标记（2026-08-16 老板追加）：**不显示**橙色损伤方块（DamageMarker 永久 `SetActive(false)`）与"伤损检出"横幅（DetectionBanner 不激活）；检出反馈仅剩报警蜂鸣 + 射线绿→橙。
+- 完成出口（2026-08-18 老板追加）：M3 完成后点击"下一模块"按钮 → `M3FlowController.nextSceneName`（代码默认 `"M4"`，M3 冻结 Scene 未序列化该字段）`SceneManager.LoadScene` 进入 M4；完成文案条件同步 M2（nextSceneName 非空即显示"轨头侧面探测完成"）。M3 脚本本次变更属老板明确授权。
 - 射线：正常绿色，检出后橙色（复用 `M2ProbeDrag.GetBeamSprite`）。
 - Scene：波形窗口按 M2 风格同步；尺子使用 `尺子正面.png`；探头起始按 PPT 左侧轨头侧面。
 

@@ -23,7 +23,7 @@
 - 目录：runtime 脚本 `Assets/Scripts/`，Editor 工具 `Assets/Editor/`，素材 `Assets/交互动画素材/`（工具图 `Assets/InspectionToolMaterials/`、探头图 `Assets/probeFootage/`、音频 `Assets/Audio/`、数字人 `Assets/DigitalHuman/`），
   场景 `Assets/Settings/Scenes/`，文档 `文档/`。
 - 存量代码不主动重构（规则只管新增代码）；任务涉及存量文件时才顺手精简。
-- **引导/讲解视频复用 M1IntroVideo + UI-LumaKey**（首次记忆、暂停恢复、黑底抠像悬空人物都已封装好，
+- **引导/讲解视频复用 M1IntroVideo + UI-LumaKey**（首次记忆、暂停恢复、引导期间暂隐常驻数字人、黑底抠像悬空人物都已封装好，
   新模块只换 VideoClip；调参走材质 Inspector）。H.264 `yuv420p` 黑底视频无 Alpha，仍需 LumaKey；视频 UI 节点只放一个 Graphic，点击由 RawImage 自身或独立子节点承载。常驻数字人（小尺寸）用独立 LumaKey 材质资产收窄 KeySmooth + RT 开 mipmap（关闭 autoGenerateMips 后在 VideoPlayer.frameReady 中显式 GenerateMips），不碰开场引导材质。详见 `.trellis/spec/unity/video-intro.md`。
 - **问答面板打开即全局暂停**（`M1QAPanel.pauseGameOnOpen` 默认开）：`Time.timeScale=0` 含模块计时/拖拽/动画，关闭时恢复打开前值；问答链路组件必须走 unscaled 计时（长按/滑入/逐字/请求/视频）。详见 `.trellis/spec/unity/low-code.md` 8.1。
 - **探测模块统一采用 M3 验收的 UGUI 基线**：1920x1080/Match0.5，浅灰页面与白色教学面、左上局部工具架、右上全身数字人、右下 460x240 深色波形、左下 364x64 视图分段、底部 176px 浅色操作带；M2 仅做保留业务合同的视觉迁移，M4/M5 只替换模块专属流程/参数/素材，禁止复制其他模块状态机。详见 `.trellis/spec/unity/ugui-module-template.md`。
@@ -35,6 +35,8 @@
 - **2026-08-16 M3 按 PPT 对齐**：老板授权同步 M3 Scene/Play；扫描 160→120mm（Bind 运行时覆盖，Scene 旧 120.96 会使一放就检出）、到达 120 检出锁定；波形复用 `M2WaveformFx`（160 短波→123 最高→120 停止）；目标以伤损为主，测距 0/120 双点；射线绿→橙复用 M2；进入时不再播放自动耦合剂 Intro，直接定位避免开场延迟。射线：默认 200mm（Bind 覆盖）前 ~5° 长度不变，仅当射线会碰到/超出**红椭圆（伤损）下边缘**才缩到刚好碰下边缘（`min(默认, drop/sin)` 连续无突变）；**检出=射线末端实际到达/越过伤损**（`BeamLenPx ≥ 沿射线到伤损距离`）。详见 low-code.md 5.4 与 module-flow-contract.md §9。
 - **2026-08-16 M3 拖动按钮样式同步 M2**：老板确认 M3 角度滑块视觉采用 M2 同款——`AngleTrack` 深灰圆角粗条、`Handle` 32×48 细长圆角条且初始左端对齐、`Fill`/`Handle` 圆角 Sprite 与 M2 一致。详见 low-code.md 5.4。
 - **2026-08-16 M2 检出即测距**：M2 与 M3 一致——检出瞬间锁定探头并直接解锁尺子测量，无"下一步"按钮门控（`NextToMeasure` 已删，nextButton 不再激活）；`M2RulerDrag.Awake` 强制测量尺水平放置（measureAngleDeg=0/measureOffset=0，Scene 旧值 9.55/(19,28) 不写回）。尺子工作态 localScale 保持 1，禁止折算 PixelsPerMm（会改变探头初始放置位置）。详见 low-code.md 5.4 与 module-flow-contract.md §10。
+- **2026-08-18 M3→M4 链路**：M3 完成点击"下一模块"按钮 → `M3FlowController.nextSceneName`（代码默认 M4）LoadScene 进入 M4；完成文案同 M2 逻辑。详见 module-flow-contract.md §9。
+- **2026-08-18 M3/M4 数字人+AI 问答（参照 M2 补齐）**：M3/M4 原无 QA/数字人组件（只有静态 FullBodyPreview 与空 QAPanel 壳），现由 `M3DigitalHumanBootstrap`（RuntimeInitializeOnLoadMethod 自动装配，零改冻结 Scene）动态补全——复用 M1 全套组件（M1QAPanel/M1DeepSeekClient/M1DigitalHumanPresenter/M1PressDetector），运行时建 Header/MessageList/InputRow 与 FullBodyView/AvatarView，三态动画（待机/思考/讲解）+短按切全身/头像+长按开对话框，素材走 `Assets/Resources/DigitalHuman/`（meta 手写），LumaKey 用 Shader.Find 创建。详见 low-code.md 5.4 数字人段。
 - 细节规范见 `.trellis/spec/unity/`（low-code.md / video-intro.md / ugui-module-template.md；改规范先改它，再同步本摘要）。
 
 <!-- TRELLIS:START -->
