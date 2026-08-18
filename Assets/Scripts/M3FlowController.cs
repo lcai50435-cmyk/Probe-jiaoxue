@@ -21,6 +21,8 @@ namespace M3
         public Button resetButton, enterNextButton;
         public AudioSource sfx;
         public AudioClip beepClip, correctClip;
+        [Tooltip("音效播放音量（2026-08-18 老板要求整体调小）")]
+        public float sfxVolume = 0.4f;
         public M3IdleHelp idleHelp;
         public float introDuration = 2f, targetAngle = 13f, targetDistance = 120f, peakTolerance = 1f;
         /// <summary>伤损波移动速度倍率：2 = 探头移动 1mm 伤损波在波形 X 轴移动 2mm（老板 2026-08-16 定稿，可调）。</summary>
@@ -121,7 +123,7 @@ namespace M3
             if (Detected || CurrentStage != Stage.Scanning) return;
             Detected = true;
             probeDrag?.SetInputLocked(true);
-            if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip);
+            if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip, sfxVolume);
             // 老板 2026-08-16 定稿：检出后尺子不自动出架，等玩家拖到测量初始位吸附并应用调整角度；钢轨红椭圆变橙（射线保持绿色）。
             rulerDrag?.PrepareMeasure();
             ShowDamageMarker();
@@ -153,12 +155,11 @@ namespace M3
             Go(Stage.Completed);
         }
         /// <summary>正确提示音（探头放置成功 / 尺子校角吸附 / 测量完成共用，与 M2 一致）。</summary>
-        public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); }
+        public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }
         public void EnterNextModule()
         {
-            rulerDrag?.ResetTool();
             onCompleted?.Invoke();
-            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // M3 通关 → 进入 M4（与 M2 同款）
+            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // M3 通关 → 进入 M4（与 M2 同款）；2026-08-18：不再先 ResetTool 归位，直接切场景
         }
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);

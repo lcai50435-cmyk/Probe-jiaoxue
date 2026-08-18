@@ -60,11 +60,12 @@ namespace M2
             DrawGrid(vh, g);
             DrawNoise(vh, g);
             var pulseW = pulseWidth * g.width;
-            DrawPulse(vh, g, g.xMin + pulseW * .5f, startPeakHeight, pulseW, 0f);   // 常驻始波（峰顶可调，无噪声）
+            // 始波：紧贴波形区左缘，无陡升前缘（直接从峰顶向下衰减，老板 2026-08-18）；伤损波保留陡升竖线（同形合同不改）
+            DrawPulse(vh, g, g.xMin + pulseW * .5f, startPeakHeight, pulseW, 0f, false);
             if (_strength > .005f)
             {
                 var defectCenterX = r.xMin + _peakU * r.width; // 与 Scene 中横轴刻度（按 0~200mm 比例锚定）对齐
-                DrawPulse(vh, g, defectCenterX, _strength, pulseW, noiseAmp * _strength);
+                DrawPulse(vh, g, defectCenterX, _strength, pulseW, noiseAmp * _strength, true);
             }
             // Play 实测越界检测（烟测断言）：任一顶点超出窗口 rect 即标记
             OutOfBounds = false;
@@ -135,19 +136,20 @@ namespace M2
 
         private static float Noise(float u) => Mathf.Sin(u * 40f) * .6f + Mathf.Sin(u * 91f) * .4f + Mathf.Sin(u * 7f) * .3f;
 
-        private void DrawPulse(VertexHelper vh, Rect r, float centerX, float heightFrac, float width, float noiseAmpFrac)
+        private void DrawPulse(VertexHelper vh, Rect r, float centerX, float heightFrac, float width, float noiseAmpFrac, bool steepRise = true)
         {
             var x0 = centerX - width * .5f;
             var w = width;
             var baseY = r.yMin + r.height * .03f;
             var peakY = r.yMin + r.height * heightFrac;
-            var prev = new Vector2(x0, baseY);
+            // 伤损波：从基线陡升前缘（近垂直竖线）再衰减；始波（steepRise=false）：从峰顶直接衰减，无竖线
+            var prev = new Vector2(x0, steepRise ? baseY : peakY);
             for (var i = 1; i <= 48; i++)
             {
                 var u = i / 48f;
                 float envelope;
-                if (u < .2f) envelope = u / .2f;                                    // 陡升前缘（图像中近垂直的尖峰前沿）
-                else envelope = Mathf.Exp(-3.2f * (u - .2f) / .8f);                 // 快速指数衰减，不再余弦振荡
+                if (steepRise && u < .2f) envelope = u / .2f;                                    // 陡升前缘（图像中近垂直的尖峰前沿）
+                else envelope = Mathf.Exp(-3.2f * (u - (steepRise ? .2f : 0f)) / (steepRise ? .8f : 1f)); // 快速指数衰减，不再余弦振荡
                 var y = baseY + (peakY - baseY) * envelope;
                 if (noiseAmpFrac > 0f) y += Noise(u * 3.7f + .5f) * noiseAmpFrac * r.height * envelope;
                 y = Mathf.Clamp(y, r.yMin, r.yMax);                                  // 防止纹波超出波形窗口
