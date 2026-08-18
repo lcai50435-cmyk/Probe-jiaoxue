@@ -32,7 +32,7 @@ namespace M4
         public event Action<float> OnDistanceChanged;
         private float _angleDeg, _spriteAspect = 1f, _settle;
         private bool _placed, _beamVisible, _inputLocked, _dragging, _homeCached;
-        private Vector2 _probeSize, _damageLocal, _ellipseLocal, _scanStartLocal, _scanEndLocal, _homeAnchor, _homePos, _homeSize, _homePivot;
+        private Vector2 _probeSize, _damageLocal, _ellipseLocal, _scanStartLocal, _scanEndLocal, _homeAnchor, _homePos, _homeSize, _homePivot, _visualBasePos;
         private Vector3 _homeScale;
         private Quaternion _homeRot;
         private Transform _homeParent;
@@ -48,7 +48,7 @@ namespace M4
         public Vector2 DamagePointInRail => _damageLocal;
         public Vector2 DamageEllipsePointInRail => _ellipseLocal; // 红椭圆中心（检出判定区域，橙色标记对齐处）
         public Vector2 ProbeEntryPointInRail => railViewport != null ? railViewport.InverseTransformPoint(probeRt.TransformPoint(EntryLocal())) : Vector2.zero;
-        /// <summary>探头 zero 锚点中心世界位置（RailViewport 局部）：扫描终点时与伤损同水平线、水平距伤损 120mm（尺子 0 刻度对齐处）。</summary>
+        /// <summary>探头 zero 锚点中心世界位置（RailViewport 局部）：扫描终点时与伤损同水平线、水平距伤损 40mm（尺子 0 刻度对齐处）。</summary>
         public Vector2 ZeroAnchorWorld => railViewport != null && zeroAnchor != null ? railViewport.InverseTransformPoint(zeroAnchor.position) : ProbeEntryPointInRail;
 
         /// <summary>射线末端是否实际照射到伤损（老板定稿 2026-08-18：末端进入红椭圆区域即判定成功接触，替换圆形半径）：
@@ -92,6 +92,7 @@ namespace M4
                     ol.effectColor = new Color(.1f, .12f, .15f, .6f); ol.effectDistance = new Vector2(2f, -2f);
                 }
             }
+            if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition; // 贴图初始位置（入射点旋转补偿基准，M2 同款）
             if (_probeSize == Vector2.zero && probeRt != null) _probeSize = probeRt.sizeDelta;
             if (zeroAnchor == null && probeRt != null) zeroAnchor = probeRt.Find("zero") as RectTransform;
             if (redLine == null) redLine = FindDeep(transform.root, "red") as RectTransform; // 老板参考线（红椭圆伤损所在区域）
@@ -273,9 +274,17 @@ namespace M4
         {
             var target = flow != null ? flow.targetAngle : 10f;
             var tilt = target > 0f ? degrees / target * visualTiltAtTarget : 0f;
-            if (probeVisual != null) probeVisual.localRotation = Quaternion.Euler(0f, 0f, probeBaseAngleDeg + tilt); // M4 向上偏转：bg 平放基准上叠加 +tilt
+            if (probeVisual != null)
+            {
+                probeVisual.localRotation = Quaternion.Euler(0f, 0f, probeBaseAngleDeg + tilt); // M4 向上偏转：bg 平放基准上叠加 +tilt
+                // 入射点旋转补偿（M2 同款）：贴图旋转使发射面视觉点绕探头中心转走，平移 probeVisual 抵消，射线始终从发射面射出
+                var ang = (probeBaseAngleDeg + tilt) * Mathf.Deg2Rad;
+                var c = Mathf.Cos(ang); var s = Mathf.Sin(ang);
+                var e = EntryLocal();
+                probeVisual.anchoredPosition = _visualBasePos + e - new Vector2(e.x * c - e.y * s, e.x * s + e.y * c);
+            }
             if (beamLine != null) beamLine.localRotation = Quaternion.Euler(0f, 0f, degrees); // M4 向上偏转：0° 时平，随角度同步上偏
-            if (reflectedBeam != null) reflectedBeam.localRotation = Quaternion.Euler(0f, 0f, degrees);
+            if (reflectedBeam != null) reflectedBeam.localRotation = Quaternion.Euler(0f, 0f, -degrees); // 反射束与入射束（+degrees）关于水平镜像，与 M3 同套合同
         }
 
         private Vector2 EntryLocal()
@@ -313,7 +322,7 @@ namespace M4
         /// M4 同款合同：射线截断以 red 对象为参考，移动 red 截断处实时变化）。</summary>
         private float RedBottomY()
         {
-            if (redLine == null || railViewport == null) return scanStartY - 50f; // fallback：近似当前高度差
+            if (redLine == null || railViewport == null) return scanStartY + 50f; // fallback：M4 向上，伤损（red）在入射点上方近似 50px
             var bottom = redLine.TransformPoint(new Vector3(0f, -redLine.rect.height * redLine.pivot.y, 0f)); // 下边缘局部点（含层级/缩放）
             return railViewport.InverseTransformPoint(bottom).y;
         }

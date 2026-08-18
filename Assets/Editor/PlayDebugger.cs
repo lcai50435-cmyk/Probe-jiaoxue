@@ -307,6 +307,7 @@ namespace M2.EditorTools
                 EditorGUILayout.LabelField("【M2 尺子】（Ruler · M2RulerDrag）", EditorStyles.boldLabel);
                 EditorGUI.BeginChangeCheck();
                 // 尺子工作态大小由 measureSize 决定（ppm 几何基准），不再提供工作态 scale 覆盖
+                _m2Ruler.measureSize = EditorGUILayout.Vector2Field("尺子工作态尺寸 (measureSize，会连带 ppm/探头几何)", _m2Ruler.measureSize);
                 _m2Ruler.slotUv = EditorGUILayout.Vector2Field("10°槽锚点·校角吸附位置 (slotUv)", _m2Ruler.slotUv);
                 _m2Ruler.zeroUv = EditorGUILayout.Vector2Field("0mm锚点 (zeroUv)", _m2Ruler.zeroUv);
                 _m2Ruler.ruler110Uv = EditorGUILayout.Vector2Field("110mm刻线锚点 (ruler110Uv)", _m2Ruler.ruler110Uv);
@@ -1072,6 +1073,7 @@ namespace M2.EditorTools
             if (_m2Ruler != null)
             {
                 var p = new PendingApply { ComponentType = typeof(M2RulerDrag) };
+                p.Fields["measureSize"] = _m2Ruler.measureSize; // 尺子工作态尺寸（写回 Scene，2026-08-18 补）
                 p.Fields["slotUv"] = _m2Ruler.slotUv;
                 p.Fields["zeroUv"] = _m2Ruler.zeroUv;
                 p.Fields["ruler110Uv"] = _m2Ruler.ruler110Uv;

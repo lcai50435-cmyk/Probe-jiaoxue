@@ -80,6 +80,7 @@ namespace M2
             rulerRt.anchoredPosition = new Vector2((measureStartLocal.x - railViewport.pivot.x) * railViewport.rect.width, (measureStartLocal.y - railViewport.pivot.y) * railViewport.rect.height);
             // bg 同以 Scene 值（scale 0.8 / pos 不变）为准，不覆盖（老板 2026-08-16）
             ComputeAnchors(); rulerRt.gameObject.SetActive(true);
+            EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
             return true;
         }
         private Vector2 AnchorAt(Vector2 size, Vector2 uv)
@@ -118,6 +119,17 @@ namespace M2
             if (rulerImage != null) rulerImage.color = Color.white; // 工作态不置灰
             rulerRt.gameObject.SetActive(true);
             ComputeAnchors();
+            EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
+        }
+
+        /// <summary>渲染层级合同（2026-08-18 老板）：探头渲染层级必须高于尺子。尺子进入 railViewport 工作态时，若探头已在其中，把尺子插到探头前一位（sibling 越大渲染越靠上），保证探头盖住尺子。</summary>
+        private void EnsureProbeAboveRuler()
+        {
+            if (rulerRt == null || railViewport == null) return;
+            var probe = flow != null ? flow.probeDrag : null;
+            if (probe == null || probe.probeRt == null || probe.probeRt.parent != railViewport || rulerRt.parent != railViewport) return;
+            if (probe.probeRt.GetSiblingIndex() > rulerRt.GetSiblingIndex()) return; // 探头已在尺子上方
+            rulerRt.SetSiblingIndex(probe.probeRt.GetSiblingIndex()); // 尺子移到探头前一位
         }
         public void OnDrag(PointerEventData eventData)
         {

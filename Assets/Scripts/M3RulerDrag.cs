@@ -151,6 +151,7 @@ namespace M3
             rulerRt.pivot = new Vector2(.5f, .5f);
             rulerRt.anchoredPosition = NormalizedToRailLocal(start);
             rulerRt.sizeDelta = measureSize; rulerRt.gameObject.SetActive(true);
+            EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
         }
 
         /// <summary>归一化 (0~1) 坐标 → 轨道本地像素（以 railViewport pivot 为原点）。</summary>
@@ -245,6 +246,17 @@ namespace M3
             rulerRt.anchoredPosition = local; // 尺子中心跟指针（与 OnDrag 校角一致）
             rulerRt.gameObject.SetActive(true);
             ComputeAnchors();
+            EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
+        }
+
+        /// <summary>渲染层级合同（2026-08-18 老板）：探头渲染层级必须高于尺子。尺子进入 railViewport 工作态时，若探头已在其中，把尺子插到探头前一位（sibling 越大渲染越靠上），保证探头盖住尺子。</summary>
+        private void EnsureProbeAboveRuler()
+        {
+            if (rulerRt == null || railViewport == null) return;
+            var probe = flow != null ? flow.probeDrag : null;
+            if (probe == null || probe.probeRt == null || probe.probeRt.parent != railViewport || rulerRt.parent != railViewport) return;
+            if (probe.probeRt.GetSiblingIndex() > rulerRt.GetSiblingIndex()) return; // 探头已在尺子上方
+            rulerRt.SetSiblingIndex(probe.probeRt.GetSiblingIndex()); // 尺子移到探头前一位
         }
 
         /// <summary>拖到测量初始位起点吸附：位置固定初始位、角度变为 measureAngleDeg，吸附即判定成功（蜂鸣+完成）。
