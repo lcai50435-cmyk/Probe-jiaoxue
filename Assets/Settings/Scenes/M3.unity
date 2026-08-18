@@ -2515,6 +2515,9 @@ MonoBehaviour:
   beamHitRadiusPx: 10
   showReflectedBeam: 0
   damageUv: {x: 0.46836823, y: 0.2121}
+  damageEllipseUv: {x: 0.4672775, y: 0.23243243}
+  ellipseHalfWidthPx: 5.671902
+  ellipseHalfHeightPx: 17.45946
   unlocked: 0
   currentDistanceMm: 150
 --- !u!1 &709824643
@@ -4978,7 +4981,7 @@ MonoBehaviour:
   measureSprite: {fileID: 5987772278907439635, guid: 7a99bd260df48484c936a5411d1c3183, type: 3}
   measureSize: {x: 420, y: 91}
   positioningStart: {x: 0.27620193, y: 0.675487}
-  measureStartLocal: {x: 0.43134615, y: 0.69383115}
+  measureStartLocal: {x: 0.43134615, y: 0.6894643}
   zeroUv: {x: 0.005, y: 0.038}
   ruler120Uv: {x: 0.807, y: 0.038}
   slotUv: {x: 0.005, y: 0.136}
@@ -8197,7 +8200,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -325, y: 123}
+  m_AnchoredPosition: {x: -325, y: 120}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1857640703

@@ -138,17 +138,17 @@ namespace M3.EditorTools
                         _nextAt = EditorApplication.timeSinceStartup + .2f;
                         break;
                     case 3:
-                        _probe.AutoMoveToMm(120f); // 平移探头到 120mm：射线照到伤损即检出
-                        Require(_flow.Detected, $"120mm 未检出：BeamHit={_probe.BeamHitsDamage} AngleCorrect={_probe.AngleCorrect} 距离={_probe.CurrentDistanceMm:F1}");
-                        Require(Mathf.Abs(_probe.CurrentDistanceMm - 120f) < .01f, "检出距离未钳在 120mm");
-                        var progress = Mathf.InverseLerp(_probe.ScanStartLocal.x, _probe.ScanEndLocal.x, _probe.probeRt.anchoredPosition.x);
-                        Require(Mathf.Abs(progress - 1f) < .01f, "120mm 未处于扫描终点");
-                        Require(!_flow.damageMarker.activeSelf, "检出后 DamageMarker 应保持隐藏（老板定稿不再显示）");
+                        // 检出：从扫描起点按 0.5mm 步进推进，射线末端进入红椭圆区域（椭圆判定）即检出；不跳终点（会错过触发点）
+                        for (var mm = _probe.scanStartMm; mm >= _probe.scanEndMm && !_flow.Detected; mm -= .5f)
+                            _probe.AutoMoveToMm(mm);
+                        Require(_flow.Detected, $"未检出：BeamHit={_probe.BeamHitsDamage} AngleCorrect={_probe.AngleCorrect} 距离={_probe.CurrentDistanceMm:F1}");
+                        Require(_probe.CurrentDistanceMm < _probe.scanStartMm, "检出未发生在扫描推进过程中");
+                        Require(_flow.damageMarker.activeSelf, "检出后 DamageMarker 应显示且对齐红椭圆中心（2026-08-18 老板：M3/M4 统一）");
                         Require(!_flow.detectionBanner.activeSelf, "检出后 DetectionBanner 应保持隐藏");
                         Require(_flow.CurrentStage == M3FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");
                         Require(_ruler.unlocked && _ruler.rulerRt.parent == _ruler.railViewport, "检出后尺子应直接出架进测量");
                         var lockedPos = _probe.probeRt.anchoredPosition;
-                        _probe.AutoMoveToMm(120f);
+                        _probe.AutoMoveToMm(_probe.scanEndMm);
                         Require(_probe.probeRt.anchoredPosition == lockedPos, "检出后探头未锁定");
                         _nextAt = EditorApplication.timeSinceStartup + .2f;
                         break;

@@ -24,12 +24,15 @@ namespace M3
         public bool showReflectedBeam = false; // 反射射线默认关闭；老场景仍保留节点，但不再显示
         /// <summary>伤损标定 UV（正视角透明.png 2292×740）：x=红椭圆中心 1073.5；y=0.2121 对应椭圆中心（=red 上边缘线高度，老板参考线对齐处）。</summary>
         public Vector2 damageUv = new Vector2(1073.5f / 2292f, .2121f);
+        /// <summary>红椭圆（伤损）中心 UV（正视角透明.png 像素采样：中心 x=1071、y=172）；检出判定基准（2026-08-18 与 M4 统一：末端进入红椭圆区域即成功接触）。</summary>
+        public Vector2 damageEllipseUv = new Vector2(1071f / 2292f, 172f / 740f);
+        public float ellipseHalfWidthPx = 13f / 2292f * 1000f, ellipseHalfHeightPx = 40f / 740f * 323f; // 红椭圆半轴（RailViewport 局部 px，Inspector 可调判定区大小）
         public bool unlocked;
         public float currentDistanceMm = 160f;
         public event Action<float> OnDistanceChanged;
         private float _angleDeg, _spriteAspect = 1f, _settle;
         private bool _placed, _beamVisible, _inputLocked, _dragging, _homeCached;
-        private Vector2 _probeSize, _damageLocal, _scanStartLocal, _scanEndLocal, _homeAnchor, _homePos, _homeSize, _homePivot;
+        private Vector2 _probeSize, _damageLocal, _ellipseLocal, _scanStartLocal, _scanEndLocal, _homeAnchor, _homePos, _homeSize, _homePivot;
         private Vector3 _homeScale;
         private Quaternion _homeRot;
         private Transform _homeParent;
@@ -43,21 +46,24 @@ namespace M3
         public Vector2 ScanEndLocal => _scanEndLocal;
         public float PixelsPerMm => flow != null && flow.rulerDrag != null ? flow.rulerDrag.PixelsPerMm : 2.768f;
         public Vector2 DamagePointInRail => _damageLocal;
+        public Vector2 DamageEllipsePointInRail => _ellipseLocal; // 红椭圆中心（检出判定区域，橙色标记对齐处）
         public Vector2 ProbeEntryPointInRail => railViewport != null ? railViewport.InverseTransformPoint(probeRt.TransformPoint(EntryLocal())) : Vector2.zero;
         /// <summary>探头 zero 锚点中心世界位置（RailViewport 局部）：扫描终点时与伤损同水平线、水平距伤损 120mm（尺子 0 刻度对齐处）。</summary>
         public Vector2 ZeroAnchorWorld => railViewport != null && zeroAnchor != null ? railViewport.InverseTransformPoint(zeroAnchor.position) : ProbeEntryPointInRail;
 
-        /// <summary>射线末端是否实际照射到伤损点（老板定稿：末端照到伤损点才触发检出，不是方向对准就算）：
-        /// 射线末端（entry + 方向×当前长度）到伤损点的距离 ≤ 命中半径。</summary>
+        /// <summary>射线末端是否实际照射到伤损（老板 2026-08-18：末端进入红椭圆区域即判定成功接触，与 M4 统一）：
+        /// 射线末端（entry + 方向×当前长度）在红椭圆归一化坐标下 dx²/a²+dy²/b² ≤ 1（含边缘），与视觉“碰到红椭圆”一致。</summary>
         public bool BeamHitsDamage
         {
             get
             {
                 if (!_placed || railViewport == null) return false;
                 var entry = ProbeEntryPointInRail;
-                var dir = new Vector2(Mathf.Cos(-_angleDeg * Mathf.Deg2Rad), Mathf.Sin(-_angleDeg * Mathf.Deg2Rad));
+                var dir = new Vector2(Mathf.Cos(-_angleDeg * Mathf.Deg2Rad), Mathf.Sin(-_angleDeg * Mathf.Deg2Rad)); // M3 向下：-角度
                 var end = entry + dir * BeamLenPx(_angleDeg);
-                return Vector2.Distance(_damageLocal, end) <= beamHitRadiusPx;
+                var dx = (end.x - _ellipseLocal.x) / Mathf.Max(.1f, ellipseHalfWidthPx);
+                var dy = (end.y - _ellipseLocal.y) / Mathf.Max(.1f, ellipseHalfHeightPx);
+                return dx * dx + dy * dy <= 1f;
             }
         }
 
@@ -90,7 +96,9 @@ namespace M3
             if (zeroAnchor == null && probeRt != null) zeroAnchor = probeRt.Find("zero") as RectTransform;
             if (redLine == null) redLine = FindDeep(transform.root, "red") as RectTransform; // 老板参考线（红椭圆伤损所在区域）
             // 注意：scanStartMm/scanEndMm/beamLengthZeroMm 等以 Scene 中老板手工调值为准，运行时不再覆盖。
-            CalibrateTrack(); ConfigureBeam(); HideBeam();
+            if (damageEllipseUv.x < 0f || damageEllipseUv.x > 1f || damageEllipseUv.y < 0f || damageEllipseUv.y > 1f)
+                damageEllipseUv = new Vector2(1071f / 2292f, 172f / 740f); // 非法 UV 迁移回红椭圆中心
+            CalibrateTrack(); CalibrateEllipse(); ConfigureBeam(); HideBeam();
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
             if (angleSlider != null) { angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged); _angleDeg = angleSlider.value; initialAngleDeg = angleSlider.value; } // 初始角以 Scene 中滑块当前值为准
             if (angleValueText != null) angleValueText.text = $"{_angleDeg:0}°";
@@ -276,6 +284,14 @@ namespace M3
             return new Vector2(
                 (_probeSize.x - rw) * .5f + probeEntryLocal.x * rw - _probeSize.x * .5f,
                 (_probeSize.y - rw / _spriteAspect) * .5f + probeEntryLocal.y * (rw / _spriteAspect) - _probeSize.y * .5f);
+        }
+
+        /// <summary>红椭圆中心换算 RailViewport 局部（检出判定基准，独立于 damageUv 的扫描几何）。</summary>
+        private void CalibrateEllipse()
+        {
+            var rail = flow != null && flow.railPerspective != null ? flow.railPerspective.GetComponent<RectTransform>() : null;
+            if (rail == null || railViewport == null) { _ellipseLocal = _damageLocal; return; }
+            _ellipseLocal = railViewport.InverseTransformPoint(rail.TransformPoint(new Vector3((damageEllipseUv.x - .5f) * rail.rect.width, (.5f - damageEllipseUv.y) * rail.rect.height)));
         }
 
         private void CalibrateTrack()

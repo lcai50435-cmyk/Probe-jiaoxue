@@ -46,6 +46,7 @@ namespace M4
         public Vector2 ScanEndLocal => _scanEndLocal;
         public float PixelsPerMm => flow != null && flow.rulerDrag != null ? flow.rulerDrag.PixelsPerMm : 2.768f;
         public Vector2 DamagePointInRail => _damageLocal;
+        public Vector2 DamageEllipsePointInRail => _ellipseLocal; // 红椭圆中心（检出判定区域，橙色标记对齐处）
         public Vector2 ProbeEntryPointInRail => railViewport != null ? railViewport.InverseTransformPoint(probeRt.TransformPoint(EntryLocal())) : Vector2.zero;
         /// <summary>探头 zero 锚点中心世界位置（RailViewport 局部）：扫描终点时与伤损同水平线、水平距伤损 120mm（尺子 0 刻度对齐处）。</summary>
         public Vector2 ZeroAnchorWorld => railViewport != null && zeroAnchor != null ? railViewport.InverseTransformPoint(zeroAnchor.position) : ProbeEntryPointInRail;

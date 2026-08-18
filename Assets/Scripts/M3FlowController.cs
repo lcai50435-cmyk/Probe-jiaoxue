@@ -137,7 +137,7 @@ namespace M3
                 rt.anchorMin = rt.anchorMax = probeDrag.railViewport.pivot; rt.pivot = new Vector2(.5f, .5f);
                 rt.sizeDelta = new Vector2(16f, 36f); // 竖椭圆（贴合红椭圆竖向形状）
                 rt.localScale = Vector3.one;
-                rt.anchoredPosition = probeDrag.DamagePointInRail; // 对齐伤损中心
+                rt.anchoredPosition = probeDrag.DamageEllipsePointInRail; // 对齐红椭圆中心（判定区域，2026-08-18 老板：M3/M4 统一）
             }
             damageMarker.SetActive(true);
         }
