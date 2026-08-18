@@ -2502,10 +2502,10 @@ MonoBehaviour:
   beamColor: {r: 0.3, g: 1, b: 0.5, a: 1}
   beamDetectedColor: {r: 1, g: 0.45, b: 0.05, a: 1}
   placementTolerancePx: {x: 60, y: 40}
-  probeEntryLocal: {x: 0.89, y: 0.5}
-  scanStartMm: 128.73122
+  probeEntryLocal: {x: 0.58, y: 0.5}
+  scanStartMm: 135.49348
   scanEndMm: 40
-  scanStartY: 40
+  scanStartY: 38
   visualTiltAtTarget: 10
   initialAngleDeg: 0
   probeBaseAngleDeg: 15
@@ -2516,7 +2516,7 @@ MonoBehaviour:
   showReflectedBeam: 0
   damageUv: {x: 0.46836823, y: 0.2121}
   damageEllipseUv: {x: 0.4672775, y: 0.23243243}
-  ellipseHalfWidthPx: 5.671902
+  ellipseHalfWidthPx: 8
   ellipseHalfHeightPx: 17.45946
   unlocked: 0
   currentDistanceMm: 55
@@ -3059,9 +3059,9 @@ MonoBehaviour:
   scanMinMm: 0
   scanMaxMm: 200
   majorDivisions: 5
-  appearMm: 55
-  peakMm: 45
-  stopMm: 40
+  appearMm: 65
+  peakMm: 55
+  stopMm: 50
   startStrength: 0.08
   peakStrength: 0.85
   pulseWidth: 0.075
@@ -3075,7 +3075,7 @@ MonoBehaviour:
   axisRedColor: {r: 0.86, g: 0.12, b: 0.12, a: 1}
   subGridColor: {r: 0.62, g: 0.62, b: 0.62, a: 0.6}
   lineThickness: 2
-  noiseAmp: 0.04
+  noiseAmp: 0.012
 --- !u!222 &910000002
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4940,7 +4940,7 @@ RectTransform:
   m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 1
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 463674089}
   m_Father: {fileID: 1520170581}
@@ -4980,8 +4980,8 @@ MonoBehaviour:
   positioningSprite: {fileID: 5987772278907439635, guid: 7a99bd260df48484c936a5411d1c3183, type: 3}
   measureSprite: {fileID: -754433769875543845, guid: 9cd604d9c76743f4cad020b1440388f5, type: 3}
   measureSize: {x: 420, y: 91}
-  positioningStart: {x: 0.26073718, y: 0.548539}
-  measureStartLocal: {x: 0.51995194, y: 0.56623375}
+  positioningStart: {x: 0.27652243, y: 0.56452924}
+  measureStartLocal: {x: 0.53036857, y: 0.55454546}
   zeroUv: {x: 0.005, y: 0.038}
   ruler40Uv: {x: 0.268, y: 0.038}
   slotUv: {x: 0.005, y: 0.136}

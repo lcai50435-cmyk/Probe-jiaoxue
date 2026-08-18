@@ -54,11 +54,12 @@ namespace M4
             if (waveformFx != null)
             {
                 waveformFx.scanMinMm = 0f; waveformFx.scanMaxMm = 200f;
-                // M4 PPT 定稿：伤损波 55mm 短波出现 → 45mm 最高 → 40mm 停止；
-                // 伤损波最高时与始波同高（peakStrength = startPeakHeight）；初态即 160mm 短波小波形，扫描平移时随距离变化。
-                waveformFx.appearMm = 55f; waveformFx.peakMm = 45f; waveformFx.stopMm = 40f;
-                waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度
-                waveformFx.SetDistanceMm(55f);
+                // M4 PPT 定稿：伤损波 65mm 短波出现 → 55mm 最高 → 50mm 停止（2026-08-18 右移 10mm 避开始波重叠，终点对齐 50mm 刻度）；
+                // 伤损波最高时视觉与始波同高；初态即 65mm 短波小波形，扫描平移时随距离变化。
+                waveformFx.appearMm = 65f; waveformFx.peakMm = 55f; waveformFx.stopMm = 50f;
+                // 伤损波最高时与始波直接等高（peakStrength = startPeakHeight；伤损波噪声已调小避免峰顶毛刺抬高，2026-08-18 老板）
+                waveformFx.peakStrength = waveformFx.startPeakHeight;
+                waveformFx.SetDistanceMm(65f);
                 foreach (Transform child in waveformFx.transform) child.gameObject.SetActive(false);
             }
             ApplyView(false);
@@ -106,7 +107,7 @@ namespace M4
             if (CurrentStage == Stage.Scanning && probeDrag != null && waveformFx != null)
             {
                 var t = Mathf.InverseLerp(probeDrag.scanStartMm, probeDrag.scanEndMm, mm) * waveformSpeed;
-                var wmm = Mathf.Lerp(55f, 40f, Mathf.Clamp01(t));
+                var wmm = Mathf.Lerp(65f, 50f, Mathf.Clamp01(t));
                 waveformFx.SetDistanceMm(wmm);
             }
             // 检出 = 扫描中 && 角度正确 && 射线末端实际照射到伤损点（末端照到伤损才触发蜂鸣）。
@@ -180,7 +181,7 @@ namespace M4
             if (detectionBanner != null) detectionBanner.SetActive(false);
             if (measurementBubble != null) measurementBubble.SetActive(false);
             SetDialog(false); probeDrag?.ResetTool(); rulerDrag?.Hide();
-            waveformFx?.ResetWave(55f);
+            waveformFx?.ResetWave(65f);
             idleHelp?.ResetAll(); ApplyView(false);
             EnterPositioning();
         }

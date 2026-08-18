@@ -149,7 +149,7 @@ namespace M4
             if (rulerRt == null || railViewport == null) return;
             rulerRt.SetParent(railViewport, false); rulerRt.anchorMin = rulerRt.anchorMax = railViewport.pivot;
             rulerRt.pivot = new Vector2(.5f, .5f);
-            rulerRt.localScale = new Vector3(.6f, .6f, .6f); // 工作态 0.6 倍显示（2026-08-18 老板：M2/M4 尺子以 M3 为基准统一；ppm 不乘 scale，几何不变）
+            rulerRt.localScale = new Vector3(_measuring ? .73f : .6f, _measuring ? .65f : .6f, _measuring ? .65f : .6f); // 工作态 0.6 倍显示（2026-08-18 老板：M2/M4 尺子以 M3 为基准统一；ppm 不乘 scale，几何不变）；测量阶段尺子素材 X 0.73 / YZ 0.65（2026-08-18 老板试调，仅 M4）
             rulerRt.anchoredPosition = NormalizedToRailLocal(start);
             rulerRt.sizeDelta = measureSize; rulerRt.gameObject.SetActive(true);
             EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
@@ -240,7 +240,7 @@ namespace M4
             rulerRt.SetParent(railViewport, false);
             rulerRt.anchorMin = rulerRt.anchorMax = railViewport.pivot;
             rulerRt.pivot = new Vector2(.5f, .5f);
-            rulerRt.localScale = new Vector3(.6f, .6f, .6f); // 工作态 0.6 倍显示（2026-08-18 老板：M2/M4 尺子以 M3 为基准统一；ppm 不乘 scale，几何不变）
+            rulerRt.localScale = new Vector3(_measuring ? .73f : .6f, _measuring ? .65f : .6f, _measuring ? .65f : .6f); // 工作态 0.6 倍显示（2026-08-18 老板：M2/M4 尺子以 M3 为基准统一；ppm 不乘 scale，几何不变）；测量阶段尺子素材 X 0.73 / YZ 0.65（2026-08-18 老板试调，仅 M4）
             rulerRt.sizeDelta = measureSize;
             rulerRt.localRotation = Quaternion.Euler(0f, 0f, _measuring ? measureAngleDeg : positioningAngle); // 测量阶段用测量角度，校角用校角角度
             SetPhaseSprite(_measuring); // 拖入工作态即按阶段应用素材

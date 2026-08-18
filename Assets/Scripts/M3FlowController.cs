@@ -58,6 +58,7 @@ namespace M3
                 // 伤损波最高时与始波同高（peakStrength = startPeakHeight）；初态即 160mm 短波小波形，扫描平移时随距离变化。
                 waveformFx.appearMm = 160f; waveformFx.peakMm = 123f; waveformFx.stopMm = 120f;
                 waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度
+                waveformFx.noiseAmp = .012f; // 伤损波噪声调小，峰顶毛刺不抬高（2026-08-18 老板：与始波视觉等高，M2/M4 同款）
                 waveformFx.SetDistanceMm(160f);
                 foreach (Transform child in waveformFx.transform) child.gameObject.SetActive(false);
             }

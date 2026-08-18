@@ -47,6 +47,7 @@ namespace M2
                 // 伤损波 150mm 短波出现 → 115mm 最高 → 110mm 停止；最高时与始波同高（peakStrength=startPeakHeight）。
                 waveformFx.appearMm = 150f; waveformFx.peakMm = 115f; waveformFx.stopMm = 110f; // M2 合同（与 Scene 序列化一致，防御覆盖）
                 waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度（与 M3 同款）
+                waveformFx.noiseAmp = .012f; // 伤损波噪声调小，峰顶毛刺不抬高（2026-08-18 老板：与始波视觉等高，M4 同款）
                 waveformFx.SetDistanceMm(150f);
             }
             _bubbleText = measurementBubble != null ? measurementBubble.GetComponentInChildren<TMP_Text>(true) : null;
