@@ -32,20 +32,22 @@ namespace M1.EditorTools
         private const string IntroVideoName = "引导视频";
         private const string IntroSkipName = "跳过引导";
         private const string IntroHidePath = "DigitalHumanStage/FullBodyView"; // 引导播放期间隐藏的常驻数字人全身
+        private const string SubtitleName = "引导字幕"; // 2026-08-18：视频静音后解说词改字幕
         // 引导期间需要暂停的常驻数字人视频（VideoPlayer 不受 timeScale 影响）
         private const string StageName = "DigitalHumanStage";
         private const string FullBodyName = "FullBodyView";
         private const string IntroBasePath =
             "Assets/DigitalHuman/A-04 引导动画/引导动画-1/引导动画-1（有音轨版）/引导动画-1（有音轨版）";
         private const float IntroDimAlpha = 0.8f;          // 半黑遮罩黑度（与视频纯黑底视觉融合）
+        private const float IntroVideoScale = 0.78f;       // 2026-08-18：引导视频等比缩小（数字人变小、底部留黑，与字幕分离）
         private const float IntroVideoAspect = 1080f / 1450f; // 竖屏 1080x1450，方案 A：高度适配居中
         private const string LumaKeyMatPath = "Assets/Shaders/UI-LumaKey.mat";
 
         // M1-1 点击音效素材（正确/错误/通过，已与用户确认）
         private const string CorrectClipPath = "Assets/Audio/E-01 正确提示音/正确音2.mp3";
         private const string WrongClipPath = "Assets/Audio/E-02 错误提示音/错误提示音.mp3";
-        private const string PassClipPath = "Assets/Audio/E-04 通关音效/通关音效1.mp3"; // M1-2 开始探测进入下一模块
-        private const string Pass2ClipPath = "Assets/Audio/E-04 通关音效/通关音效2.mp3"; // M1-1 点击继续进入 M1-2
+        private const string PassClipPath = "Assets/Audio/E-01 正确提示音/正确音2.mp3"; // M1-2 开始探测进入下一模块（2026-08-18 老板定稿：换为选择正确音效）
+        private const string Pass2ClipPath = "Assets/Audio/E-01 正确提示音/正确音2.mp3"; // M1-1 点击继续进入 M1-2（2026-08-18 老板定稿：换为选择正确音效）
 
         /// <summary>命令行/批处理入口：打开 M1 场景后执行 Setup（供 CI 与无人值守使用）。</summary>
         public static void SetupM11Batch()
@@ -301,12 +303,18 @@ namespace M1.EditorTools
                 InjectIntroHide(m1, board);
                 var player = FindIncludingInactive(root, IntroVideoName);
                 var vp = player != null ? player.GetComponent<VideoPlayer>() : null;
+                var vrtOld = player != null ? player.GetComponent<RectTransform>() : null;
+                if (vrtOld != null && vrtOld.localScale.x != IntroVideoScale)
+                    vrtOld.localScale = new Vector3(IntroVideoScale, IntroVideoScale, 1f); // 2026-08-18：等比缩小居中
                 if (clip != null && vp != null && vp.clip == null) vp.clip = clip;
+                if (vp != null) vp.audioOutputMode = VideoAudioOutputMode.None; // 2026-08-18：引导视频静音改字幕
                 if (m1 != null && clip != null && m1.player != null && m1.player.clip == null) m1.player.clip = clip;
                 // 修复材质：引导视频必须用 LumaKey 抠像材质（黑底去除、人物悬空）
                 var existingRaw = player != null ? player.GetComponent<RawImage>() : null;
                 var lumaMat = EnsureLumaKeyMaterial();
                 if (existingRaw != null && lumaMat != null && existingRaw.material != lumaMat) existingRaw.material = lumaMat;
+                var subTmp2 = EnsureSubtitle(root.gameObject, font);
+                if (m1 != null && subTmp2 != null) m1.subtitleText = subTmp2;
                 Debug.Log("[M1Setup] 已存在 " + IntroCanvasName + "，跳过创建（补全引用）。");
                 return "已存在";
             }
@@ -338,6 +346,7 @@ namespace M1.EditorTools
             vrt.pivot = new Vector2(0.5f, 0.5f);
             vrt.anchoredPosition = Vector2.zero;
             vrt.sizeDelta = new Vector2(100f, 0f); // 宽度由 AspectRatioFitter 按高度推算
+            vrt.localScale = new Vector3(IntroVideoScale, IntroVideoScale, 1f); // 等比缩小居中（数字人变小）
             var fitter = videoGo.GetComponent<AspectRatioFitter>();
             fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
             fitter.aspectRatio = IntroVideoAspect;
@@ -349,7 +358,7 @@ namespace M1.EditorTools
             vp2.playOnAwake = false;
             vp2.isLooping = false;
             vp2.skipOnDrop = true;
-            vp2.audioOutputMode = VideoAudioOutputMode.Direct;
+            vp2.audioOutputMode = VideoAudioOutputMode.None; // 老板 2026-08-18：引导视频静音，解说词改字幕（画面照播）
 
             // --- 右上角跳过按钮（首次进入隐藏，由 M1IntroVideo 控制）---
             var skipGo = new GameObject(IntroSkipName, typeof(RectTransform), typeof(CanvasRenderer),
@@ -382,12 +391,16 @@ namespace M1.EditorTools
             tmp.color = Color.white;
             if (font != null) tmp.font = font;
 
+            // --- 引导字幕（底部半透明黑条 + 白字描边，盖在视频画面底部；内容由 M1IntroVideo 按播放进度切换）---
+            var subTmp = EnsureSubtitle(canvasGo, font);
+
             // --- 挂载运行时控制器并接线 ---
             var intro = canvasGo.AddComponent<M1IntroVideo>();
             intro.overlay = canvasGo;
             intro.player = vp2;
             intro.videoImage = raw;
             intro.skipButton = sBtn;
+            intro.subtitleText = subTmp;
             InjectIntroPause(intro, board);
             InjectIntroHide(intro, board);
             dim.GetComponent<Button>().onClick.AddListener(intro.Skip);
@@ -416,6 +429,40 @@ namespace M1.EditorTools
             intro.pauseWhilePlaying = new[] { dhVp };
             EditorUtility.SetDirty(intro);
             Debug.Log("[M1Setup] 引导期间将暂停常驻数字人视频：" + dhVp.gameObject.name);
+        }
+
+        /// <summary>引导字幕（底部白字 + 黑描边，无背景条，直接叠在画面上）。幂等：已存在只补字体。</summary>
+        private static TextMeshProUGUI EnsureSubtitle(GameObject canvasGo, TMP_FontAsset font)
+        {
+            var sub = FindIncludingInactive(canvasGo.transform, SubtitleName);
+            if (sub != null)
+            {
+                var t = sub.GetComponent<TextMeshProUGUI>() ?? sub.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (t != null && font != null && t.font == null) t.font = font;
+                return t;
+            }
+            var textGo = new GameObject(SubtitleName, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            textGo.transform.SetParent(canvasGo.transform, false);
+            var trt = textGo.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0.5f, 0f);
+            trt.anchorMax = new Vector2(0.5f, 0f);
+            trt.pivot = new Vector2(0.5f, 0f);
+            trt.anchoredPosition = new Vector2(0f, 16f);
+            trt.sizeDelta = new Vector2(1200f, 100f);
+            var tmp = textGo.GetComponent<TextMeshProUGUI>();
+            tmp.text = "叮咚！AI 智能陪练铁小探上线啦～";
+            tmp.fontSize = 28;
+            tmp.alignment = TextAlignmentOptions.Bottom; // 垂直底部对齐：文字贴底显示，与数字人脚部错开
+            tmp.enableWordWrapping = false; // 2026-08-18：单行显示，不换行
+            tmp.color = Color.white;
+            if (font != null) tmp.font = font;
+            var ol = textGo.AddComponent<Outline>();
+            ol.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            ol.effectDistance = new Vector2(2f, -2f);
+            var sh = textGo.AddComponent<Shadow>();
+            sh.effectColor = new Color(0f, 0f, 0f, 0.7f);
+            sh.effectDistance = new Vector2(2f, -3f);
+            return tmp;
         }
 
         /// <summary>注入引导期间需隐藏的对象（常驻数字人全身）：仅当字段为空时赋值，不覆盖用户配置。</summary>

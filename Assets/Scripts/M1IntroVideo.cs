@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
@@ -43,6 +44,28 @@ namespace M1
         [Tooltip("运行时兜底：hideWhilePlaying 未配置时按此路径自动发现（Setup 注入后此项失效）")]
         public string hideStagePath = "画板/DigitalHumanStage/FullBodyView";
 
+        [Tooltip("引导字幕 TMP（2026-08-18 老板定稿：视频静音、解说词改字幕；Setup 注入，可为空则不显示）")]
+        public TextMeshProUGUI subtitleText;
+
+        [Tooltip("引导视频等比缩放（2026-08-18：数字人缩小、与字幕分离；Setup 已设值时不覆盖）")]
+        public float introVideoScale = 0.78f;
+
+        [Tooltip("运行时兜底：subtitleText 未注入时按此路径自动发现（Setup 注入后此项失效）")]
+        public string subtitlePath = "画板/引导遮罩/引导字幕";
+
+        [Tooltip("字幕分段台词（对应引导视频解说词，Inspector 可改）")]
+        public string[] subtitleSegments =
+        {
+            "叮咚！AI 智能陪练铁小探上线啦～",
+            "今天我们要用“三位一体、交叉验证”新工艺，完成对铝热焊缝轨头下颚伤损的探测。",
+            "我会全程贴身陪练，遇到难题随时为大家答疑。准备好，我们这就开启今天的探测啦！"
+        };
+
+        [Tooltip("每段字幕起始秒（视频约 15.2 秒，Inspector 可微调对帧）")]
+        public float[] subtitleTimes = { 0.5f, 4.2f, 10.2f };
+
+        private int _subtitleIndex = -1;
+
         private bool[] _hiddenActive;
         private bool[] _hiddenGraphicEnabled;
 
@@ -77,6 +100,17 @@ namespace M1
                 var stage = GameObject.Find(hideStagePath);
                 if (stage != null) hideWhilePlaying = new[] { stage };
             }
+            // 运行时兜底：Setup 未注入字幕引用时，按路径自动发现（防引导视频无字幕）
+            if (subtitleText == null && !string.IsNullOrEmpty(subtitlePath))
+            {
+                var sub = GameObject.Find(subtitlePath);
+                if (sub != null) subtitleText = sub.GetComponent<TextMeshProUGUI>();
+            }
+            // 运行时兜底二：场景无字幕节点时动态创建（挂遮罩底部，字体从跳过按钮复制），保证不跑 Setup 也显示字幕
+            if (subtitleText == null) subtitleText = CreateRuntimeSubtitle();
+            // 运行时兜底：引导视频等比缩小（数字人变小；Setup 已设 0.78 则不覆盖）
+            if (videoImage != null && Mathf.Approximately(videoImage.rectTransform.localScale.x, 1f))
+                videoImage.rectTransform.localScale = new Vector3(introVideoScale, introVideoScale, 1f);
 
             _firstTime = PlayerPrefs.GetInt(seenPrefsKey, 0) == 0;
             var clip = player != null ? player.clip : null;
@@ -92,6 +126,7 @@ namespace M1
             videoImage.texture = _rt;
             player.loopPointReached += OnVideoEnd;
             player.prepareCompleted += OnPrepared;
+            player.audioOutputMode = VideoAudioOutputMode.None; // 老板 2026-08-18：引导视频静音，解说词改字幕（防场景旧序列化 Direct 覆盖）
 
             // 场景加载即冻结游戏 + 后台预解码：避免玩家在准备期间操作，也避免播放开头卡顿
             Time.timeScale = 0f;
@@ -99,9 +134,10 @@ namespace M1
             StartCoroutine(PrepareTimeout());
         }
 
-        /// <summary>引导播放期间强制冻结附带视频：VideoPlayer 不受 timeScale=0 影响，Presenter 可能在 Start 后重新播放，故每帧保持暂停。</summary>
+        /// <summary>引导播放期间强制冻结附带视频：VideoPlayer 不受 timeScale=0 影响，Presenter 可能在 Start 后重新播放，故每帧保持暂停。同时按播放进度切换字幕。</summary>
         private void Update()
         {
+            UpdateSubtitle();
             if (_finished || pauseWhilePlaying == null) return;
             foreach (var p in pauseWhilePlaying)
                 if (p != null && p.isPlaying) p.Pause();
@@ -169,8 +205,64 @@ namespace M1
                 foreach (var p in pauseWhilePlaying)
                     if (p != null && p.isPaused) p.Play();
             RestoreWhilePlaying(); // 引导结束：恢复常驻数字人显示
+            if (subtitleText != null) subtitleText.text = ""; // 字幕清空
             overlay.SetActive(false);
             Time.timeScale = 1f; // 恢复游戏
+        }
+
+        /// <summary>按视频播放进度切换字幕分段；未到第一段或已结束时清空。</summary>
+        private void UpdateSubtitle()
+        {
+            if (_finished || subtitleText == null || player == null || subtitleSegments == null || subtitleSegments.Length == 0) return;
+            var t = player.time;
+            var idx = -1;
+            if (subtitleTimes != null)
+                for (var i = subtitleTimes.Length - 1; i >= 0; i--)
+                    if (t >= subtitleTimes[i]) { idx = i; break; }
+            if (idx < 0)
+            {
+                if (_subtitleIndex != -1) { _subtitleIndex = -1; subtitleText.text = ""; }
+                return;
+            }
+            if (idx >= subtitleSegments.Length) idx = subtitleSegments.Length - 1;
+            if (idx != _subtitleIndex)
+            {
+                _subtitleIndex = idx;
+                subtitleText.text = subtitleSegments[idx];
+            }
+        }
+
+        /// <summary>场景无字幕节点时运行时动态创建（挂引导遮罩底部：白字描边，无背景条；字体从跳过按钮 TMP 复制）。
+        /// 仅当 Setup 未创建/未注入字幕时才走此兜底；动态节点为 DontSave，不写入场景。</summary>
+        private TextMeshProUGUI CreateRuntimeSubtitle()
+        {
+            if (overlay == null) return null;
+            var textGo = new GameObject("~IntroSubtitle", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            textGo.hideFlags = HideFlags.DontSave;
+            textGo.transform.SetParent(overlay.transform, false);
+            var trt = textGo.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0.5f, 0f);
+            trt.anchorMax = new Vector2(0.5f, 0f);
+            trt.pivot = new Vector2(0.5f, 0f);
+            trt.anchoredPosition = new Vector2(0f, 16f);
+            trt.sizeDelta = new Vector2(1200f, 100f);
+            var tmp = textGo.GetComponent<TextMeshProUGUI>();
+            tmp.fontSize = 28;
+            tmp.alignment = TextAlignmentOptions.Bottom; // 垂直底部对齐：文字贴底显示，与数字人脚部错开
+            tmp.enableWordWrapping = false; // 2026-08-18：单行显示，不换行
+            tmp.color = Color.white;
+            if (skipButton != null)
+            {
+                var src = skipButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (src != null && src.font != null) tmp.font = src.font; // 复用跳过按钮同款中文字体
+            }
+            var ol = textGo.AddComponent<Outline>();
+            ol.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            ol.effectDistance = new Vector2(2f, -2f);
+            var sh = textGo.AddComponent<Shadow>();
+            sh.effectColor = new Color(0f, 0f, 0f, 0.7f);
+            sh.effectDistance = new Vector2(2f, -3f);
+            return tmp;
         }
 
         /// <summary>隐藏引导期间需暂隐的对象：优先禁用 Graphic（视频继续后台播放，恢复无停帧），无 Graphic 才 SetActive(false)。</summary>
