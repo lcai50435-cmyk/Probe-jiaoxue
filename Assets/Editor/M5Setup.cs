@@ -148,7 +148,10 @@ namespace M5.EditorTools
 
         private static void EnsureRailArea(Transform main, TMP_FontAsset font)
         {
-            var railArea = EnsureGo(main, "RailArea"); Stretch(railArea);
+            var railArea = EnsureGo(main, "RailArea");
+            // M2 合同：RailArea 右侧收窄 592（波形窗口 SupportArea 占右侧 576），避免白底 RailViewport 盖满 MainScene 导致背景全白（老板 2026-08-23）；Scene 权威仅空布局设默认
+            if (railArea.sizeDelta.sqrMagnitude < 1f)
+                SetRect(railArea, new Vector2(0, 0), new Vector2(1, 1), new Vector2(-296, 0), new Vector2(-592, 0), new Vector2(.5f, .5f));
             if (main.Find("Tool") == null)
             {
                 // 老板 2026-08-23 定稿：工具架用 MainScene/Tool 权威（老板添加）；Tool 不存在时才创建 M5 标准工具架
