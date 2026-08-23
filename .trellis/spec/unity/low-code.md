@@ -115,6 +115,7 @@
   - **浅色工具置灰坑（2026-08-18 老板反馈 rag 透明）**：rag 是浅灰白布，置灰 (0.55,0.57,0.6,0.62) 后几乎融入浅色背景（像透明）。浅色工具锁定色必须加深+高不透明 `(0.45,0.47,0.5,0.9)` 并加 Outline 深色描边（effectColor=(.2,.22,.25,.6) effectDistance=(2,-2)）与背景分离；深色工具（探头/尺子）用 M2 同款置灰即可。
   - 数字人/QA 复用 `M3DigitalHumanBootstrap`（已支持 M3/M4/M5 场景名）：M5Setup 建 QAPanel 壳（含 Placeholder）+ Blocker + DigitalHumanStage（含 FullBodyPreview）即可，Bootstrap 运行时装配全套。
   - 素材：rag.png（`Assets/probeFootage/rag.png`，Multiple sprite rag_0 internalID `1024226415114158248`，meta 已修 4096+Uncompressed）从 m4 分支并入；钢轨复用 `俯视角.png`/`俯视角透视.png`。
+  - **2026-08-23 波形窗口保留 + 钢轨 Scene 权威（老板定稿）**：M5 保留 M2 波形窗口（SupportArea/WaveformArea_B 静态视觉）——`M2WaveformFx` 程序化绘制与 M2 同款（深底/蓝条红条/网格/绿色始波/噪声线，参数 150/115/110；早期 Setup 曾删该组件且不会自愈，Adapt 现检测 WaveGrid 缺组件自动补回）。老板手工调整钢轨位置（RailBackground anchoredPosition x=-236，左移避开波形窗口），此后 **M5Setup 对钢轨布局 Scene 权威**：railBg sizeDelta 非 0 时 Setup 不覆盖（仅新建/空布局设默认），视觉微调不写回 Setup 默认。
   - 验收：M5RuntimeSmoke 5 组断言（初态铺满/进度跟手+视图切换/拖出工作态/100% 完成+结束模块/Reset+QA 暂停）；M5Shot 三视口；M5Setup 幂等（连跑两次 SHA 一致）。
 
 ## 6. 目录与模块约定

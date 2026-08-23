@@ -193,7 +193,9 @@ namespace M5.EditorTools
         private static void EnsureViewport(Transform viewport, TMP_FontAsset font)
         {
             var railBg = EnsureImage(viewport, "RailBackground", Color.white);
-            SetRect(railBg, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(-24, -32.979f), new Vector2(960.523f, 285.958f), new Vector2(.5f, .5f));
+            // 钢轨布局 Scene 权威：老板手工调整的位置/尺寸不被 Setup 重置（仅新建/空布局时设置默认）
+            if (railBg.sizeDelta.sqrMagnitude < 1f)
+                SetRect(railBg, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(-24, -32.979f), new Vector2(960.523f, 285.958f), new Vector2(.5f, .5f));
             SetRailSprite(railBg, RailNormalPath);
             railBg.SetAsFirstSibling();
 
@@ -289,7 +291,7 @@ namespace M5.EditorTools
         /// <summary>
         /// M2 复制基线适配（老板定稿：M5 = M2 UGUI 骨架 + 删除 M2 探测流程节点）。
         /// 幂等：M2 专属节点/组件已删除后第二次跑全部跳过。
-        /// 1) 移除 M2 运行时组件（M2FlowController/M2ProbeDrag/M2RulerDrag/M2WaveformFx/M2IdleHelp）与失效脚本引用
+        /// 1) 移除 M2 运行时组件（M2FlowController/M2ProbeDrag/M2RulerDrag/M2IdleHelp）与失效脚本引用；M2WaveformFx 保留（波形窗口静态视觉）
         /// 2) 删除 M2 探测专属节点：WeldLine/BeamLayer/MeasurementBubble/StepControlArea（波形窗口 SupportArea 保留，老板 2026-08-23 定稿）
         /// 3) 耦合剂层：删空壳 CouplantMask，CouplantOverlay（Image+CanvasGroup）提为 RailViewport 直接子节点作薄膜
         /// 4) ToolShelf：删除旧 RagHome（名字可能带引号/尾随空格），由 EnsureToolShelf 重建正规节点
@@ -305,11 +307,11 @@ namespace M5.EditorTools
             var viewport = railArea != null ? railArea.Find("RailViewport") : null;
             var dock = safeArea.Find("ControlDock_D");
 
-            // 1) M2 运行时组件（会初始化 M2 探测流程，必须移除；幂等）
+            // 1) M2 运行时组件（会初始化 M2 探测流程，必须移除；幂等）。M2WaveformFx 保留——波形窗口视觉由它程序化绘制，
+            //    独立于 M2 流程（初始即画深底/网格/始波/噪声线），M5 无外部 SetDistanceMm 驱动即静态呈现，与 M2 窗口一致且无实际作用
             foreach (var c in canvas.GetComponentsInChildren<M2FlowController>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             foreach (var c in canvas.GetComponentsInChildren<M2ProbeDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             foreach (var c in canvas.GetComponentsInChildren<M2RulerDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2WaveformFx>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             foreach (var c in canvas.GetComponentsInChildren<M2IdleHelp>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             RemoveMissingScripts(canvas);
 
@@ -320,8 +322,19 @@ namespace M5.EditorTools
                 DestroyNamed(viewport, "BeamLayer");
                 DestroyNamed(viewport, "MeasurementBubble");
             }
-            // SupportArea（M2 波形窗口）保留：老板 2026-08-23 要求 M5 保留波形窗口静态视觉（无实际作用，M2WaveformFx 已由上方移除）
+            // SupportArea（M2 波形窗口）保留：老板 2026-08-23 要求 M5 保留波形窗口静态视觉（无实际作用）
             if (dock != null) DestroyNamed(dock, "StepControlArea");
+            // 波形窗口补回 M2WaveformFx：早期 Setup 曾删除该组件且不会自愈，补回后程序化绘制与 M2 同款波形（深底/网格/始波/噪声线）
+            if (main != null)
+            {
+                var support = main.Find("SupportArea");
+                var waveGrid = support != null ? FindDeep(support, "WaveGrid") : null;
+                if (waveGrid != null && waveGrid.GetComponent<M2WaveformFx>() == null)
+                {
+                    var fx = waveGrid.gameObject.AddComponent<M2WaveformFx>();
+                    fx.appearMm = 150f; fx.peakMm = 115f; fx.stopMm = 110f; // M2 Scene 序列化参数（老板 2026-08-15 定稿），初始波形与 M2 一致
+                }
+            }
 
             // 3) 耦合剂层修复
             if (viewport != null)
