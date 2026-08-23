@@ -146,6 +146,10 @@ namespace M4.EditorTools
                         Require(_flow.damageMarker.activeSelf, "检出后伤损标记（DamageMarker）应显示为橙色");
                         var dmgColor = _flow.damageMarker.GetComponent<Image>().color;
                         Require(dmgColor.a > .3f, "伤损标记未变橙");
+                        _flow.SetNormalView();
+                        Require(!_flow.damageMarker.activeSelf, "普通视图下检出后伤损标记应隐藏（仅透视可见，2026-08-23 老板）");
+                        _flow.SetPerspectiveView();
+                        Require(_flow.damageMarker.activeSelf, "切回透视后伤损标记应重新显示（2026-08-23 老板）");
                         Require(!_flow.detectionBanner.activeSelf, "检出后 DetectionBanner 应保持隐藏");
                         Require(_flow.CurrentStage == M4FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");
                         Require(_ruler.unlocked && _ruler.rulerRt.parent == _ruler.railViewport, "检出后尺子应直接出架进测量");

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace M4
 {
-    /// <summary>M4 探头拖拽：55→40mm 像素几何、10° 向上视觉、检出绿→橙射线。</summary>
+    /// <summary>M4 探头拖拽：55→40mm 像素几何、10° 向上视觉、检出射线恒绿（无绿→橙，2026-08-23）。</summary>
     public class M4ProbeDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public RectTransform probeRt, probeVisual, railViewport, beamLine, reflectedBeam, zeroAnchor, redLine; // zeroAnchor=探头 0 刻度锚点（不可见，尺子 0 刻度对齐其中心）；redLine=老板参考线（射线末端高度线）

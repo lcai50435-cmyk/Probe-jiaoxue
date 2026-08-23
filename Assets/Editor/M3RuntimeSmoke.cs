@@ -144,6 +144,10 @@ namespace M3.EditorTools
                         Require(_flow.Detected, $"未检出：BeamHit={_probe.BeamHitsDamage} AngleCorrect={_probe.AngleCorrect} 距离={_probe.CurrentDistanceMm:F1}");
                         Require(_probe.CurrentDistanceMm < _probe.scanStartMm, "检出未发生在扫描推进过程中");
                         Require(_flow.damageMarker.activeSelf, "检出后 DamageMarker 应显示且对齐红椭圆中心（2026-08-18 老板：M3/M4 统一）");
+                        _flow.SetNormalView();
+                        Require(!_flow.damageMarker.activeSelf, "普通视图下检出后伤损标记应隐藏（仅透视可见，2026-08-23 老板）");
+                        _flow.SetPerspectiveView();
+                        Require(_flow.damageMarker.activeSelf, "切回透视后伤损标记应重新显示（2026-08-23 老板）");
                         Require(!_flow.detectionBanner.activeSelf, "检出后 DetectionBanner 应保持隐藏");
                         Require(_flow.CurrentStage == M3FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");
                         Require(_ruler.unlocked && _ruler.rulerRt.parent == _ruler.railViewport, "检出后尺子应直接出架进测量");

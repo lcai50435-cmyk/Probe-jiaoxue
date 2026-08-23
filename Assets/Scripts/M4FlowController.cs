@@ -124,7 +124,7 @@ namespace M4
             if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip, sfxVolume);
             // 老板 2026-08-16 定稿：检出后尺子不自动出架，等玩家拖到测量初始位吸附并应用调整角度；钢轨红椭圆变橙（射线保持绿色）。
             rulerDrag?.PrepareMeasure();
-            ShowDamageMarker();
+            RefreshDamageMarker(); // 老板 2026-08-23：伤损变色仅透视可见（PerspectiveOn && Detected），检出本身只报警
             Go(Stage.Measuring);
             idleHelp?.ResetIdle();
         }
@@ -143,6 +143,13 @@ namespace M4
                 rt.anchoredPosition = probeDrag.DamageEllipsePointInRail; // 对齐红椭圆中心（判定区域，2026-08-18 老板：M3/M4 统一）
             }
             damageMarker.SetActive(true);
+        }
+        /// <summary>伤损标记显隐统一入口：透视开且已检出才显示（老板 2026-08-23：未开透视仅报警，透视才能看到伤损变色）。</summary>
+        private void RefreshDamageMarker()
+        {
+            if (damageMarker == null) return;
+            if (PerspectiveOn && Detected) ShowDamageMarker();
+            else damageMarker.SetActive(false);
         }
         public void NotifyMeasured()
         {
@@ -169,7 +176,7 @@ namespace M4
             PerspectiveOn = on;
             if (railBg != null) railBg.gameObject.SetActive(!on);
             if (railPerspective != null) railPerspective.SetActive(on);
-            if (damageMarker != null && !Detected) damageMarker.SetActive(false); // 检出后保留橙色伤损标记，Reset/非检出隐藏
+            RefreshDamageMarker(); // 伤损标记仅透视+检出可见（老板 2026-08-23：未开透视仅报警）
             var selected = new Color(.08f, .42f, .66f); var idle = new Color(.58f, .61f, .65f);
             if (normalBtnImg != null) { normalBtnImg.color = on ? idle : selected; SetButtonText(normalBtnImg, on ? new Color(.12f, .15f, .18f) : Color.white); }
             if (perspectiveBtnImg != null) { perspectiveBtnImg.color = on ? selected : idle; SetButtonText(perspectiveBtnImg, on ? Color.white : new Color(.12f, .15f, .18f)); }

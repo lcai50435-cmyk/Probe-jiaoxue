@@ -94,7 +94,7 @@ namespace M2
             if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip, sfxVolume);
             if (nextButton != null) nextButton.gameObject.SetActive(false); // 老板定稿：检出即测距，无"下一步"门控（与 M3 一致）
             rulerDrag?.PrepareMeasure(); // 老板 2026-08-16：尺子不自动出架，玩家自己从工具架拖到测量放置位置吸附
-            ShowDamageMarker(); // 老板 2026-08-16 定稿：射线保持绿色，钢轨红椭圆（伤损）变橙
+            RefreshDamageMarker(); // 老板 2026-08-23：伤损变色仅透视可见（PerspectiveOn && Detected），检出本身只报警
             Go(Stage.Measuring);
             idleHelp?.ResetIdle();
         }
@@ -119,6 +119,12 @@ namespace M2
             rt2.localScale = Vector3.one;
             rt2.anchoredPosition = probe.DamagePointInRail; // 对齐伤损中心
             _damageMarker.gameObject.SetActive(true);
+        }
+        /// <summary>伤损标记显隐统一入口：透视开且已检出才显示（老板 2026-08-23：未开透视仅报警，透视才能看到伤损变色）。</summary>
+        private void RefreshDamageMarker()
+        {
+            if (!PerspectiveOn || !Detected) { if (_damageMarker != null) _damageMarker.gameObject.SetActive(false); return; }
+            ShowDamageMarker();
         }
         public void NotifyMeasured()
         {
@@ -150,6 +156,7 @@ namespace M2
             Color selected = new Color(.08f, .42f, .66f), idle = new Color(.58f, .61f, .65f);
             if (normalBtnImg != null) { normalBtnImg.color = on ? idle : selected; SetButtonText(normalBtnImg, on ? new Color(.12f, .15f, .18f) : Color.white); }
             if (perspectiveBtnImg != null) { perspectiveBtnImg.color = on ? selected : idle; SetButtonText(perspectiveBtnImg, on ? Color.white : new Color(.12f, .15f, .18f)); }
+            RefreshDamageMarker(); // 伤损标记仅透视+检出可见（老板 2026-08-23：未开透视仅报警）
         }
         private static void SetButtonText(Image image, Color color) { if (image == null) return; var text = image.GetComponentInChildren<TMP_Text>(true); if (text != null) text.color = color; }
         public void ResetAll()
