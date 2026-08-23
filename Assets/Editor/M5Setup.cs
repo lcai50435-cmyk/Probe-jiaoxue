@@ -362,9 +362,21 @@ namespace M5.EditorTools
 
         private static void EnsureStage(Transform stage, TMP_FontAsset font)
         {
-            if (FindDeep(stage, "FullBodyView") != null || FindDeep(stage, "FullBodyPreview") != null) return; // M2 复制基线：数字人舞台已存在
-            var preview = EnsureImage(stage, "FullBodyPreview", new Color(.9f, .92f, .95f));
-            Stretch(preview); preview.gameObject.SetActive(false);
+            // M2 合同：数字人 FullBodyView Scene 壳（老板 2026-08-23：M2 在 Scene 有白色长方形可调整，M5 同样 Scene 序列化可调，Bootstrap 运行时复用）
+            if (FindDeep(stage, "FullBodyView") != null) return;
+            var go = new GameObject("FullBodyView", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            go.transform.SetParent(stage, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(.5f, 0f); rt.anchorMax = new Vector2(.5f, 1f); // M2 合同：底部全高锚定
+            rt.pivot = new Vector2(.5f, .5f);
+            rt.anchoredPosition = new Vector2(-13f, -35f);
+            rt.sizeDelta = new Vector2(320f, 0f);
+            var fitter = go.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+            fitter.aspectRatio = 1080f / 1450f;
+            var raw = go.GetComponent<RawImage>();
+            raw.color = Color.white; // Scene 白色长方形占位（Scene 视图可选中/调整大小）
+            raw.raycastTarget = true;
         }
 
         private static void EnsureModal(Transform modal, TMP_FontAsset font)

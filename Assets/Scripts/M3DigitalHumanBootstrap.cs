@@ -235,35 +235,51 @@ namespace M3
             // M5 数字人 = M2 合同（老板 2026-08-23：M5 是 M2 轨顶基线，数字人与 M2 一致）；M3/M4 用 StageCenterOffsetY=30 标定
             var isM5 = SceneManager.GetActiveScene().name == "M5";
 
-            var fb = NewGo(FullBodyName, stage);
-            var frt = fb.GetComponent<RectTransform>();
-            var fitter = fb.AddComponent<AspectRatioFitter>();
-            if (isM5)
+            // 复用 Scene 已序列化的 FullBodyView 壳（M5：M5Setup 创建，Scene 白色长方形可调整，布局 Scene 权威）；M3/M4 无壳则运行时创建
+            var existingFb = stage.Find(FullBodyName);
+            GameObject fb;
+            RawImage raw;
+            VideoPlayer vp;
+            if (existingFb != null && existingFb.GetComponent<RawImage>() != null)
             {
-                // M2 合同：底部全高锚定 + HeightControlsWidth（宽=高×ratio），pos (-13,-35)
-                frt.anchorMin = new Vector2(0.5f, 0f); frt.anchorMax = new Vector2(0.5f, 1f);
-                frt.pivot = new Vector2(0.5f, 0.5f);
-                frt.anchoredPosition = new Vector2(-13f, -35f);
-                frt.sizeDelta = new Vector2(320f, 0f);
-                fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+                fb = existingFb.gameObject;
+                if (existingFb.GetComponent<AspectRatioFitter>() == null) existingFb.gameObject.AddComponent<AspectRatioFitter>();
+                raw = existingFb.GetComponent<RawImage>();
+                vp = existingFb.GetComponent<VideoPlayer>() ?? existingFb.gameObject.AddComponent<VideoPlayer>();
+                if (existingFb.GetComponent<M1PressDetector>() == null) existingFb.gameObject.AddComponent<M1PressDetector>();
             }
             else
             {
-                frt.anchorMin = new Vector2(0.5f, 0.5f); frt.anchorMax = new Vector2(0.5f, 0.5f);
-                frt.pivot = new Vector2(0.5f, 0.5f);
-                frt.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
-                frt.sizeDelta = new Vector2(StageWidth, 0f);
-                fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+                fb = NewGo(FullBodyName, stage);
+                var frt = fb.GetComponent<RectTransform>();
+                var fitter = fb.AddComponent<AspectRatioFitter>();
+                if (isM5)
+                {
+                    // M2 合同：底部全高锚定 + HeightControlsWidth（宽=高×ratio），pos (-13,-35)
+                    frt.anchorMin = new Vector2(0.5f, 0f); frt.anchorMax = new Vector2(0.5f, 1f);
+                    frt.pivot = new Vector2(0.5f, 0.5f);
+                    frt.anchoredPosition = new Vector2(-13f, -35f);
+                    frt.sizeDelta = new Vector2(320f, 0f);
+                    fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+                }
+                else
+                {
+                    frt.anchorMin = new Vector2(0.5f, 0.5f); frt.anchorMax = new Vector2(0.5f, 0.5f);
+                    frt.pivot = new Vector2(0.5f, 0.5f);
+                    frt.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
+                    frt.sizeDelta = new Vector2(StageWidth, 0f);
+                    fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+                }
+                fitter.aspectRatio = StageAspect;
+                raw = fb.AddComponent<RawImage>();
+                vp = fb.AddComponent<VideoPlayer>();
+                fb.AddComponent<M1PressDetector>();
             }
-            fitter.aspectRatio = StageAspect;
-            var raw = fb.AddComponent<RawImage>();
             raw.raycastTarget = true;
             if (mat != null) raw.material = mat;
-            var vp = fb.AddComponent<VideoPlayer>();
             vp.playOnAwake = false; vp.isLooping = true;
             vp.audioOutputMode = VideoAudioOutputMode.None; // 强制静音，与 M1/M2 一致
             vp.skipOnDrop = true;
-            fb.AddComponent<M1PressDetector>();
 
             var av = NewGo(AvatarName, stage);
             var art = av.GetComponent<RectTransform>();
