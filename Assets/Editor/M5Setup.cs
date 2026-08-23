@@ -436,10 +436,7 @@ namespace M5.EditorTools
             if (qaPanel != null)
                 for (int i = qaPanel.childCount - 1; i >= 0; i--)
                     UnityEngine.Object.DestroyImmediate(qaPanel.GetChild(i).gameObject); // 空壳供 Bootstrap BuildPanel
-            var dStage = FindDeep(canvas, "DigitalHumanStage");
-            if (dStage != null)
-                for (int i = dStage.childCount - 1; i >= 0; i--)
-                    UnityEngine.Object.DestroyImmediate(dStage.GetChild(i).gameObject); // 空壳供 Bootstrap BuildViews
+            // 注意：DigitalHumanStage 不清理——FullBodyView 由 EnsureStage 创建为 Scene 壳（老板 2026-08-23 定稿：Scene 白色长方形可调整，Scene 权威）
             RemoveMissingScripts(canvas);
 
             // 2) 删除 M2 探测流程专属节点（幂等：不存在即跳过）

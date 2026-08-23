@@ -52,6 +52,19 @@ namespace M3
 
         private static void TryBootstrap()
         {
+            try
+            {
+                TryBootstrapInner();
+            }
+            catch (System.Exception e)
+            {
+                // 防装配中断静默：异常时打日志，方便排查（不阻断其余功能）
+                Debug.LogError("[M3DigitalHumanBootstrap] 装配异常：" + e);
+            }
+        }
+
+        private static void TryBootstrapInner()
+        {
             var scene = SceneManager.GetActiveScene().name;
             if (scene != "M3" && scene != "M4" && scene != "M5") return;
             var root = GameObject.Find(SafeAreaName) ?? GameObject.Find("Canvas");
