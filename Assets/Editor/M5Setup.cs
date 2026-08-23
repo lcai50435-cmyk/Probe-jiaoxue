@@ -112,9 +112,19 @@ namespace M5.EditorTools
             var header = EnsureImage(sa, "HeaderBar", SurfaceColor);
             SetRect(header, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -64), new Vector2(-48, 80), new Vector2(.5f, .5f));
             EnsureHeader(header, font);
-            var main = EnsureImage(sa, "MainScene", SurfaceColor);
-            SetRect(main, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 48), new Vector2(-48, -336), new Vector2(.5f, .5f));
-            EnsureRailArea(main, font);
+            // MainScene：Image 组件 Scene 权威（老板 2026-08-23：删除 MainScene 的 Image 后 Setup 不补回；新建时才带 Image）
+            var main = sa.Find("MainScene");
+            RectTransform mainRt;
+            if (main == null)
+            {
+                var go = new GameObject("MainScene", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.transform.SetParent(sa, false);
+                go.GetComponent<Image>().color = SurfaceColor;
+                mainRt = go.GetComponent<RectTransform>();
+            }
+            else mainRt = main as RectTransform;
+            SetRect(mainRt, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 48), new Vector2(-48, -336), new Vector2(.5f, .5f));
+            EnsureRailArea(mainRt, font);
             var dock = EnsureImage(sa, "ControlDock_D", SurfaceColor);
             SetRect(dock, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 112), new Vector2(-48, 176), new Vector2(.5f, .5f));
             EnsureDock(dock, font);
