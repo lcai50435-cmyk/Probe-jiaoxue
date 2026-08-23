@@ -269,7 +269,11 @@ namespace M5.EditorTools
             SetRailSprite(railBg, RailNormalPath);
             railBg.SetAsFirstSibling();
 
-            var overlay = EnsureGo(viewport, "CouplantOverlay"); Stretch(overlay);
+            var overlay = EnsureGo(viewport, "CouplantOverlay");
+            // CouplantOverlay 布局 Scene 权威（老板 2026-08-23：position/scale 手工调整贴合钢轨，Setup 不得 Stretch 重置）
+            // 仅空布局（size=0 且 scale=1 且 pos=0，即新建/未配置）时 Stretch
+            if (overlay.sizeDelta.sqrMagnitude < 1f && overlay.localScale == Vector3.one && overlay.anchoredPosition.sqrMagnitude < 1f)
+                Stretch(overlay);
             var cg = overlay.GetComponent<CanvasGroup>();
             if (cg == null) cg = overlay.gameObject.AddComponent<CanvasGroup>(); // 伪 null 不能走 ??（Unity 6 对象语义）
             cg.blocksRaycasts = false; // 耦合剂层不拦截拖拽

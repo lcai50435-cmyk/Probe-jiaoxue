@@ -39,7 +39,8 @@
 - **2026-08-23 M5 波形窗口保留 + 钢轨 Scene 权威（老板定稿）**：M5 保留 M2 波形窗口（SupportArea 静态视觉，`M2WaveformFx` 程序化绘制与 M2 同款——深底/蓝条红条/网格/绿色始波/噪声线，参数 150/115/110；Setup 检测 WaveGrid 缺组件自动补回）。老板手工调整钢轨位置（RailBackground x=-236 左移避开波形窗口），**M5Setup 对 railBg 布局 Scene 权威**（sizeDelta 非 0 不覆盖，仅新建/空布局设默认），视觉微调不会被 Setup 重置。
 - **2026-08-23 M5 工具架用 MainScene/Tool（方案 B）**：老板手工添加 Tool（M2 样式三槽位 ProbeHome/RulerHome/RagHome），M5Setup 在 Tool 存在时跳过 ToolShelf 创建；Probe/Ruler 仅静态展示（M2ProbeDrag/M2RulerDrag 移除），RagHome 槽位工具节点改名为 Rag + rag.png/M5RagDrag（擦拭功能，尺寸方形 80×80），EnsureAll 查找优先 Tool 树。
 - **2026-08-23 耦合剂薄膜 CouplantMask 布局 Scene 权威**：老板手工对准钢轨（pos (-232,-32)），`M5CouplantFx.Init()` 仅空布局时按 coverRect 计算，非空不覆盖（与钢轨同约定）。
-- **2026-08-23 M5 三修复**：① 数字人舞台 DigitalHumanStage 布局 Scene 权威（Setup 不覆盖，避免数字人裁切）；② 透视钢轨与普通钢轨同布局（以普通视图为准，不再 Stretch）；③ rag 初始可拖（unlocked=true，单步交互，置灰仅视觉）。详见 low-code.md 5.4。
+- **2026-08-23 M5 三修复**：① 数字人舞台 DigitalHumanStage 布局 Scene 权威（Setup 不覆盖，避免数字人裁切）；② 透视钢轨与普通钢轨同布局（以普通视图为准，不再 Stretch）；③ rag 初始可拖（unlocked=true，单步交互，置灰仅视觉）。
+- **2026-08-23 CouplantOverlay 布局 Scene 权威**：老板调 position/scale 贴合钢轨，Setup 仅空布局才 Stretch（不重置已调布局）。详见 low-code.md 5.4。
 - **Unity 6 伪 null 坑（2026-08-18）**：`GetComponent<T>()` 对缺失组件返回 Unity 伪 null，`??` 不触发——禁止 `GetComponent ?? AddComponent` 写法，必须 `if (x == null)` 分步；`TextAlignmentOptions` 无 `MiddleCenter`（用 `Center`）；EventSystem 必须用 `InputSystemUIInputModule`（项目 Input System 模式，旧 StandaloneInputModule 每帧抛 InvalidOperationException）。详见 low-code.md 7.1。
 - 细节规范见 `.trellis/spec/unity/`（low-code.md / video-intro.md / ugui-module-template.md；改规范先改它，再同步本摘要）。
 
