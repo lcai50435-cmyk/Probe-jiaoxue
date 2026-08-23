@@ -22,6 +22,8 @@ namespace M5
         public Mode ModeNow { get; private set; } = Mode.Home;
         public float WipeProgress { get; private set; }
         private bool _dragging, _homeCached, _inputLocked;
+        private Vector2 _dragStartLocal;   // 拖动手势起点（railViewport 局部）
+        private float _dragStartX;         // 手势起点对应的抹布 x（拖出=擦拭区间左端；工作态继续拖=当前 x）
         private Vector2 _homeAnchorMin, _homeAnchorMax, _homePosition, _homeSize, _homePivot;
         private Vector3 _homeScale;
         private Quaternion _homeRotation;
@@ -58,12 +60,15 @@ namespace M5
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (_inputLocked || !unlocked || ragRt == null || railViewport == null) return;
-            if (ragRt.parent != railViewport &&
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(railViewport, eventData.position,
-                    eventData.pressEventCamera, out var local))
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(railViewport, eventData.position,
+                    eventData.pressEventCamera, out var local)) return;
+            if (ragRt.parent != railViewport)
             {
-                EnterWorkFromPointer(local); // 从工具架拖出进入工作态
+                EnterWorkFromPointer(local); // 从工具架拖出：吸附钢轨最左端（擦拭起点）
+                _dragStartX = WipeBounds().left;
             }
+            else _dragStartX = ragRt.anchoredPosition.x; // 工作态继续拖：从当前位置跟随
+            _dragStartLocal = local;
             _dragging = ragRt.parent == railViewport;
         }
 
@@ -73,8 +78,10 @@ namespace M5
                 !RectTransformUtility.ScreenPointToLocalPointInRectangle(railViewport, eventData.position,
                     eventData.pressEventCamera, out var local)) return;
             var (left, right, y) = WipeBounds();
-            ragRt.anchoredPosition = new Vector2(Mathf.Clamp(local.x, left, right), y);
-            WipeProgress = Mathf.Clamp01((ragRt.anchoredPosition.x - left) / Mathf.Max(.01f, right - left));
+            // 相对手势偏移跟随（老板 2026-08-23：拖出吸附最左后，从最左起点随拖动偏移，不落鼠标位置）
+            var x = Mathf.Clamp(_dragStartX + (local.x - _dragStartLocal.x), left, right);
+            ragRt.anchoredPosition = new Vector2(x, y);
+            WipeProgress = Mathf.Clamp01((x - left) / Mathf.Max(.01f, right - left));
             flow?.NotifyWipeProgress(WipeProgress);
         }
 
