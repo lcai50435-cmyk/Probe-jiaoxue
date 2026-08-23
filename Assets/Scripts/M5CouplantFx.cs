@@ -24,11 +24,16 @@ namespace M5
             if (_ready) return;
             if (railBg != null && maskRt != null)   // 涂抹区域 = 铁轨 rect 上的 coverRect 子矩形（底左归一化）
             {
-                maskRt.pivot = railBg.pivot;
-                maskRt.sizeDelta = new Vector2(coverRect.z * railBg.sizeDelta.x, coverRect.w * railBg.sizeDelta.y);
-                maskRt.anchoredPosition = railBg.anchoredPosition + new Vector2(
-                    (coverRect.x + coverRect.z * .5f - .5f) * railBg.sizeDelta.x,
-                    (coverRect.y + coverRect.w * .5f - .5f) * railBg.sizeDelta.y);
+                // 布局 Scene 权威（2026-08-23 老板定稿）：薄膜大小/位置以 Scene 为准（老板已手工对准钢轨），
+                // 仅空布局（sizeDelta=0）时按 coverRect 计算默认；避免运行时覆盖 Scene 微调
+                if (maskRt.sizeDelta.sqrMagnitude < 1f)
+                {
+                    maskRt.pivot = railBg.pivot;
+                    maskRt.sizeDelta = new Vector2(coverRect.z * railBg.sizeDelta.x, coverRect.w * railBg.sizeDelta.y);
+                    maskRt.anchoredPosition = railBg.anchoredPosition + new Vector2(
+                        (coverRect.x + coverRect.z * .5f - .5f) * railBg.sizeDelta.x,
+                        (coverRect.y + coverRect.w * .5f - .5f) * railBg.sizeDelta.y);
+                }
             }
             if (film == null) { Debug.LogError("[M5CouplantFx] 薄膜 Image 缺失，无法显示耦合剂。"); return; }
             if (_filmSprite == null)
