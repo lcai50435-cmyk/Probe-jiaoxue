@@ -611,6 +611,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 167429639}
+  - component: {fileID: 167429641}
   - component: {fileID: 167429640}
   m_Layer: 0
   m_Name: Ruler
@@ -649,29 +650,35 @@ MonoBehaviour:
   m_GameObject: {fileID: 167429638}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c7c954e05037de4d9fc1f739f80eaaa, type: 3}
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::M2.M2RulerDrag
-  flow: {fileID: 0}
-  rulerRt: {fileID: 167429639}
-  railViewport: {fileID: 0}
-  weldLineRt: {fileID: 0}
-  rulerHome: {fileID: 965555288}
-  rulerImage: {fileID: 1365488088}
-  measureSize: {x: 420, y: 91}
-  angleGuideSize: {x: 240, y: 42}
-  measureStartLocal: {x: 0.402, y: 0.58}
-  measureOffset: {x: 0, y: 0}
-  zeroUv: {x: -0.08, y: 0.038}
-  ruler110Uv: {x: 0.73, y: 0.038}
-  slotUv: {x: -0.05, y: 0.35}
-  angleToleranceDeg: 6
-  pointTolerancePx: 24
-  retractTolerancePx: 80
-  measureAngleDeg: 9.98
-  measureProjectTolerancePx: 30
-  unlocked: 0
-  aligned: 0
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.55, g: 0.57, b: 0.6, a: 0.62}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 5987772278907439635, guid: 52dfba5a5a6d4d241baab18702b08e0c, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &167429641
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 167429638}
+  m_CullTransparentMesh: 1
 --- !u!1 &179102428
 GameObject:
   m_ObjectHideFlags: 0
@@ -707,7 +714,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -212, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &179102430
@@ -1194,7 +1201,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -19, y: -36}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 953.7993, y: 158.13477}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &256905254
@@ -1231,7 +1238,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -216, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &256905256
@@ -1330,8 +1337,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 300755256}
+  - component: {fileID: 300755260}
+  - component: {fileID: 300755259}
+  - component: {fileID: 300755258}
+  - component: {fileID: 300755257}
   m_Layer: 0
-  m_Name: Ruler
+  m_Name: Rag
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1358,6 +1369,81 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 4}
   m_SizeDelta: {x: 150, y: 32}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &300755257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300755255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df6e7689f3fdaae439f2a5f4cb8f87bb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::M5.M5RagDrag
+  flow: {fileID: 381512665}
+  ragRt: {fileID: 300755256}
+  railViewport: {fileID: 838836095}
+  railBg: {fileID: 1817285191}
+  ragHome: {fileID: 964628931}
+  ragImage: {fileID: 300755259}
+  ragSize: {x: 150, y: 150}
+  wipeRect: {x: 0.005, y: 0.222, z: 0.993, w: 0.553}
+  wipeYOffset: 0
+  unlocked: 0
+--- !u!114 &300755258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300755255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.2, g: 0.22, b: 0.25, a: 0.6}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
+--- !u!114 &300755259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300755255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.45, g: 0.47, b: 0.5, a: 0.9}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 1024226415114158248, guid: 1f261a28628cf5848968598f20b6d0c2, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &300755260
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300755255}
+  m_CullTransparentMesh: 1
 --- !u!1 &312215967
 GameObject:
   m_ObjectHideFlags: 0
@@ -1843,7 +1929,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8882aea13f2602742970314e371f8bee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::M5.M5FlowController
-  ragDrag: {fileID: 0}
+  ragDrag: {fileID: 300755257}
   couplantFx: {fileID: 381512664}
   railBg: {fileID: 1817285191}
   couplantOverlay: {fileID: 256905255}
@@ -3805,6 +3891,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 858822295}
+  - component: {fileID: 858822297}
   - component: {fileID: 858822296}
   m_Layer: 0
   m_Name: Probe
@@ -3842,35 +3929,35 @@ MonoBehaviour:
   m_GameObject: {fileID: 858822294}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49e034074227cba449372218ae8035ad, type: 3}
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::M2.M2ProbeDrag
-  probeRt: {fileID: 858822295}
-  probeVisual: {fileID: 0}
-  probeHome: {fileID: 1250425533}
-  railViewport: {fileID: 0}
-  beamLine: {fileID: 0}
-  flow: {fileID: 0}
-  angleSlider: {fileID: 0}
-  angleValueText: {fileID: 0}
-  angleStatusText: {fileID: 0}
-  okGreen: {r: 0.13, g: 0.67, b: 0.42, a: 1}
-  scanDirection: {x: 1, y: 0}
-  probeEntryLocal: {x: 0.5, y: 0.6}
-  startLocal: {x: -500, y: -34.67}
-  damageUv: {x: 0.4808, y: 0.711}
-  placementTolerancePx: {x: 60, y: 40}
-  hitMm: 110
-  beamHitTolerancePx: 8
-  visualTiltAtTarget: 10
-  probeBaseAngleDeg: 15
-  beamBaseAngleDeg: -90
-  beamLengthZeroMm: 350
-  settleDuration: 0.5
-  beamWidthPx: 14
-  beamHitRadiusPx: 20
-  unlocked: 0
-  currentDistanceMm: 150
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.55, g: 0.57, b: 0.6, a: 0.62}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -4397286707020596315, guid: 9339ad35ff786764e82d6fb419096a7c, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &858822297
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 858822294}
+  m_CullTransparentMesh: 1
 --- !u!1 &866033318
 GameObject:
   m_ObjectHideFlags: 0

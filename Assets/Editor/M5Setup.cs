@@ -166,7 +166,7 @@ namespace M5.EditorTools
             SetRect(probeHome, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(88, 0), new Vector2(176, 88), new Vector2(.5f, .5f));
             var probe = EnsureImage(probeHome, "Probe", M2LockedColor);
             SetRect(probe, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(166, 117), new Vector2(.5f, .5f));
-            probe.GetComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProbePath);
+            probe.GetComponent<Image>().sprite = LoadFirstSprite(ProbePath);
             probe.GetComponent<Image>().preserveAspect = true;
             probe.GetComponent<Image>().raycastTarget = false;
             // 尺子（静态展示，与 M2 同款槽位，不可交互）
@@ -174,7 +174,7 @@ namespace M5.EditorTools
             SetRect(rulerHome, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(282, 0), new Vector2(176, 88), new Vector2(.5f, .5f));
             var ruler = EnsureImage(rulerHome, "Ruler", M2LockedColor);
             SetRect(ruler, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, 10), new Vector2(150, 32), new Vector2(.5f, .5f));
-            ruler.GetComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(RulerPath);
+            ruler.GetComponent<Image>().sprite = LoadFirstSprite(RulerPath);
             ruler.GetComponent<Image>().preserveAspect = true;
             ruler.GetComponent<Image>().raycastTarget = false;
             // 擦拭布（可拖）：RagHome 紧邻 RulerHome 右侧
@@ -182,7 +182,7 @@ namespace M5.EditorTools
             SetRect(home, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(476, 0), new Vector2(176, 88), new Vector2(.5f, .5f));
             var rag = EnsureImage(home, "Rag", RagLockedColor);
             SetRect(rag, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(132, 132), new Vector2(.5f, .5f));
-            rag.GetComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(RagPath);
+            rag.GetComponent<Image>().sprite = LoadFirstSprite(RagPath);
             if (rag.GetComponent<Image>().sprite != null) rag.GetComponent<Image>().preserveAspect = true;
             rag.GetComponent<Image>().raycastTarget = true;
             var outline = rag.GetComponent<Outline>();
@@ -201,13 +201,14 @@ namespace M5.EditorTools
         private static void EnsureToolCompat(Transform tool)
         {
             if (tool == null) return;
-            // Probe 静态展示（无交互，M2 同款置灰）
+            // Probe 静态展示（无交互，M2 同款置灰）；删除 M2 工具旧子 bg（可能带 Shadow/Outline 或重复贴图，避免重影）
             var probe = FindDeep(tool, "Probe");
             if (probe != null)
             {
+                RemoveDirectChild(probe, "bg");
                 var img = probe.GetComponent<Image>();
                 if (img == null) img = probe.gameObject.AddComponent<Image>();
-                img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProbePath);
+                img.sprite = LoadFirstSprite(ProbePath);
                 if (img.sprite != null) img.preserveAspect = true;
                 img.raycastTarget = false;
                 img.color = M2LockedColor;
@@ -217,9 +218,10 @@ namespace M5.EditorTools
             var ruler = rulerHome != null ? FindDeep(rulerHome, "Ruler") : null;
             if (ruler != null)
             {
+                RemoveDirectChild(ruler, "bg");
                 var img = ruler.GetComponent<Image>();
                 if (img == null) img = ruler.gameObject.AddComponent<Image>();
-                img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(RulerPath);
+                img.sprite = LoadFirstSprite(RulerPath);
                 if (img.sprite != null) img.preserveAspect = true;
                 img.raycastTarget = false;
                 img.color = M2LockedColor;
@@ -235,9 +237,10 @@ namespace M5.EditorTools
                     if (child.name != "bg" && child.name != "Chip") { rag = child; break; }
             if (rag == null) return;
             if (rag.name != "Rag") rag.name = "Rag";
+            RemoveDirectChild(rag, "bg");
             var ragImg = rag.GetComponent<Image>();
             if (ragImg == null) ragImg = rag.gameObject.AddComponent<Image>();
-            ragImg.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(RagPath);
+            ragImg.sprite = LoadFirstSprite(RagPath);
             if (ragImg.sprite != null) ragImg.preserveAspect = true;
             ragImg.raycastTarget = true;
             ragImg.color = RagLockedColor;
@@ -408,6 +411,14 @@ namespace M5.EditorTools
                 // M2 railViewport 白底子节点：删除（M5 MainScene 已是 SurfaceColor 白底，避免盖住钢轨图）
                 for (int i = viewport.childCount - 1; i >= 0; i--)
                     if (viewport.GetChild(i).name == "bg") UnityEngine.Object.DestroyImmediate(viewport.GetChild(i).gameObject);
+                // M2 钢轨图旧子节点（RailBackground/bg、RailPerspective/bg）：M5 容器 Image 唯一贴图，删除避免叠层重影
+                foreach (var railName in new[] { "RailBackground", "RailPerspective" })
+                {
+                    var rail = FindDeep(viewport, railName);
+                    if (rail != null)
+                        for (int i = rail.childCount - 1; i >= 0; i--)
+                            if (rail.GetChild(i).name == "bg") UnityEngine.Object.DestroyImmediate(rail.GetChild(i).gameObject);
+                }
                 var overlay = FindDeep(viewport, "CouplantOverlay");
                 var mask = FindDeep(viewport, "CouplantMask");
                 if (overlay != null)
@@ -649,6 +660,21 @@ namespace M5.EditorTools
             img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
             img.preserveAspect = true;
             img.raycastTarget = false;
+        }
+
+        /// <summary>Multiple 子贴图模式素材加载第一个 Sprite（probeFootage/尺子/rag 均为 spriteMode=2；LoadAssetAtPath&lt;Sprite&gt; 对主资产返回 null）。</summary>
+        private static Sprite LoadFirstSprite(string path)
+        {
+            foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
+                if (o is Sprite) return o as Sprite;
+            return null;
+        }
+
+        private static void RemoveDirectChild(Transform parent, string name)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+                if (parent.GetChild(i).name == name)
+                    UnityEngine.Object.DestroyImmediate(parent.GetChild(i).gameObject);
         }
 
         private static void Stretch(Transform t)
