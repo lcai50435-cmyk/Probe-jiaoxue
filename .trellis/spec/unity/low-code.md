@@ -85,7 +85,8 @@
   - **波形简化合同**：参考「焊筋轮廓波」仪器屏——深灰底 + 浅黄绿主网格/青次网格 + 橙红波形（平直基线 + 110mm 尖峰，检出后锁峰）；运行时隐藏 `WaveStateText`/`CurrentDistanceText` 并删除 `waveStateText` 写入逻辑，界面不得出现「峰值锁定/目标 110mm/平直基线/112mm/当前距离」提示词；`M2WaveformGraphic.Awake` 强制橙红 `(0.898,0.322,0.2)`（冻结 Scene 旧绿被覆盖，不写回）；`MeasurementBubble` 序列化「110mm」字样运行时改为「测量完成」；`M2WaveformGraphic.peakTargetMm` 目标 110mm，X 轴窗口 150→100，玩法 110mm 检出即锁峰，无峰后下降段。
   - **波形契约分叉（2026-08-15 二轮定稿，Scene 直做）**：M2 迁移到真实探伤仪屏风格，**2026-08-15 老板授权直接改 `M2.unity` 波形窗口区域**（首轮运行时挂载方案因 `M2WaveformFx` 缺 `RequireComponent(CanvasRenderer)` 导致 Play 下不渲染被否决）：
     - Scene：`WaveformArea_B` 4:3（sizeDelta 460×345、anchoredPosition.y=172.5 保下缘贴底）；删 `WaveHeader`（提示词节点 WaveStateText/CurrentDistanceText/TargetDistanceText）与 `WaveGraphic`（旧 M2WaveformGraphic）；`WaveGrid` 全 stretch 并序列化挂载 `M2WaveformFx`；新增 `ScaleTexts`（横轴 0.0/40.0/80.0/120.0/160.0/200.0mm 6 个 + 纵轴 0.0/20.0/40.0/60.0/80.0/100.0 6 个 TMP；纵轴 pivot 必须 (0,0.5) 文字在窗口内，pivot (1,0.5) 会被裁）。
-    - 绘制（`M2WaveformFx`，[RequireComponent(CanvasRenderer)] 必须有）：深色底 + **点状"+"网格**（5 等分交叉点画"+"，参考图风格，无连续线）+ 常驻绿色始波（发射脉冲尖峰 X 0~7.5% 宽，不画青绿竖线）+ 底部绿色锯齿噪声基线（固定正弦叠加种子，无闪烁）；伤损波与始波同形同色（共用 `DrawPulse`：陡升 20% + 指数衰减，不振荡；纹波钳制在波形区内），X 轴按 0~200mm 映射（150mm→75%、115mm→57.5%、110mm→55%），`SetDistanceMm` 三区间：>150 无波 / 150→115 短波长高（峰高 8%→78%）/ 115→110 保持最高左移 / <110 检出锁定不再变；纯状态驱动无协程，QA/Modal 暂停时无距离输入天然冻结。
+    - 绘制（`M2WaveformFx`，[RequireComponent(CanvasRenderer)] 必须有）：深色底 + **点状"+"网格**（5 等分交叉点画"+"，参考图风格，无连续线）+ 常驻绿色始波 + 底部绿色锯齿噪声基线（固定正弦叠加种子，无闪烁）；**始波/伤损波绘制分叉（2026-08-18 老板二轮定稿）**：始波紧贴波形区左缘、**无陡升前缘竖线，直接从峰顶向下指数衰减**（`DrawPulse(..., steepRise:false)`）；伤损波保留陡升前缘竖线 + 指数衰减（`steepRise:true`，同形合同不改）——不再"同形"；纹波钳制在波形区内，X 轴按 0~200mm 映射（150mm→75%、115mm→57.5%、110mm→55%），`SetDistanceMm` 三区间：>150 无波 / 150→115 短波长高（峰高 8%→78%）/ 115→110 保持最高左移 / <110 检出锁定不再变；纯状态驱动无协程，QA/Modal 暂停时无距离输入天然冻结。
+    - **进入下一模块不再先归位（2026-08-18 老板）**：M2/M3/M4 `EnterNextModule` 删除 `rulerDrag?.ResetTool()`（尺子留在测量位直到场景切换），点击按钮直接 `LoadScene`（M2/M3）或仅 onCompleted（M4 待接入）。
     - `M2FlowController`：`waveformFx` 为 Scene 序列化引用；`NotifyDistance`/`ResetAll` 走 `waveformFx.SetDistanceMm/ResetWave`；旧 `waveform`（M2WaveformGraphic）字段与 WaveStateText/CurrentDistanceText 字段删除。M3 的 `M2WaveformGraphic` 旧样式与配置零改动。
     - `M2WaveformFx` 代码默认值已更新为 `appearMm=160 / peakMm=123 / stopMm=120`（后续新场景/新组件默认按此生成）；M2 Scene 仍序列化 150/115/110，M3/M4 在 Scene/Flow 中显式配置。
   - **烟测断言**：新增「校角/测量同尺寸」「入射点与损伤同线」「测量尺水平」「波形提示词隐藏」「波形橙红」断言；ppm 断言为 2.768/304.5px（420×91 基准）。
@@ -105,6 +106,14 @@
   - **检出即测距**：射线照到伤损检出瞬间探头锁定，**直接** `rulerDrag.ShowMeasure() + Go(Measuring)`，玩家可直接拖尺测量——无"下一步"按钮门控；`nextButton` 不再激活且 `NextToMeasure()` 删除，`M2FlowController` 不再绑定 nextButton，ResetAll 仍隐藏该节点。
   - **测量姿态合同补缺**：`M2RulerDrag.Awake` 运行时强制 `measureAngleDeg=0`、`measureOffset=Vector2.zero`（PPT 合同：测量尺水平放置、0mm 锚点贴入射点；冻结 Scene 旧序列化 9.55/(19,28) 会破坏"测量尺未水平"烟测断言，不写回）。
   - **警告（2026-08-16 返工教训）**：尺子工作态 `localScale` 一律保持 `Vector3.one`（`EnterWorkMode` 强制），**禁止**为适配 Scene 根缩放（如 0.8）而折算 `PixelsPerMm`——ppm 是探头扫描起点/命中点几何（`damage - mm*ppm`）的唯一依据，ppm 变化会改变探头初始放置位置（老板硬性要求保持不变）。Scene 中 Ruler 根 `localScale` 仅影响工具架（Home）显示；工作态尺寸由 `measureSize` 决定。
+- **2026-08-18 M3/M4 数字人与 AI 问答（参照 M2，冻结 Scene 零改动）**：
+  - 背景：M3/M4 场景只有静态 `FullBodyPreview` 与空 `QAPanel` 壳（仅一个 Placeholder 子节点），无任何 QA/数字人组件；M2 则是场景序列化的 `M1QAPanel`+`M1DeepSeekClient`+`M1DigitalHumanPresenter` 全套。
+  - 方案：`M3DigitalHumanBootstrap`（`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` + `SceneManager.sceneLoaded` 订阅，场景名 M3/M4 时装配）——**复用 M1 全套组件零改动**，运行时动态构建：QAPanel 壳下建 Header/MessageList/InputRow（M1QAPanel 路径依赖）、Stage 下建 FullBodyView（RawImage+AspectRatioFitter+VideoPlayer+M1PressDetector）/AvatarView（Image+M1PressDetector），隐藏 FullBodyPreview，Blocker 补 Button，SafeArea 挂 M1QAPanel/M1DeepSeekClient，Stage 先 inactive 再 AddComponent<M1DigitalHumanPresenter> 注入后激活（保证 Awake 时引用就绪）。
+  - 素材走 `Assets/Resources/DigitalHuman/`（待机/思考/讲解动画2 三 mp4 + 折叠头像，meta 手写照抄原素材）；LumaKey 材质运行时 `Shader.Find("UI/LumaKey")` + `_KeyThreshold=0.02/_KeySmooth=0.006` 创建（不复制 .mat 资产）。
+  - 交互合同与 M2 一致：三态动画（待机/思考/讲解随 QA 问答状态切换）、短按全身/头像、长按打开对话框；`pauseGameOnOpen` 默认全局暂停；cnFont 从场景现有 TMP 复制（M3/M4 唯一字体 guid 1e7b8a18...）；apiKey 运行时组件无法持久填写（演示为"尚未配置 API Key"提示），如需真实 AI 回复由 M4Setup 后续 Scene 化注入。
+  - FullBodyView/AvatarView 共用视觉中心 `StageCenterOffsetY=30`（2026-08-18 老板定稿：M3/M4 数字人 Y=30，不用 M1 的 -248；Stage 本体 320 宽 + scale 0.74 为 M3 视觉权威）。
+  - 装配器超 150 行（335 行）理由：M3 冻结无法序列化组件，M1QASetup 的 Editor 结构需运行时镜像构建，属 M3/M4 共享装配胶水；全部内存态修改，M3/M4 Scene 哈希不变。
+  - **M3→M4 完成出口（2026-08-18 老板追加）**：`M3FlowController` 加 `nextSceneName="M4"`（场景未序列化，代码默认生效）+ `EnterNextModule` 内 `LoadScene`（与 M2 同款），完成文案判断同步；M3 脚本变更属老板明确授权。
 
 - **2026-08-18 M5 擦拭耦合剂（复用 M2 UGUI 骨架，单步交互结束模块）**：
   - 流程：起始（M2 轨头顶面视角 + 钢轨顶面涂蓝色耦合剂）→ 玩家拖擦拭布（rag.png）至钢轨顶面 → 左右拖动控制擦拭范围（进度跟手）→ 100% 通过。**无探测流程、无下一模块**（完成面板显示"M5 擦拭耦合剂完成"，enterNextButton 不显示；onCompleted UnityEvent 保留可配置）。

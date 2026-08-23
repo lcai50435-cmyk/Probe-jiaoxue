@@ -10,6 +10,8 @@ namespace M2
         public M2FlowController flow;
         public RectTransform rulerRt, railViewport, weldLineRt, rulerHome;
         public Image rulerImage;
+        public Sprite positioningSprite; // 校角阶段尺子素材；null = 跟随 Scene 序列化 sprite
+        public Sprite measureSprite;     // 测量阶段尺子素材；null = 跟随 Scene 序列化 sprite
         public Vector2 measureSize = new Vector2(320f, 57f), angleGuideSize = new Vector2(240f, 42f), measureStartLocal = new Vector2(.5f, .78f), measureOffset = Vector2.zero;
         public Vector2 zeroUv = new Vector2(.005f, .038f), ruler110Uv = new Vector2(.73f, .038f), slotUv = new Vector2(.005f, .136f);
         public float angleToleranceDeg = 6f, pointTolerancePx = 24f, retractTolerancePx = 80f, measureAngleDeg = 0f, measureProjectTolerancePx = 30f;
@@ -22,6 +24,7 @@ namespace M2
         private Vector2 _homeAnchorMin, _homeAnchorMax, _homePosition, _homeSize, _homePivot, _bgPos;
         private Vector3 _homeScale, _bgScale;
         private Quaternion _homeRotation;
+        private Sprite _homeSprite; // Scene 初态 sprite（归槽恢复用）
         private void Awake()
         {
             CacheSceneHome();
@@ -29,7 +32,17 @@ namespace M2
         }
         public void Bind(M2FlowController owner)
         {
-            flow = owner; CacheSceneHome(); if (rulerImage != null) { var sprites = Resources.LoadAll<Sprite>("尺子正面"); if (sprites != null && sprites.Length > 0) rulerImage.sprite = sprites[0]; }
+            flow = owner; CacheSceneHome();
+            if (rulerImage != null)
+            {
+                _homeSprite = rulerImage.sprite; // Scene 序列化 sprite 是视觉权威（老板可手工换图）
+                // 两个阶段素材都未配置：优先沿用 Scene 序列化 sprite；Scene 也空才用 Resources 兜底（历史素材替换合同）
+                if (positioningSprite == null && measureSprite == null && _homeSprite == null)
+                {
+                    var sprites = Resources.LoadAll<Sprite>("尺子正面");
+                    if (sprites != null && sprites.Length > 0) positioningSprite = measureSprite = sprites[0];
+                }
+            }
             OnAngleAligned -= flow.NotifyRulerAligned; OnAngleAligned += flow.NotifyRulerAligned;
             OnDistanceAligned -= flow.NotifyMeasured; OnDistanceAligned += flow.NotifyMeasured;
             OnAngleRetracted -= flow.NotifyRulerRetracted; OnAngleRetracted += flow.NotifyRulerRetracted;
@@ -38,10 +51,10 @@ namespace M2
         }
         public void Unlock() { unlocked = true; aligned = false; if (rulerImage != null) rulerImage.color = Color.white; }
         public void UnlockRetract() => aligned = false;
-        public void ShowAngleGuide() { if (EnterWorkMode(measureSize)) { ModeNow = Mode.AngleGuide; Unlock(); } } // 校角与测量统一 measureSize（PPT 合同，与 M3 一致）
+        public void ShowAngleGuide() { SetPhaseSprite(false); if (EnterWorkMode(measureSize)) { ModeNow = Mode.AngleGuide; Unlock(); } } // 校角与测量统一 measureSize（PPT 合同，与 M3 一致）
         /// <summary>检出后进入测量待拖态：尺子留在工具架（不自动出架），玩家自己拖出到测量放置位置吸附并应用测量角度（老板 2026-08-16，与 M3 一致）。</summary>
-        public void PrepareMeasure() { ModeNow = Mode.DistanceMeasure; aligned = false; unlocked = true; if (rulerImage != null) rulerImage.color = Color.white; }
-        public void ShowMeasure() { if (EnterWorkMode(measureSize)) { ModeNow = Mode.DistanceMeasure; OrientMeasure(); Unlock(); } }
+        public void PrepareMeasure() { ModeNow = Mode.DistanceMeasure; aligned = false; unlocked = true; if (rulerImage != null) rulerImage.color = Color.white; SetPhaseSprite(true); }
+        public void ShowMeasure() { SetPhaseSprite(true); if (EnterWorkMode(measureSize)) { ModeNow = Mode.DistanceMeasure; OrientMeasure(); Unlock(); } }
         public void ResetTool()
         {
             CacheSceneHome();
@@ -55,6 +68,7 @@ namespace M2
                 rulerRt.SetAsLastSibling();
             }
             if (rulerImage != null) { rulerImage.color = new Color(.55f, .57f, .6f, .62f); rulerImage.rectTransform.localScale = _bgScale; rulerImage.rectTransform.anchoredPosition = _bgPos; }
+            if (_homeSprite != null && rulerImage != null) rulerImage.sprite = _homeSprite; // 归槽恢复 Scene 初态图
         }
         private bool EnterWorkMode(Vector2 size)
         {
@@ -66,6 +80,7 @@ namespace M2
             rulerRt.anchoredPosition = new Vector2((measureStartLocal.x - railViewport.pivot.x) * railViewport.rect.width, (measureStartLocal.y - railViewport.pivot.y) * railViewport.rect.height);
             // bg 同以 Scene 值（scale 0.8 / pos 不变）为准，不覆盖（老板 2026-08-16）
             ComputeAnchors(); rulerRt.gameObject.SetActive(true);
+            EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
             return true;
         }
         private Vector2 AnchorAt(Vector2 size, Vector2 uv)
@@ -100,9 +115,21 @@ namespace M2
             rulerRt.sizeDelta = measureSize;
             rulerRt.localRotation = Quaternion.Euler(0f, 0f, ModeNow == Mode.DistanceMeasure ? measureAngleDeg : 0f); // 测量态应用测量角度（老板 measureAngleDeg）
             rulerRt.anchoredPosition = local; // 尺子中心跟指针（OnDrag 继续）
+            SetPhaseSprite(ModeNow == Mode.DistanceMeasure); // 拖入工作态即按阶段应用素材
             if (rulerImage != null) rulerImage.color = Color.white; // 工作态不置灰
             rulerRt.gameObject.SetActive(true);
             ComputeAnchors();
+            EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
+        }
+
+        /// <summary>渲染层级合同（2026-08-18 老板）：探头渲染层级必须高于尺子。尺子进入 railViewport 工作态时，若探头已在其中，把尺子插到探头前一位（sibling 越大渲染越靠上），保证探头盖住尺子。</summary>
+        private void EnsureProbeAboveRuler()
+        {
+            if (rulerRt == null || railViewport == null) return;
+            var probe = flow != null ? flow.probeDrag : null;
+            if (probe == null || probe.probeRt == null || probe.probeRt.parent != railViewport || rulerRt.parent != railViewport) return;
+            if (probe.probeRt.GetSiblingIndex() > rulerRt.GetSiblingIndex()) return; // 探头已在尺子上方
+            rulerRt.SetSiblingIndex(probe.probeRt.GetSiblingIndex()); // 尺子移到探头前一位
         }
         public void OnDrag(PointerEventData eventData)
         {
@@ -193,7 +220,23 @@ namespace M2
             var bg = rulerRt.Find("bg") as RectTransform; if (bg != null) { _bgScale = bg.localScale; _bgPos = bg.anchoredPosition; }
             if (rulerImage == null) rulerImage = bg != null ? bg.GetComponent<Image>() : null;
             if (rulerImage == null || rulerImage.sprite == null) Debug.LogError("[M2RulerDrag] 缺少正式尺 Sprite，mm 标定不可用。", this);
+            _homeSprite = rulerImage != null ? rulerImage.sprite : null;
             _homeCached = true;
+        }
+
+        /// <summary>应用当前阶段尺子素材并重算锚点（阶段切换内部用；sprite 为 null 时保持现有图）。</summary>
+        private void SetPhaseSprite(bool measuring)
+        {
+            var sp = measuring ? measureSprite : positioningSprite;
+            if (sp != null && rulerImage != null) rulerImage.sprite = sp;
+            ComputeAnchors();
+        }
+
+        /// <summary>调试器用：按当前模式应用阶段素材并重摆姿态（赋值后实时生效）。</summary>
+        public void ApplyPhaseSprite()
+        {
+            SetPhaseSprite(ModeNow == Mode.DistanceMeasure);
+            RefreshPose();
         }
         private static Transform FindDeep(Transform root, string name)
         {

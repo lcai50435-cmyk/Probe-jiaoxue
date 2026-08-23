@@ -21,6 +21,8 @@ namespace M2
         public GameObject[] stepPanels;
         public AudioSource sfx;
         public AudioClip beepClip, correctClip;
+        [Tooltip("音效播放音量（2026-08-18 老板要求整体调小）")]
+        public float sfxVolume = 0.4f;
         public M2IdleHelp idleHelp;
         public float targetAngle = 10f, targetDistance = 110f, distanceToleranceMm = 2f;
         public UnityEvent onCompleted;
@@ -47,6 +49,7 @@ namespace M2
                 // 伤损波 150mm 短波出现 → 115mm 最高 → 110mm 停止；最高时与始波同高（peakStrength=startPeakHeight）。
                 waveformFx.appearMm = 150f; waveformFx.peakMm = 115f; waveformFx.stopMm = 110f; // M2 合同（与 Scene 序列化一致，防御覆盖）
                 waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度（与 M3 同款）
+                waveformFx.noiseAmp = .012f; // 伤损波噪声调小，峰顶毛刺不抬高（2026-08-18 老板：与始波视觉等高，M4 同款）
                 waveformFx.SetDistanceMm(150f);
             }
             _bubbleText = measurementBubble != null ? measurementBubble.GetComponentInChildren<TMP_Text>(true) : null;
@@ -72,13 +75,13 @@ namespace M2
         public void NotifyPlacementChanged() { if (CurrentStage == Stage.Positioning && probeDrag != null && probeDrag.Placed) rulerDrag?.ShowAngleGuide(); }
         public void NotifyRulerAligned() { if (CurrentStage == Stage.Positioning) { RulerDocked = true; probeDrag?.SetAngleLocked(false); } }
         /// <summary>正确提示音（尺子校角吸附 / 校角确认 / 测量完成共用，与 M3 一致）。</summary>
-        public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); }
+        public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }
         public void NotifyAngleConfirmed()
         {
             if (CurrentStage != Stage.Positioning || !RulerDocked) return;
             AngleVerifiedByRuler = true;
             probeDrag?.SetAngleLocked(true);
-            if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip);
+            if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume);
             rulerDrag?.UnlockRetract();
         }
         public void NotifyRulerRetracted() { if (CurrentStage == Stage.Positioning && AngleVerifiedByRuler) Go(Stage.Scanning); }
@@ -88,10 +91,10 @@ namespace M2
             if (Detected || CurrentStage != Stage.Scanning) return;
             Detected = true;
             probeDrag?.SetInputLocked(true);
-            if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip);
+            if (sfx != null && beepClip != null) sfx.PlayOneShot(beepClip, sfxVolume);
             if (nextButton != null) nextButton.gameObject.SetActive(false); // 老板定稿：检出即测距，无"下一步"门控（与 M3 一致）
             rulerDrag?.PrepareMeasure(); // 老板 2026-08-16：尺子不自动出架，玩家自己从工具架拖到测量放置位置吸附
-            ShowDamageMarker(); // 老板 2026-08-16 定稿：射线保持绿色，钢轨红椭圆（伤损）变橙
+            RefreshDamageMarker(); // 老板 2026-08-23：伤损变色仅透视可见（PerspectiveOn && Detected），检出本身只报警
             Go(Stage.Measuring);
             idleHelp?.ResetIdle();
         }
@@ -117,17 +120,22 @@ namespace M2
             rt2.anchoredPosition = probe.DamagePointInRail; // 对齐伤损中心
             _damageMarker.gameObject.SetActive(true);
         }
+        /// <summary>伤损标记显隐统一入口：透视开且已检出才显示（老板 2026-08-23：未开透视仅报警，透视才能看到伤损变色）。</summary>
+        private void RefreshDamageMarker()
+        {
+            if (!PerspectiveOn || !Detected) { if (_damageMarker != null) _damageMarker.gameObject.SetActive(false); return; }
+            ShowDamageMarker();
+        }
         public void NotifyMeasured()
         {
             if (Measured) return;
             Measured = true; // 老板 2026-08-16：M2 通过后不显示“测量完成”提示气泡（measurementBubble 不再激活）
-            if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip); Go(Stage.Completed);
+            if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); Go(Stage.Completed);
         }
         public void EnterNextModule()
         {
-            rulerDrag?.ResetTool();
             onCompleted?.Invoke();
-            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // 老板 2026-08-16：M2 通关 → 进入 M3
+            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // 老板 2026-08-16：M2 通关 → 进入 M3；2026-08-18：不再先 ResetTool 归位，直接切场景
         }
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);
@@ -148,6 +156,7 @@ namespace M2
             Color selected = new Color(.08f, .42f, .66f), idle = new Color(.58f, .61f, .65f);
             if (normalBtnImg != null) { normalBtnImg.color = on ? idle : selected; SetButtonText(normalBtnImg, on ? new Color(.12f, .15f, .18f) : Color.white); }
             if (perspectiveBtnImg != null) { perspectiveBtnImg.color = on ? selected : idle; SetButtonText(perspectiveBtnImg, on ? Color.white : new Color(.12f, .15f, .18f)); }
+            RefreshDamageMarker(); // 伤损标记仅透视+检出可见（老板 2026-08-23：未开透视仅报警）
         }
         private static void SetButtonText(Image image, Color color) { if (image == null) return; var text = image.GetComponentInChildren<TMP_Text>(true); if (text != null) text.color = color; }
         public void ResetAll()

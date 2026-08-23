@@ -3,40 +3,40 @@ using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
 using M2;
-using M3;
+using M4;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace M3.EditorTools
+namespace M4.EditorTools
 {
     /// <summary>隔离副本 Play Mode 验收器；只驱动公开运行时 API，不保存 Scene；退出时校验 Scene 哈希不变。
-    /// 2026-08-16 更新：160→120mm、M2WaveformFx、120mm 双点测量、检出锁定；不再有 Intro/耦合剂；检出即直接进入测距（无"下一步"门控）。</summary>
+    /// 2026-08-17 M4（M3 复制基线）：55→40mm、M2WaveformFx（55/45/40）、40mm 双点测量、检出锁定、伤损变橙；无 Intro/耦合剂；检出即直接进入测距。</summary>
     [InitializeOnLoad]
-    public static class M3RuntimeSmoke
+    public static class M4RuntimeSmoke
     {
-        private const string ScenePath = "Assets/Settings/Scenes/M3.unity";
-        private const string RequestPath = "Temp/M3RuntimeSmoke.request";
-        private const string PendingKey = "M3RuntimeSmoke.Pending";
-        private const string HashKey = "M3RuntimeSmoke.SceneHash";
+        private const string ScenePath = "Assets/Settings/Scenes/M4.unity";
+        private const string RequestPath = "Temp/M4RuntimeSmoke.request";
+        private const string PendingKey = "M4RuntimeSmoke.Pending";
+        private const string HashKey = "M4RuntimeSmoke.SceneHash";
         private static double _nextAt;
         private static int _step;
-        private static M3FlowController _flow;
-        private static M3ProbeDrag _probe;
-        private static M3RulerDrag _ruler;
+        private static M4FlowController _flow;
+        private static M4ProbeDrag _probe;
+        private static M4RulerDrag _ruler;
         private static M2WaveformFx _waveFx;
         private static string _sceneHash;
         private static Vector3 _probeStartWorld;
         private static Vector2 _probeStartPos, _scanStart;
 
-        static M3RuntimeSmoke()
+        static M4RuntimeSmoke()
         {
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             if (File.Exists(RequestPath)) { File.Delete(RequestPath); EditorApplication.delayCall += RunBatch; }
         }
 
-        [MenuItem("Tools/M3/Runtime Smoke (Play Mode) %#&9")]
+        [MenuItem("Tools/M4/Runtime Smoke (Play Mode) %#&9")]
         public static void RunBatch()
         {
             if (EditorApplication.isPlaying) return;
@@ -53,7 +53,7 @@ namespace M3.EditorTools
             {
                 var expected = SessionState.GetString(HashKey, "");
                 if (expected.Length > 0 && ComputeHash(ScenePath) != expected)
-                    Debug.LogError("[M3RuntimeSmoke] FAIL：M3 Scene 哈希已变化（冻结场景被修改）。");
+                    Debug.LogError("[M4RuntimeSmoke] FAIL：M4 Scene 哈希已变化。");
                 _sceneHash = null;
             }
             if (state != PlayModeStateChange.EnteredPlayMode || !SessionState.GetBool(PendingKey, false)) return;
@@ -61,11 +61,11 @@ namespace M3.EditorTools
             {
                 _sceneHash = SessionState.GetString(HashKey, "");
                 Require(_sceneHash.Length > 0, "缺少冻结 Scene 哈希基线");
-                _flow = UnityEngine.Object.FindFirstObjectByType<M3FlowController>();
-                Require(_flow != null, "缺少 M3FlowController");
+                _flow = UnityEngine.Object.FindFirstObjectByType<M4FlowController>();
+                Require(_flow != null, "缺少 M4FlowController");
                 _probe = _flow.probeDrag; _ruler = _flow.rulerDrag;
                 Require(_probe != null && _ruler != null, "probeDrag/rulerDrag 引用缺失");
-                Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "初始阶段错误");
+                Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "初始阶段错误");
                 Require(!_flow.beamLayer.activeSelf, "进入 Play 时 BeamLayer/射线不应提前显示");
                 if (_flow.couplantOverlay != null) Require(!_flow.couplantOverlay.gameObject.activeSelf, "初始不应展示耦合剂薄膜");
                 Require(_probe.probeVisual != null && _probe.probeVisual.GetComponent<Image>().raycastTarget, "探头射线未恢复");
@@ -75,8 +75,8 @@ namespace M3.EditorTools
                 Require(_probe.unlocked, "初始探头未解锁");
                 Require(_ruler.unlocked && !_flow.PositioningRulerInPlace, "初始定位尺应可拖拽且未到位");
                 _waveFx = _flow.waveformFx;
-                Require(_waveFx != null, "M3 未挂载 M2WaveformFx");
-                Require(Mathf.Abs(_waveFx.appearMm - 160f) < .01f && Mathf.Abs(_waveFx.peakMm - 123f) < .01f && Mathf.Abs(_waveFx.stopMm - 120f) < .01f, "波形参数未按 PPT 设置");
+                Require(_waveFx != null, "M4 未挂载 M2WaveformFx");
+                Require(Mathf.Abs(_waveFx.appearMm - 55f) < .01f && Mathf.Abs(_waveFx.peakMm - 45f) < .01f && Mathf.Abs(_waveFx.stopMm - 40f) < .01f, "波形参数未按 PPT 设置");
                 _probeStartWorld = _probe.probeRt.position; _probeStartPos = _probe.probeRt.anchoredPosition; _scanStart = _probe.ScanStartLocal;
                 _step = 0; _nextAt = EditorApplication.timeSinceStartup + .2;
                 EditorApplication.update += Tick;
@@ -95,7 +95,7 @@ namespace M3.EditorTools
                         _nextAt = EditorApplication.timeSinceStartup + .2;
                         break;
                     case 1:
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "初始阶段错误");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "初始阶段错误");
                         if (_flow.couplantOverlay != null) Require(!_flow.couplantOverlay.gameObject.activeSelf, "耦合剂薄膜未隐藏");
                         Require(_probe.unlocked && !_probe.angleSlider.interactable, "初始探头应解锁、角度滑块应锁定");
                         Require(_ruler.unlocked && !_ruler.positioned && _ruler.rulerRt.parent == _ruler.rulerHome, "初始定位尺应留在 RulerHome 且可拖拽");
@@ -105,36 +105,36 @@ namespace M3.EditorTools
                         Click("CancelButton");
                         Require(_probe.unlocked && _ruler.unlocked && !_probe.angleSlider.interactable, "关闭重置对话框后角度滑块应保持锁定");
                         Require(Vector2.Distance(_probe.ScanStartLocal, _scanStart) < .001f, "扫描起点在初始定位后发生漂移");
-                        _probe.AutoMoveToMm(160f); // 放探头（0°）
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "仅探头就位不应进入扫描");
-                        _probe.OnAngleChanged(13f);
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "尺子未吸附时角度正确仍不应进入扫描");
+                        _probe.AutoMoveToMm(55f); // 放探头（0°）
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "仅探头就位不应进入扫描");
+                        _probe.OnAngleChanged(10f);
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "尺子未吸附时角度正确仍不应进入扫描");
                         _ruler.AutoPosition(); // 尺子中心吸白色点 → 解锁角度滑块
                         Require(_ruler.rulerRt.parent == _ruler.railViewport, "定位尺未进入 RailViewport");
                         Require(_probe.angleSlider.interactable, "尺子吸附后角度滑块应解锁");
                         Require(_flow.RulerDocked && !_flow.AngleVerifiedByRuler, "尺子吸附后 RulerDocked 应为真、校角未确认");
-                        _probe.OnAngleChanged(13f); // 重新触发稳定计时（滑块从 0 动画到 13 后停住）
+                        _probe.OnAngleChanged(10f); // 重新触发稳定计时（滑块从 0 动画到 13 后停住）
                         _nextAt = EditorApplication.timeSinceStartup + 1f;
                         break;
                     case 2: // 等待 0.5s 稳定确认
                         Require(_flow.AngleVerifiedByRuler, "13° 稳定 0.5s 后校角未确认");
                         Require(!_probe.angleSlider.interactable, "校角确认后角度滑块应锁定");
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "校角确认后不应直接进入扫描（需撤尺）");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "校角确认后不应直接进入扫描（需撤尺）");
                         _ruler.AutoRetract(); // 撤尺归槽 → 进入扫描
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Scanning, "撤尺后未进入扫描");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Scanning, "撤尺后未进入扫描");
                         Require(_ruler.rulerRt.parent == _ruler.rulerHome && !_ruler.positioned, "撤尺后尺子未归槽 Home");
-                        Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg - _probe.visualTiltAtTarget)) < .1f, "探头 13° 视觉反馈错误");
-                        Require(Mathf.Abs(Mathf.DeltaAngle(_probe.beamLine.localEulerAngles.z, -13f)) < .1f, "入射声束角度错误");
+                        Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg + _probe.visualTiltAtTarget)) < .1f, "探头 10° 视觉反馈错误");
+                        Require(Mathf.Abs(Mathf.DeltaAngle(_probe.beamLine.localEulerAngles.z, 10f)) < .1f, "入射声束角度错误");
                         _flow.perspectiveBtnImg.GetComponent<Button>().onClick.Invoke();
                         Require(_flow.beamLayer.activeSelf && _flow.railPerspective.activeSelf && !_flow.railBg.gameObject.activeSelf, "透视按钮未切换显示");
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Scanning, "视图切换改变流程状态");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Scanning, "视图切换改变流程状态");
                         // 波形三态：160 短波 / 123 最高 / 120 锁定
-                        _waveFx.SetDistanceMm(160f);
-                        Require(Mathf.Abs(_waveFx.Strength - .08f) < .02f && Mathf.Abs(_waveFx.PeakU - .8f) < .01f, "160mm 短波状态错误");
-                        _waveFx.SetDistanceMm(123f);
-                        Require(Mathf.Abs(_waveFx.Strength - .78f) < .02f && Mathf.Abs(_waveFx.PeakU - .615f) < .01f, "123mm 最高波状态错误");
-                        _waveFx.SetDistanceMm(120f);
-                        Require(Mathf.Abs(_waveFx.Strength - .78f) < .02f && Mathf.Abs(_waveFx.PeakU - .6f) < .01f, "120mm 停止波状态错误");
+                        _waveFx.SetDistanceMm(55f);
+                        Require(Mathf.Abs(_waveFx.Strength - .08f) < .02f && Mathf.Abs(_waveFx.PeakU - .275f) < .01f, "55mm 短波状态错误");
+                        _waveFx.SetDistanceMm(45f);
+                        Require(Mathf.Abs(_waveFx.Strength - .78f) < .02f && Mathf.Abs(_waveFx.PeakU - .225f) < .01f, "45mm 最高波状态错误");
+                        _waveFx.SetDistanceMm(40f);
+                        Require(Mathf.Abs(_waveFx.Strength - .78f) < .02f && Mathf.Abs(_waveFx.PeakU - .2f) < .01f, "40mm 停止波状态错误");
                         _nextAt = EditorApplication.timeSinceStartup + .2f;
                         break;
                     case 3:
@@ -143,13 +143,15 @@ namespace M3.EditorTools
                             _probe.AutoMoveToMm(mm);
                         Require(_flow.Detected, $"未检出：BeamHit={_probe.BeamHitsDamage} AngleCorrect={_probe.AngleCorrect} 距离={_probe.CurrentDistanceMm:F1}");
                         Require(_probe.CurrentDistanceMm < _probe.scanStartMm, "检出未发生在扫描推进过程中");
-                        Require(_flow.damageMarker.activeSelf, "检出后 DamageMarker 应显示且对齐红椭圆中心（2026-08-18 老板：M3/M4 统一）");
+                        Require(_flow.damageMarker.activeSelf, "检出后伤损标记（DamageMarker）应显示为橙色");
+                        var dmgColor = _flow.damageMarker.GetComponent<Image>().color;
+                        Require(dmgColor.a > .3f, "伤损标记未变橙");
                         _flow.SetNormalView();
                         Require(!_flow.damageMarker.activeSelf, "普通视图下检出后伤损标记应隐藏（仅透视可见，2026-08-23 老板）");
                         _flow.SetPerspectiveView();
                         Require(_flow.damageMarker.activeSelf, "切回透视后伤损标记应重新显示（2026-08-23 老板）");
                         Require(!_flow.detectionBanner.activeSelf, "检出后 DetectionBanner 应保持隐藏");
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");
                         Require(_ruler.unlocked && _ruler.rulerRt.parent == _ruler.railViewport, "检出后尺子应直接出架进测量");
                         var lockedPos = _probe.probeRt.anchoredPosition;
                         _probe.AutoMoveToMm(_probe.scanEndMm);
@@ -158,10 +160,10 @@ namespace M3.EditorTools
                         break;
                     case 4:
                         AlignRuler();
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Completed && _flow.Measured, "尺子吸附后未完成");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Completed && _flow.Measured, "尺子吸附后未完成");
                         Require(_flow.completionText.text.Contains("下一模块待接入"), "M4 出口文案错误");
                         _flow.ResetAll();
-                        Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "重置未回定位阶段");
+                        Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "重置未回定位阶段");
                         if (_flow.couplantOverlay != null) Require(!_flow.couplantOverlay.gameObject.activeSelf, "重置后耦合剂薄膜未隐藏");
                         Require(_probe.unlocked && !_probe.angleSlider.interactable, "重置后探头应解锁、角度滑块应锁定");
                         Require(_ruler.unlocked, "重置后尺子未解锁");
@@ -170,7 +172,7 @@ namespace M3.EditorTools
                         Require(_ruler.rulerRt.parent == _ruler.rulerHome, "重置后尺子未回架");
                         Require(Vector3.Distance(_probe.probeRt.position, _probeStartWorld) < .01f && Vector2.Distance(_probe.probeRt.anchoredPosition, _probeStartPos) < .01f, "重置后探头未回 Scene 初态");
                         Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg)) < .1f, "重置后探头未保持平放基准角（bg z=15）");
-                        Pass("放探头→尺子中心吸白色点→13°稳定确认→撤尺→射线照伤损检出→直接测距→双点测距→重置 全链路通过。");
+                        Pass("放探头→尺子中心吸白色点→10°稳定确认→撤尺→射线照伤损检出→直接测距→双点测距→重置 全链路通过。");
                         break;
                 }
             }
@@ -181,15 +183,15 @@ namespace M3.EditorTools
         {
             foreach (var button in _flow.GetComponentsInChildren<Button>(true))
                 if (button.name == name) { button.onClick.Invoke(); return; }
-            throw new InvalidOperationException("[M3RuntimeSmoke] 缺少按钮：" + name);
+            throw new InvalidOperationException("[M4RuntimeSmoke] 缺少按钮：" + name);
         }
 
         private static void AlignRuler()
         {
             var drag = _ruler;
-            var anchor = _probe.ZeroAnchorWorld; // 0 刻度对齐探头 zero 锚点中心（老板合同：zero↔尺子 0 刻度、伤损↔120mm 刻度）
+            var anchor = _probe.ZeroAnchorWorld; // 0 刻度对齐探头 zero 锚点中心（老板合同：zero↔尺子 0 刻度、伤损↔40mm 刻度）
             drag.rulerRt.anchoredPosition = anchor - drag.ZeroAnchorLocal;
-            typeof(M3RulerDrag).GetMethod("CheckAlign", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(drag, null);
+            typeof(M4RulerDrag).GetMethod("CheckAlign", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(drag, null);
         }
 
         private static string ComputeHash(string path)
@@ -201,14 +203,14 @@ namespace M3.EditorTools
 
         private static void Require(bool condition, string message)
         {
-            if (!condition) throw new InvalidOperationException("[M3RuntimeSmoke] " + message);
+            if (!condition) throw new InvalidOperationException("[M4RuntimeSmoke] " + message);
         }
 
         private static void Pass(string detail)
         {
             Cleanup();
-            if (ComputeHash(ScenePath) != _sceneHash) { Fail(new InvalidOperationException("[M3RuntimeSmoke] Scene 哈希变化")); return; }
-            Debug.Log("[M3RuntimeSmoke] PASS：" + detail);
+            if (ComputeHash(ScenePath) != _sceneHash) { Fail(new InvalidOperationException("[M4RuntimeSmoke] Scene 哈希变化")); return; }
+            Debug.Log("[M4RuntimeSmoke] PASS：" + detail);
             EditorApplication.ExitPlaymode();
             if (Application.isBatchMode) EditorApplication.delayCall += () => EditorApplication.Exit(0);
         }

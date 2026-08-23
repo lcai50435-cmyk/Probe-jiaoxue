@@ -207,7 +207,7 @@ namespace M2.EditorTools
                         var beamTex = beamImg.sprite.texture; var beamY = beamTex.height / 3;
                         Require(beamTex.GetPixel(beamTex.width / 2, beamY).a > beamTex.GetPixel(0, beamY).a * 4f, "检测束仍是等宽实心矩形");
                         var beamCenter = beamTex.GetPixel(beamTex.width / 2, beamY);
-                        Require(beamCenter.r > beamCenter.g && beamCenter.g > beamCenter.b, "检出后射线未变成橙色");
+                        Require(beamCenter.g > beamCenter.r && beamCenter.g > beamCenter.b, "检出后射线应保持绿色（2026-08-23：无绿→橙）");
                         Require(_flow.probeDrag.beamLine.sizeDelta.x <= 16f, "检测束宽度过宽");
                         Require(Vector2.Distance(_flow.probeDrag.beamLine.anchoredPosition, entry) < 1f, "检测束起点不在探头入射点");
                         Require(!_flow.nextButton.gameObject.activeSelf, "检出后不应显示下一步按钮（老板定稿：检出即测距）");

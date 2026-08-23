@@ -5,14 +5,14 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-namespace M3
-{   /// <summary>M3 流程唯一状态所有者：定位 → 扫描 → 测距 → 完成（不再播放自动耦合剂 Intro）。
-    /// 2026-08-16 按 PPT 对齐：扫描 160→120mm，波形复用 M2WaveformFx，目标以伤损为主。</summary>
-    public class M3FlowController : MonoBehaviour
+namespace M4
+{   /// <summary>M4 流程唯一状态所有者：定位 → 扫描 → 测距 → 完成（无耦合剂开场，与 M3 一致）。
+    /// 2026-08-17 按 M4 PPT 对齐：扫描 55→40mm，波形复用 M2WaveformFx（55→45→40），目标以伤损为主。</summary>
+    public class M4FlowController : MonoBehaviour
     {
         public enum Stage { Intro, Positioning, Scanning, Measuring, Completed } // Intro 保留兼容旧引用，运行时不再进入
-        public M3ProbeDrag probeDrag;
-        public M3RulerDrag rulerDrag;
+        public M4ProbeDrag probeDrag;
+        public M4RulerDrag rulerDrag;
         public M2WaveformFx waveformFx;
         public GameObject beamLayer, railPerspective, damageMarker, detectionBanner, completionPanel, measurementBubble;
         public RectTransform couplantOverlay, railBg;
@@ -23,14 +23,12 @@ namespace M3
         public AudioClip beepClip, correctClip;
         [Tooltip("音效播放音量（2026-08-18 老板要求整体调小）")]
         public float sfxVolume = 0.4f;
-        public M3IdleHelp idleHelp;
-        public float introDuration = 2f, targetAngle = 13f, targetDistance = 120f, peakTolerance = 1f;
+        public M4IdleHelp idleHelp;
+        public float introDuration = 2f, targetAngle = 10f, targetDistance = 40f, peakTolerance = 1f;
         /// <summary>伤损波移动速度倍率：2 = 探头移动 1mm 伤损波在波形 X 轴移动 2mm（老板 2026-08-16 定稿，可调）。</summary>
         public float waveformSpeed = 2f;
-        public string[] stepHints = { "放置探头并调整偏角至向下 13°", "向前移动探头（55→40mm）", "拖动尺子：0 刻度对齐探头入射点，120mm 对齐伤损" };
+        public string[] stepHints = { "放置探头并调整偏角至向上 10°", "向前移动探头（55→40mm）", "拖动尺子：0 刻度对齐探头入射点，40mm 对齐伤损" };
         public UnityEvent onCompleted;
-        /// <summary>M3 通关 → M4（老板 2026-08-18；M3 冻结 Scene 未序列化，代码默认生效）。</summary>
-        public string nextSceneName = "M4";
         public Stage CurrentStage { get; private set; } = Stage.Positioning;
         public bool Detected, Measured, PerspectiveOn, RulerDocked, AngleVerifiedByRuler;
         public float distanceToleranceMm = 2f;
@@ -38,10 +36,10 @@ namespace M3
         private float _prevMm = 55f;
         private Sprite _damageMarkerSprite; // 伤损橙标记（椭圆）
         private static readonly string[] DefaultHints = {
-            "将 K2.5 探头放置在轨头侧面，无偏角",
-            "用定位尺向下偏转 13°",
-            "向前移动探头至入射点距伤损 120mm",
-            "拖动尺子：0 刻度对齐探头入射点，120mm 对齐伤损"
+            "将探头放置在轨腰左侧最上端，无偏角",
+            "用定位尺（水平放置）将探头向上偏转 10°",
+            "向前移动探头至入射点距伤损 40mm",
+            "拖动尺子：0 刻度对齐探头入射点，40mm 对齐伤损"
         };
         private static readonly string[] StageNames = { "探头定位与偏角", "移动探测", "尺子测距", "完成" };
 
@@ -58,12 +56,12 @@ namespace M3
             if (waveformFx != null)
             {
                 waveformFx.scanMinMm = 0f; waveformFx.scanMaxMm = 200f;
-                // 老板 2026-08-16 最终定稿：伤损波 160mm 短波出现 → 122-123mm 最高 → 120mm 停止；
-                // 伤损波最高时与始波同高（peakStrength = startPeakHeight）；初态即 160mm 短波小波形，扫描平移时随距离变化。
-                waveformFx.appearMm = 160f; waveformFx.peakMm = 123f; waveformFx.stopMm = 120f;
-                waveformFx.peakStrength = waveformFx.startPeakHeight; // 伤损波峰值=始波高度
-                waveformFx.noiseAmp = .012f; // 伤损波噪声调小，峰顶毛刺不抬高（2026-08-18 老板：与始波视觉等高，M2/M4 同款）
-                waveformFx.SetDistanceMm(160f);
+                // M4 PPT 定稿：伤损波 65mm 短波出现 → 55mm 最高 → 50mm 停止（2026-08-18 右移 10mm 避开始波重叠，终点对齐 50mm 刻度）；
+                // 伤损波最高时视觉与始波同高；初态即 65mm 短波小波形，扫描平移时随距离变化。
+                waveformFx.appearMm = 65f; waveformFx.peakMm = 55f; waveformFx.stopMm = 50f;
+                // 伤损波最高时与始波直接等高（peakStrength = startPeakHeight；伤损波噪声已调小避免峰顶毛刺抬高，2026-08-18 老板）
+                waveformFx.peakStrength = waveformFx.startPeakHeight;
+                waveformFx.SetDistanceMm(65f);
                 foreach (Transform child in waveformFx.transform) child.gameObject.SetActive(false);
             }
             ApplyView(false);
@@ -111,7 +109,7 @@ namespace M3
             if (CurrentStage == Stage.Scanning && probeDrag != null && waveformFx != null)
             {
                 var t = Mathf.InverseLerp(probeDrag.scanStartMm, probeDrag.scanEndMm, mm) * waveformSpeed;
-                var wmm = Mathf.Lerp(160f, 120f, Mathf.Clamp01(t));
+                var wmm = Mathf.Lerp(65f, 50f, Mathf.Clamp01(t));
                 waveformFx.SetDistanceMm(wmm);
             }
             // 检出 = 扫描中 && 角度正确 && 射线末端实际照射到伤损点（末端照到伤损才触发蜂鸣）。
@@ -163,11 +161,7 @@ namespace M3
         }
         /// <summary>正确提示音（探头放置成功 / 尺子校角吸附 / 测量完成共用，与 M2 一致）。</summary>
         public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }
-        public void EnterNextModule()
-        {
-            onCompleted?.Invoke();
-            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName); // M3 通关 → 进入 M4（与 M2 同款）；2026-08-18：不再先 ResetTool 归位，直接切场景
-        }
+        public void EnterNextModule() { onCompleted?.Invoke(); } // 2026-08-18：不再先 ResetTool 归位，等下一模块接入后在此 LoadScene
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);
         private void SetDialog(bool visible)
@@ -196,7 +190,7 @@ namespace M3
             if (detectionBanner != null) detectionBanner.SetActive(false);
             if (measurementBubble != null) measurementBubble.SetActive(false);
             SetDialog(false); probeDrag?.ResetTool(); rulerDrag?.Hide();
-            waveformFx?.ResetWave(160f);
+            waveformFx?.ResetWave(65f);
             idleHelp?.ResetAll(); ApplyView(false);
             EnterPositioning();
         }
@@ -218,7 +212,7 @@ namespace M3
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
-            if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "轨头侧面探测完成" : "下一模块待接入";
+            if (done && completionText != null) completionText.text = onCompleted != null && onCompleted.GetPersistentEventCount() > 0 ? "轨腰部位探测完成" : "下一模块待接入";
         }
     }
 }

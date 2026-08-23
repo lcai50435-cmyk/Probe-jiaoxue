@@ -5,13 +5,13 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace M3
+namespace M4
 {
-    /// <summary>M3 探头拖拽：160→120mm 像素几何、13° 视觉、检出射线恒绿（无绿→橙，2026-08-23）。</summary>
-    public class M3ProbeDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    /// <summary>M4 探头拖拽：55→40mm 像素几何、10° 向上视觉、检出射线恒绿（无绿→橙，2026-08-23）。</summary>
+    public class M4ProbeDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public RectTransform probeRt, probeVisual, railViewport, beamLine, reflectedBeam, zeroAnchor, redLine; // zeroAnchor=探头 0 刻度锚点（不可见，尺子 0 刻度对齐其中心）；redLine=老板参考线（射线末端高度线）
-        public M3FlowController flow;
+        public M4FlowController flow;
         public Slider angleSlider;
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
@@ -19,20 +19,20 @@ namespace M3
         public Color beamDetectedColor = new Color(1f, .45f, .05f);
         public Vector2 placementTolerancePx = new Vector2(60f, 40f);
         public Vector2 probeEntryLocal = new Vector2(.89f, .04f);
-        public float scanStartMm = 160f, scanEndMm = 120f, scanStartY = 107f, visualTiltAtTarget = 13f, initialAngleDeg = 0f, probeBaseAngleDeg = 15f;
+        public float scanStartMm = 55f, scanEndMm = 40f, scanStartY = 107f, visualTiltAtTarget = 10f, initialAngleDeg = 0f, probeBaseAngleDeg = 15f;
         public float settleDuration = .5f, beamLengthZeroMm = 550f, beamWidthPx = 14f, beamHitRadiusPx = 60f; // 校角稳定计时 / 0°基准射线长度 / 射线粗 / 命中半径
         public bool showReflectedBeam = false; // 反射射线默认关闭；老场景仍保留节点，但不再显示
         /// <summary>伤损标定 UV（正视角透明.png 2292×740）：x=红椭圆中心 1073.5；y=0.2121 对应椭圆中心（=red 上边缘线高度，老板参考线对齐处）。</summary>
         public Vector2 damageUv = new Vector2(1073.5f / 2292f, .2121f);
-        /// <summary>红椭圆（伤损）中心 UV（正视角透明.png 像素采样：中心 x=1071、y=172）；检出判定基准（2026-08-18 与 M4 统一：末端进入红椭圆区域即成功接触）。</summary>
+        /// <summary>红椭圆（伤损）中心 UV（正视角透明.png 像素采样：中心 x=1071、y=172）；检出判定基准（老板定稿：射线末端进入红椭圆区域即成功接触，替换圆形半径）。</summary>
         public Vector2 damageEllipseUv = new Vector2(1071f / 2292f, 172f / 740f);
         public float ellipseHalfWidthPx = 13f / 2292f * 1000f, ellipseHalfHeightPx = 40f / 740f * 323f; // 红椭圆半轴（RailViewport 局部 px，Inspector 可调判定区大小）
         public bool unlocked;
-        public float currentDistanceMm = 160f;
+        public float currentDistanceMm = 55f;
         public event Action<float> OnDistanceChanged;
         private float _angleDeg, _spriteAspect = 1f, _settle;
         private bool _placed, _beamVisible, _inputLocked, _dragging, _homeCached;
-        private Vector2 _probeSize, _damageLocal, _ellipseLocal, _scanStartLocal, _scanEndLocal, _homeAnchor, _homePos, _homeSize, _homePivot;
+        private Vector2 _probeSize, _damageLocal, _ellipseLocal, _scanStartLocal, _scanEndLocal, _homeAnchor, _homePos, _homeSize, _homePivot, _visualBasePos;
         private Vector3 _homeScale;
         private Quaternion _homeRot;
         private Transform _homeParent;
@@ -48,10 +48,10 @@ namespace M3
         public Vector2 DamagePointInRail => _damageLocal;
         public Vector2 DamageEllipsePointInRail => _ellipseLocal; // 红椭圆中心（检出判定区域，橙色标记对齐处）
         public Vector2 ProbeEntryPointInRail => railViewport != null ? railViewport.InverseTransformPoint(probeRt.TransformPoint(EntryLocal())) : Vector2.zero;
-        /// <summary>探头 zero 锚点中心世界位置（RailViewport 局部）：扫描终点时与伤损同水平线、水平距伤损 120mm（尺子 0 刻度对齐处）。</summary>
+        /// <summary>探头 zero 锚点中心世界位置（RailViewport 局部）：扫描终点时与伤损同水平线、水平距伤损 40mm（尺子 0 刻度对齐处）。</summary>
         public Vector2 ZeroAnchorWorld => railViewport != null && zeroAnchor != null ? railViewport.InverseTransformPoint(zeroAnchor.position) : ProbeEntryPointInRail;
 
-        /// <summary>射线末端是否实际照射到伤损（老板 2026-08-18：末端进入红椭圆区域即判定成功接触，与 M4 统一）：
+        /// <summary>射线末端是否实际照射到伤损（老板定稿 2026-08-18：末端进入红椭圆区域即判定成功接触，替换圆形半径）：
         /// 射线末端（entry + 方向×当前长度）在红椭圆归一化坐标下 dx²/a²+dy²/b² ≤ 1（含边缘），与视觉“碰到红椭圆”一致。</summary>
         public bool BeamHitsDamage
         {
@@ -59,7 +59,7 @@ namespace M3
             {
                 if (!_placed || railViewport == null) return false;
                 var entry = ProbeEntryPointInRail;
-                var dir = new Vector2(Mathf.Cos(-_angleDeg * Mathf.Deg2Rad), Mathf.Sin(-_angleDeg * Mathf.Deg2Rad)); // M3 向下：-角度
+                var dir = new Vector2(Mathf.Cos(_angleDeg * Mathf.Deg2Rad), Mathf.Sin(_angleDeg * Mathf.Deg2Rad)); // M4 向上：+角度
                 var end = entry + dir * BeamLenPx(_angleDeg);
                 var dx = (end.x - _ellipseLocal.x) / Mathf.Max(.1f, ellipseHalfWidthPx);
                 var dy = (end.y - _ellipseLocal.y) / Mathf.Max(.1f, ellipseHalfHeightPx);
@@ -67,7 +67,7 @@ namespace M3
             }
         }
 
-        public void Bind(M3FlowController owner)
+        public void Bind(M4FlowController owner)
         {
             flow = owner;
             // Scene 若被误存了非法 UV（例如 probeEntryLocal=231,268），按验收合同迁移回 0.89,0.04；0~1 的合法调值不覆盖。
@@ -92,6 +92,7 @@ namespace M3
                     ol.effectColor = new Color(.1f, .12f, .15f, .6f); ol.effectDistance = new Vector2(2f, -2f);
                 }
             }
+            if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition; // 贴图初始位置（入射点旋转补偿基准，M2 同款）
             if (_probeSize == Vector2.zero && probeRt != null) _probeSize = probeRt.sizeDelta;
             if (zeroAnchor == null && probeRt != null) zeroAnchor = probeRt.Find("zero") as RectTransform;
             if (redLine == null) redLine = FindDeep(transform.root, "red") as RectTransform; // 老板参考线（红椭圆伤损所在区域）
@@ -271,11 +272,19 @@ namespace M3
 
         private void ApplyAngleVisual(float degrees)
         {
-            var target = flow != null ? flow.targetAngle : 13f;
+            var target = flow != null ? flow.targetAngle : 10f;
             var tilt = target > 0f ? degrees / target * visualTiltAtTarget : 0f;
-            if (probeVisual != null) probeVisual.localRotation = Quaternion.Euler(0f, 0f, probeBaseAngleDeg - tilt); // bg 的 Scene 旋转（15°）是“平放”基准，Play 下保持并叠加角度视觉
-            if (beamLine != null) beamLine.localRotation = Quaternion.Euler(0f, 0f, -degrees); // 射线相对探头 90°：0° 时平，随角度同步下偏（老板定稿）
-            if (reflectedBeam != null) reflectedBeam.localRotation = Quaternion.Euler(0f, 0f, degrees);
+            if (probeVisual != null)
+            {
+                probeVisual.localRotation = Quaternion.Euler(0f, 0f, probeBaseAngleDeg + tilt); // M4 向上偏转：bg 平放基准上叠加 +tilt
+                // 入射点旋转补偿（M2 同款）：贴图旋转使发射面视觉点绕探头中心转走，平移 probeVisual 抵消，射线始终从发射面射出
+                var ang = (probeBaseAngleDeg + tilt) * Mathf.Deg2Rad;
+                var c = Mathf.Cos(ang); var s = Mathf.Sin(ang);
+                var e = EntryLocal();
+                probeVisual.anchoredPosition = _visualBasePos + e - new Vector2(e.x * c - e.y * s, e.x * s + e.y * c);
+            }
+            if (beamLine != null) beamLine.localRotation = Quaternion.Euler(0f, 0f, degrees); // M4 向上偏转：0° 时平，随角度同步上偏
+            if (reflectedBeam != null) reflectedBeam.localRotation = Quaternion.Euler(0f, 0f, -degrees); // 反射束与入射束（+degrees）关于水平镜像，与 M3 同套合同
         }
 
         private Vector2 EntryLocal()
@@ -297,7 +306,7 @@ namespace M3
         private void CalibrateTrack()
         {
             var rail = flow != null && flow.railPerspective != null ? flow.railPerspective.GetComponent<RectTransform>() : null;
-            if (rail == null || railViewport == null) { Debug.LogError("[M3ProbeDrag] 缺少 RailPerspective/RailViewport，几何合同不可用。", this); return; }
+            if (rail == null || railViewport == null) { Debug.LogError("[M4ProbeDrag] 缺少 RailPerspective/RailViewport，几何合同不可用。", this); return; }
             _damageLocal = railViewport.InverseTransformPoint(rail.TransformPoint(new Vector3((damageUv.x - .5f) * rail.rect.width, (.5f - damageUv.y) * rail.rect.height)));
             var ppm = PixelsPerMm > 0.01f ? PixelsPerMm : 2.768f;
             // 用户确认：入射点起始位置为 RailViewport 局部 (x, scanStartY)，对应伤损左侧 scanStartMm；
@@ -310,21 +319,21 @@ namespace M3
         }
 
         /// <summary>red 对象下边缘在 RailViewport 局部的 y（射线末端目标线，实时跟随老板手工移动 red；
-        /// 老板 2026-08-16 确认：射线截断以 red 对象为参考，移动 red 截断处实时变化）。</summary>
+        /// M4 同款合同：射线截断以 red 对象为参考，移动 red 截断处实时变化）。</summary>
         private float RedBottomY()
         {
-            if (redLine == null || railViewport == null) return scanStartY - 50f; // fallback：近似当前高度差
+            if (redLine == null || railViewport == null) return scanStartY + 50f; // fallback：M4 向上，伤损（red）在入射点上方近似 50px
             var bottom = redLine.TransformPoint(new Vector3(0f, -redLine.rect.height * redLine.pivot.y, 0f)); // 下边缘局部点（含层级/缩放）
             return railViewport.InverseTransformPoint(bottom).y;
         }
 
-        /// <summary>射线长度（px）：默认 beamLengthZeroMm（200mm）不变；仅当射线方向会碰到/超出红椭圆下边缘时才缩到"刚好打到下边缘"（drop/sin）。
-        /// min 语义天然连续（angle→0 时 drop/sin→∞）：前 ~5° 长度完全不变，临界后平滑缩到末端精确落在红椭圆下边缘，无突变。</summary>
+        /// <summary>射线长度（px）：默认 beamLengthZeroMm 不变；仅当射线方向会碰到/超出红椭圆下边缘时才缩到"刚好打到下边缘"（drop/sin）。
+        /// M4 向上偏转：drop = redBottomY - entryY（伤损在入射点上方才缩）；min 语义天然连续，无突变。</summary>
         private float BeamLenPx(float angleDeg)
         {
             var maxPx = beamLengthZeroMm * PixelsPerMm;
-            var drop = ProbeEntryPointInRail.y - RedBottomY();
-            if (drop <= 1f) return maxPx; // 入射点不高于红椭圆下边缘：向下射线够不到，保持默认长度
+            var drop = RedBottomY() - ProbeEntryPointInRail.y; // M4 向上：伤损（红椭圆下边缘）高于入射点
+            if (drop <= 1f) return maxPx; // 伤损不高于入射点：向上射线够不到，保持默认长度
             var sin = Mathf.Sin(angleDeg * Mathf.Deg2Rad);
             if (sin <= .001f) return maxPx; // 近水平：drop/sin 发散（等价 min 取 maxPx），防除零
             return Mathf.Min(maxPx, drop / sin); // 够得到才缩，末端刚好打在红椭圆下边缘

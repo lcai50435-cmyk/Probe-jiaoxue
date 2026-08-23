@@ -58,7 +58,7 @@ namespace M1
 
         [Header("判定与文案")]
         [Tooltip("正确工具物体名")]
-        public string correctToolName = "手推式钢轨探伤仪";
+        public string correctToolName = "超声波焊缝探伤仪";
         public string textInitial = "请选择钢轨探伤工具";
         public string textWrong = "选择错了，请重新选择";
         public string textCorrect = "选择正确";
@@ -80,10 +80,12 @@ namespace M1
         public AudioClip correctClip;
         [Tooltip("选错工具时播放的错误提示音")]
         public AudioClip wrongClip;
-        [Tooltip("M1-2 点击开始探测进入下一模块时播放的通关音效")]
+        [Tooltip("M1-2 点击开始探测进入下一模块时播放的通关音效（2026-08-18 老板定稿：与选择正确音效同素材）")]
         public AudioClip passClip;
-        [Tooltip("M1-1 点击继续进入 M1-2 时播放的通关音效")]
+        [Tooltip("M1-1 点击继续进入 M1-2 时播放的通关音效（2026-08-18 老板定稿：与选择正确音效同素材）")]
         public AudioClip pass2Clip;
+        [Tooltip("所有音效播放音量（2026-08-18 老板要求整体调小）")]
+        public float sfxVolume = 0.4f;
 
         private static readonly string[] ToolNames =
         {
@@ -386,11 +388,11 @@ namespace M1
             onDone?.Invoke();
         }
 
-        /// <summary>播放音效；素材或 AudioSource 缺失时静默跳过，不报错。</summary>
+        /// <summary>播放音效；素材或 AudioSource 缺失时静默跳过，不报错。统一按 sfxVolume 缩小音量。</summary>
         private void PlaySfx(AudioClip clip)
         {
             if (clip == null || _audioSource == null) return;
-            _audioSource.PlayOneShot(clip);
+            _audioSource.PlayOneShot(clip, sfxVolume);
         }
 
         private static IEnumerator Shake(RectTransform rt, float duration, float amplitude)

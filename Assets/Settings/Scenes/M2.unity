@@ -8248,7 +8248,7 @@ MonoBehaviour:
   angleStatusText: {fileID: 1181040906}
   okGreen: {r: 0.13, g: 0.67, b: 0.42, a: 1}
   scanDirection: {x: 1, y: 0}
-  probeEntryLocal: {x: 0.5, y: 0.6}
+  probeEntryLocal: {x: 0.24, y: 0.81}
   startLocal: {x: -500, y: -34.67}
   damageUv: {x: 0.4808, y: 0.711}
   placementTolerancePx: {x: 60, y: 40}
@@ -8257,10 +8257,10 @@ MonoBehaviour:
   visualTiltAtTarget: 10
   probeBaseAngleDeg: 15
   beamBaseAngleDeg: -90
-  beamLengthZeroMm: 350
+  beamLengthZeroMm: 270
   settleDuration: 0.5
   beamWidthPx: 14
-  beamHitRadiusPx: 20
+  beamHitRadiusPx: 15
   unlocked: 0
   currentDistanceMm: 150
 --- !u!224 &1438739841
@@ -8281,7 +8281,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 166, y: 117}
+  m_SizeDelta: {x: 124.3, y: 117}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1445719128
 GameObject:
@@ -10621,6 +10621,7 @@ MonoBehaviour:
   onCompleted:
     m_PersistentCalls:
       m_Calls: []
+  nextSceneName: M3
   CouplantApplied: 0
   Detected: 0
   Measured: 0
@@ -12889,13 +12890,15 @@ MonoBehaviour:
   weldLineRt: {fileID: 872380491}
   rulerHome: {fileID: 1612217864}
   rulerImage: {fileID: 418471493}
-  measureSize: {x: 420, y: 91}
+  positioningSprite: {fileID: 0}
+  measureSprite: {fileID: 0}
+  measureSize: {x: 408, y: 91}
   angleGuideSize: {x: 240, y: 42}
   measureStartLocal: {x: 0.402, y: 0.58}
   measureOffset: {x: 0, y: 0}
-  zeroUv: {x: -0.08, y: 0.038}
-  ruler110Uv: {x: 0.73, y: 0.038}
-  slotUv: {x: -0.05, y: 0.35}
+  zeroUv: {x: -0.16, y: -0.42}
+  ruler110Uv: {x: 0.73, y: -0.48}
+  slotUv: {x: -0.1, y: 0.27}
   angleToleranceDeg: 6
   pointTolerancePx: 24
   retractTolerancePx: 80

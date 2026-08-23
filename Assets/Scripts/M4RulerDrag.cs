@@ -3,19 +3,19 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace M3
+namespace M4
 {
-    /// <summary>M3 尺子拖拽：定位阶段用 0 刻度贴探头入射点并保持水平；测量阶段 0/120mm 双点校验伤损。</summary>
-    public class M3RulerDrag : MonoBehaviour, IBeginDragHandler, IDragHandler
+    /// <summary>M4 尺子拖拽：定位阶段尺子水平放置贴探头入射点；测量阶段 0/40mm 双点校验伤损。</summary>
+    public class M4RulerDrag : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
-        public M3FlowController flow;
+        public M4FlowController flow;
         public RectTransform rulerRt, railViewport, weldLineRt, rulerHome, positioningTarget;
         public Image rulerImage;
         public Sprite positioningSprite; // 定位（校角）阶段尺子素材；null = 跟随 Scene 序列化 sprite
         public Sprite measureSprite;     // 测量阶段尺子素材；null = 跟随 Scene 序列化 sprite
         public Vector2 measureSize = new Vector2(420f, 91f);
         public Vector2 positioningStart = new Vector2(.22f, .78f), measureStartLocal = new Vector2(.5f, .78f);
-        public Vector2 zeroUv = new Vector2(.005f, .038f), ruler120Uv = new Vector2(.807f, .038f), slotUv = new Vector2(.005f, .136f);
+        public Vector2 zeroUv = new Vector2(.005f, .038f), ruler40Uv = new Vector2(.268f, .038f), slotUv = new Vector2(.005f, .136f);
         public float snapTolerance = 24f, positioningAngle = 0f, positionedAngleDeg = 0f, measureAngleDeg = 0f, angleToleranceDeg = 6f, pointTolerancePx = 24f, measureProjectTolerancePx = 30f, retractTolerancePx = 80f;
         public event Action OnPositioned, OnAligned, OnRetracted;
         public bool unlocked, positioned, aligned;
@@ -30,7 +30,7 @@ namespace M3
 
         private void Awake() => CacheSceneHome();
 
-        public void Bind(M3FlowController owner)
+        public void Bind(M4FlowController owner)
         {
             flow = owner;
             CacheSceneHome();
@@ -59,7 +59,7 @@ namespace M3
             if (rulerHome == null) rulerHome = FindDeep(rulerRt.root, "RulerHome") as RectTransform;
             if (rulerHome == null || rulerRt.parent != rulerHome)
             {
-                Debug.LogError("[M3RulerDrag] Scene 中 Ruler 必须是 RulerHome 的子节点。", this);
+                Debug.LogError("[M4RulerDrag] Scene 中 Ruler 必须是 RulerHome 的子节点。", this);
                 return;
             }
             _homeAnchorMin = rulerRt.anchorMin; _homeAnchorMax = rulerRt.anchorMax;
@@ -149,6 +149,7 @@ namespace M3
             if (rulerRt == null || railViewport == null) return;
             rulerRt.SetParent(railViewport, false); rulerRt.anchorMin = rulerRt.anchorMax = railViewport.pivot;
             rulerRt.pivot = new Vector2(.5f, .5f);
+            rulerRt.localScale = new Vector3(_measuring ? .73f : .6f, _measuring ? .65f : .6f, _measuring ? .65f : .6f); // 工作态 0.6 倍显示（2026-08-18 老板：M2/M4 尺子以 M3 为基准统一；ppm 不乘 scale，几何不变）；测量阶段尺子素材 X 0.73 / YZ 0.65（2026-08-18 老板试调，仅 M4）
             rulerRt.anchoredPosition = NormalizedToRailLocal(start);
             rulerRt.sizeDelta = measureSize; rulerRt.gameObject.SetActive(true);
             EnsureProbeAboveRuler(); // 渲染层级合同：探头必须高于尺子（2026-08-18 老板）
@@ -199,9 +200,9 @@ namespace M3
         private void ComputeAnchors()
         {
             var size = rulerRt != null && rulerRt.sizeDelta.y > 0f ? rulerRt.sizeDelta : measureSize;
-            _zero = AnchorAt(size, zeroUv); _r120 = AnchorAt(size, ruler120Uv); _slot = AnchorAt(size, slotUv);
-            var m0 = AnchorAt(measureSize, zeroUv); var m120 = AnchorAt(measureSize, ruler120Uv);
-            PixelsPerMm = Vector2.Distance(m0, m120) / 120f;
+            _zero = AnchorAt(size, zeroUv); _r120 = AnchorAt(size, ruler40Uv); _slot = AnchorAt(size, slotUv);
+            var m0 = AnchorAt(measureSize, zeroUv); var m40 = AnchorAt(measureSize, ruler40Uv);
+            PixelsPerMm = Vector2.Distance(m0, m40) / 40f;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -239,6 +240,7 @@ namespace M3
             rulerRt.SetParent(railViewport, false);
             rulerRt.anchorMin = rulerRt.anchorMax = railViewport.pivot;
             rulerRt.pivot = new Vector2(.5f, .5f);
+            rulerRt.localScale = new Vector3(_measuring ? .73f : .6f, _measuring ? .65f : .6f, _measuring ? .65f : .6f); // 工作态 0.6 倍显示（2026-08-18 老板：M2/M4 尺子以 M3 为基准统一；ppm 不乘 scale，几何不变）；测量阶段尺子素材 X 0.73 / YZ 0.65（2026-08-18 老板试调，仅 M4）
             rulerRt.sizeDelta = measureSize;
             rulerRt.localRotation = Quaternion.Euler(0f, 0f, _measuring ? measureAngleDeg : positioningAngle); // 测量阶段用测量角度，校角用校角角度
             SetPhaseSprite(_measuring); // 拖入工作态即按阶段应用素材
@@ -260,7 +262,7 @@ namespace M3
         }
 
         /// <summary>拖到测量初始位起点吸附：位置固定初始位、角度变为 measureAngleDeg，吸附即判定成功（蜂鸣+完成）。
-        /// 老板 2026-08-16 定稿：以测量阶段放置位置（measureStartLocal）为基准，吸附成功即完成测量，不再依赖 0/120 几何对齐。</summary>
+        /// 以测量阶段放置位置（measureStartLocal）为基准，吸附成功即完成测量。</summary>
         private void CheckMeasurePlacement()
         {
             if (rulerRt == null || railViewport == null || aligned) return;
@@ -314,7 +316,7 @@ namespace M3
         {
             if (flow?.probeDrag == null || rulerRt == null) return;
             rulerRt.localRotation = Quaternion.Euler(0f, 0f, measureAngleDeg);
-            rulerRt.anchoredPosition = flow.probeDrag.ZeroAnchorWorld - _zero; // 0 刻度压 zero 中心、120mm 刻度压伤损（=射线末端）
+            rulerRt.anchoredPosition = flow.probeDrag.ZeroAnchorWorld - _zero; // 0 刻度压 zero 中心、40mm 刻度压伤损（=射线末端）
         }
 
         private static Transform FindDeep(Transform root, string name)

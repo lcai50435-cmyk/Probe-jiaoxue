@@ -894,9 +894,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 172122892}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 397d087d8020a1a48a6c221f459ee3e8, type: 3}
+  m_Script: {fileID: 11500000, guid: 74320b004e624a5bb621bc7b1848e3d7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::M3.M3IdleHelp
+  m_EditorClassIdentifier: Assembly-CSharp::M4.M4IdleHelp
   flow: {fileID: 172122896}
   helpPanel: {fileID: 77902834}
   helpText: {fileID: 77686424}
@@ -915,9 +915,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 172122892}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 059f97c6c3cfc59458f62d1c4b8796a9, type: 3}
+  m_Script: {fileID: 11500000, guid: 1b1d588afe144437a318f08e7cfd28c4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::M3.M3FlowController
+  m_EditorClassIdentifier: Assembly-CSharp::M4.M4FlowController
   probeDrag: {fileID: 631720252}
   rulerDrag: {fileID: 939213509}
   waveformFx: {fileID: 910000001}
@@ -941,14 +941,14 @@ MonoBehaviour:
   correctClip: {fileID: 8300000, guid: 42d00cc799d68904cb56f3e8d569cf36, type: 3}
   idleHelp: {fileID: 172122895}
   introDuration: 2
-  targetAngle: 13
-  targetDistance: 120
+  targetAngle: 10
+  targetDistance: 40
   peakTolerance: 1
   waveformSpeed: 2
   stepHints:
-  - "\u653E\u7F6E\u63A2\u5934\u5E76\u8C03\u6574\u504F\u89D2\u81F3\u5411\u4E0B 13\xB0"
-  - "\u5411\u524D\u79FB\u52A8\u63A2\u5934\uFF08150\u2192100mm\uFF09"
-  - "\u62D6\u52A8\u5C3A\u5B50\uFF1A0 \u523B\u5EA6\u5BF9\u9F50\u710A\u7F1D\u7194\u5408\u7EBF"
+  - "\u653E\u7F6E\u63A2\u5934\u5E76\u8C03\u6574\u504F\u89D2\u81F3\u5411\u4E0A 10\xB0"
+  - "\u5411\u524D\u79FB\u52A8\u63A2\u5934\uFF0855\u219240mm\uFF09"
+  - "\u62D6\u52A8\u5C3A\u5B50\uFF1A0 \u523B\u5EA6\u5BF9\u9F50\u4F24\u635F"
   onCompleted:
     m_PersistentCalls:
       m_Calls: []
@@ -2021,7 +2021,7 @@ RectTransform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 1
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 939213506}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -2050,7 +2050,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -754433769875543845, guid: 9cd604d9c76743f4cad020b1440388f5, type: 3}
+  m_Sprite: {fileID: 5987772278907439635, guid: 52dfba5a5a6d4d241baab18702b08e0c, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2455,7 +2455,7 @@ RectTransform:
   m_GameObject: {fileID: 631720248}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 433125897}
@@ -2464,7 +2464,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -9, y: -8}
+  m_AnchoredPosition: {x: -9, y: -1}
   m_SizeDelta: {x: 124.3, y: 117}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &631720251
@@ -2484,9 +2484,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 631720248}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 27be533df96e5304dbf41f15ef00f9a7, type: 3}
+  m_Script: {fileID: 11500000, guid: 4f7a0f5527e740c88b64630a3722a779, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::M3.M3ProbeDrag
+  m_EditorClassIdentifier: Assembly-CSharp::M4.M4ProbeDrag
   probeRt: {fileID: 631720249}
   probeVisual: {fileID: 433125897}
   railViewport: {fileID: 459947100}
@@ -2502,24 +2502,24 @@ MonoBehaviour:
   beamColor: {r: 0.3, g: 1, b: 0.5, a: 1}
   beamDetectedColor: {r: 1, g: 0.45, b: 0.05, a: 1}
   placementTolerancePx: {x: 60, y: 40}
-  probeEntryLocal: {x: 0.89, y: 0.6}
-  scanStartMm: 119.03393
-  scanEndMm: 31.16
-  scanStartY: 108.083405
-  visualTiltAtTarget: 13
+  probeEntryLocal: {x: 0.58, y: 0.5}
+  scanStartMm: 135.49348
+  scanEndMm: 40
+  scanStartY: 38
+  visualTiltAtTarget: 10
   initialAngleDeg: 0
   probeBaseAngleDeg: 15
   settleDuration: 0.5
-  beamLengthZeroMm: 270
+  beamLengthZeroMm: 240
   beamWidthPx: 14
   beamHitRadiusPx: 10
   showReflectedBeam: 0
   damageUv: {x: 0.46836823, y: 0.2121}
   damageEllipseUv: {x: 0.4672775, y: 0.23243243}
-  ellipseHalfWidthPx: 5.671902
+  ellipseHalfWidthPx: 8
   ellipseHalfHeightPx: 17.45946
   unlocked: 0
-  currentDistanceMm: 150
+  currentDistanceMm: 55
 --- !u!1 &709824643
 GameObject:
   m_ObjectHideFlags: 0
@@ -2652,7 +2652,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u91CD\u7F6E M3 \u6D41\u7A0B\uFF1F"
+  m_text: "\u91CD\u7F6E M4 \u6D41\u7A0B\uFF1F"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -3059,9 +3059,9 @@ MonoBehaviour:
   scanMinMm: 0
   scanMaxMm: 200
   majorDivisions: 5
-  appearMm: 160
-  peakMm: 123
-  stopMm: 120
+  appearMm: 65
+  peakMm: 55
+  stopMm: 50
   startStrength: 0.08
   peakStrength: 0.85
   pulseWidth: 0.075
@@ -3075,7 +3075,7 @@ MonoBehaviour:
   axisRedColor: {r: 0.86, g: 0.12, b: 0.12, a: 1}
   subGridColor: {r: 0.62, g: 0.62, b: 0.62, a: 0.6}
   lineThickness: 2
-  noiseAmp: 0.04
+  noiseAmp: 0.012
 --- !u!222 &910000002
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4937,18 +4937,18 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 939213505}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
-  m_ConstrainProportionsScale: 1
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 463674089}
   m_Father: {fileID: 1520170581}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -5}
-  m_SizeDelta: {x: 150, y: 32}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 120, y: 25.6}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &939213508
 CanvasRenderer:
@@ -4967,9 +4967,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 939213505}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 47c12b69329f89a449ea40ed8191fba5, type: 3}
+  m_Script: {fileID: 11500000, guid: daaf06a05f874491b8fa5bf4da64e38a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::M3.M3RulerDrag
+  m_EditorClassIdentifier: Assembly-CSharp::M4.M4RulerDrag
   flow: {fileID: 0}
   rulerRt: {fileID: 939213506}
   railViewport: {fileID: 459947100}
@@ -4977,18 +4977,18 @@ MonoBehaviour:
   rulerHome: {fileID: 1520170581}
   positioningTarget: {fileID: 0}
   rulerImage: {fileID: 463674090}
-  positioningSprite: {fileID: -754433769875543845, guid: 9cd604d9c76743f4cad020b1440388f5, type: 3}
-  measureSprite: {fileID: 5987772278907439635, guid: 7a99bd260df48484c936a5411d1c3183, type: 3}
+  positioningSprite: {fileID: 5987772278907439635, guid: 7a99bd260df48484c936a5411d1c3183, type: 3}
+  measureSprite: {fileID: -754433769875543845, guid: 9cd604d9c76743f4cad020b1440388f5, type: 3}
   measureSize: {x: 420, y: 91}
-  positioningStart: {x: 0.27620193, y: 0.675487}
-  measureStartLocal: {x: 0.43134615, y: 0.6894643}
+  positioningStart: {x: 0.27652243, y: 0.56452924}
+  measureStartLocal: {x: 0.53036857, y: 0.55454546}
   zeroUv: {x: 0.005, y: 0.038}
-  ruler120Uv: {x: 0.807, y: 0.038}
+  ruler40Uv: {x: 0.268, y: 0.038}
   slotUv: {x: 0.005, y: 0.136}
   snapTolerance: 24
   positioningAngle: 0
   positionedAngleDeg: 0
-  measureAngleDeg: -12.7
+  measureAngleDeg: 11.5
   angleToleranceDeg: 6
   pointTolerancePx: 24
   measureProjectTolerancePx: 30
@@ -5208,7 +5208,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u5B9A\u4F4D\u5C3A\u5230\u4F4D\u540E\uFF0C\u8C03\u6574\u63A2\u5934\u5411\u4E0B\u504F\u8F6C
+  m_text: "\u5B9A\u4F4D\u5C3A\u5230\u4F4D\u540E\uFF0C\u8C03\u6574\u63A2\u5934\u5411\u4E0A\u504F\u8F6C
     13\xB0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -6133,7 +6133,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "120mm \u4F24\u635F\u68C0\u51FA"
+  m_text: "40mm \u4F24\u635F\u68C0\u51FA"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -6482,7 +6482,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "13\xB0"
+  m_text: "10\xB0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -6656,7 +6656,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u5411\u4E0B\u504F\u8F6C"
+  m_text: "\u5411\u4E0A\u504F\u8F6C"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -7127,7 +7127,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u5C06 K2.5 \u63A2\u5934\u8D34\u5408\u8F68\u5934\u4FA7\u9762"
+  m_text: "\u5C06 K2.5 \u63A2\u5934\u8D34\u5408\u8F68\u8170\u4FA7\u9762"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -8088,7 +8088,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "M3 \u8F68\u5934\u4FA7\u9762\u63A2\u6D4B"
+  m_text: "M4 \u8F68\u8170\u90E8\u4F4D\u63A2\u6D4B"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -8200,7 +8200,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -325, y: 120}
+  m_AnchoredPosition: {x: -325, y: 108}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1857640703

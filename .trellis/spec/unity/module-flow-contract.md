@@ -104,9 +104,32 @@ ol.effectColor = new Color(.1f,.12f,.15f,.6f); ol.effectDistance = new Vector2(2
 - 波形：复用 `M2WaveformFx`，`appearMm=160`、`peakMm=123`、`stopMm=120`；初态 160mm 短波，123mm 最高，120mm 锁定。
 - 测量：0 刻度对齐探头入射点，120mm 刻度对齐伤损，完成测量。
 - 检出即测距（2026-08-16 老板追加）：射线照到伤损检出瞬间探头锁定，**直接** `rulerDrag.Show() + Go(Measuring)`，玩家可直接拖尺测量——**无"下一步"按钮门控**（M3 曾用运行时创建的 NextButton 门控，已删除）。
-- 检出无视觉标记（2026-08-16 老板追加）：**不显示**橙色损伤方块（DamageMarker 永久 `SetActive(false)`）与"伤损检出"横幅（DetectionBanner 不激活）；检出反馈仅剩报警蜂鸣 + 射线绿→橙。
-- 射线：正常绿色，检出后橙色（复用 `M2ProbeDrag.GetBeamSprite`）。
+- 检出视觉反馈（2026-08-23 老板定稿，覆盖 08-16 旧口径）：检出瞬间蜂鸣报警 + 探头锁定 + 直接进 Measuring（无下一步门控）；**伤损橙色椭圆标记仅在透视视图可见**——普通视图检出时界面无任何伤损变色（只有报警声），切到透视视图才显示橙色标记，切回立即隐藏（见 §11）。DetectionBanner 不激活。
+- 完成出口（2026-08-18 老板追加）：M3 完成后点击"下一模块"按钮 → `M3FlowController.nextSceneName`（代码默认 `"M4"`，M3 冻结 Scene 未序列化该字段）`SceneManager.LoadScene` 进入 M4；完成文案条件同步 M2（nextSceneName 非空即显示"轨头侧面探测完成"）。**2026-08-18 二轮：`EnterNextModule` 删除 `rulerDrag?.ResetTool()`，点击直接切场景，尺子不再先归位（M2/M4 同款）**。M3 脚本本次变更属老板明确授权。
+- 射线：恒绿色（无绿→橙，见 §11）。
 - Scene：波形窗口按 M2 风格同步；尺子使用 `尺子正面.png`；探头起始按 PPT 左侧轨头侧面。
+
+---
+
+## 11. 伤损标记透视视图合同（2026-08-23，M2/M3/M4 通用）
+
+老板验收反馈：探测到损伤（检出）时，**还没打开透视就出现伤损变色是错的**；正确行为是：
+
+- 检出 = 仅蜂鸣报警（+ 探头锁定 + 进 Measuring），普通视图下界面**无任何伤损视觉变化**（红椭圆保持红色）。
+- 伤损橙色椭圆标记（`GetEllipseSprite` 半透明橙 16×36 竖椭圆，对齐红椭圆中心）**只在透视视图显示**：显示条件 `PerspectiveOn && Detected`。
+- 三模块同构实现：`FlowController` 新增 `RefreshDamageMarker()` 作为显隐唯一入口（检出时与 `ApplyView` 切换视图时都调它）；`NotifyDetected()` 不再无条件 `ShowDamageMarker()`，`ApplyView()` 不再按 `!Detected` 保留标记。
+- 射线颜色不受影响：M2/M3/M4 射线恒绿色（2026-08-16 曾试行绿→橙，已回退）。
+- Reset / 未检出：标记保持隐藏，M3/M4 标记 Image.color 恢复红色（Scene 节点）。
+- M4 同款（轨腰 40mm 合同）：检出仅报警，橙色标记仅透视可见。
+
+## 12. M4 轨腰流程合同（2026-08-17/18）
+
+- 流程：Positioning(10°定位，直接进入，无 Intro/耦合剂) → Scanning(55→40mm 检出锁定) → Measuring(尺子 0/40 双点) → Completed。
+- 目标点：**伤损**（红椭圆区域命中判定，`DamageEllipsePointInRail`，2026-08-18 老板：M3/M4 统一对齐红椭圆中心）。
+- 扫描：`scanStartMm=55`、`scanEndMm=40`；波形 `appearMm=65`、`peakMm=55`、`stopMm=50`（2026-08-18 右移 10mm 避开始波重叠，终点对齐 50mm 刻度）。
+- 测量：0 刻度对齐探头入射点，40mm 刻度对齐伤损；检出即测距、无下一步门控（同 M2/M3）。
+- 伤损橙色标记：透视视图可见合同同 §11；音效整体 `sfxVolume=0.4`（2026-08-18 老板）。
+- 完成出口：`EnterNextModule` 直接 `onCompleted?.Invoke()`（不 ResetTool），待下一模块接入。
 
 ---
 
