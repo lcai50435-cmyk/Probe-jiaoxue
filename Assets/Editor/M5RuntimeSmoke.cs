@@ -112,7 +112,7 @@ namespace M5.EditorTools
                         _flow.NotifyWipeProgress(1f);
                         Require(_flow.Wiped, "100% 未标记完成");
                         Require(_flow.CurrentStage == M5FlowController.Stage.Completed, "100% 未进入完成阶段");
-                        Require(_flow.completionPanel != null && _flow.completionPanel.activeSelf, "完成面板未显示");
+                        Require(_flow.completionPanel == null || !_flow.completionPanel.activeSelf, "完成态不显示完成面板（老板 2026-08-23：完成文案不出现）");
                         Require(_flow.completionText != null && _flow.completionText.text == "M5 擦拭耦合剂完成", "完成文案错误");
                         Require(_flow.enterNextButton == null || !_flow.enterNextButton.gameObject.activeSelf, "结束模块不应有下一模块按钮");
                         Pass("擦完通过 + 完成面板（结束模块无下一模块）");

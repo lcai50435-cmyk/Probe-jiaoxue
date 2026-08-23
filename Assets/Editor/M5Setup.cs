@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using M1;
 using M2;
 using M5;
 using TMPro;
@@ -397,6 +398,20 @@ namespace M5.EditorTools
             foreach (var c in canvas.GetComponentsInChildren<M2ProbeDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             foreach (var c in canvas.GetComponentsInChildren<M2RulerDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             foreach (var c in canvas.GetComponentsInChildren<M2IdleHelp>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            // 数字人/QA：M2 复制版带残缺 M1 组件（字段全空）与旧结构，M5 设计为 Bootstrap 壳（prd：复用 M3DigitalHumanBootstrap 扩展场景名 M5 装配全套）。
+            // 移除 M1 组件与旧 QA/数字人节点，Bootstrap 运行时装配干净链路（幂等：已清理后跳过）。
+            foreach (var c in canvas.GetComponentsInChildren<M1QAPanel>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M1DeepSeekClient>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M1DigitalHumanPresenter>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M1PressDetector>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            var qaPanel = FindDeep(canvas, "QAPanel");
+            if (qaPanel != null)
+                for (int i = qaPanel.childCount - 1; i >= 0; i--)
+                    UnityEngine.Object.DestroyImmediate(qaPanel.GetChild(i).gameObject); // 空壳供 Bootstrap BuildPanel
+            var dStage = FindDeep(canvas, "DigitalHumanStage");
+            if (dStage != null)
+                for (int i = dStage.childCount - 1; i >= 0; i--)
+                    UnityEngine.Object.DestroyImmediate(dStage.GetChild(i).gameObject); // 空壳供 Bootstrap BuildViews
             RemoveMissingScripts(canvas);
 
             // 2) 删除 M2 探测流程专属节点（幂等：不存在即跳过）

@@ -120,6 +120,7 @@
   - **2026-08-23 耦合剂薄膜（CouplantMask）布局 Scene 权威（老板定稿）**：老板手工把薄膜对准钢轨（pos (-232,-32)、size 953.8×158.1 ≈ coverRect 计算），`M5CouplantFx.Init()` 仅在 maskRt sizeDelta=0（空布局）时按 coverRect 计算默认，非空不覆盖——与钢轨（RailBackground）同一 Scene 权威约定；M5RuntimeSmoke 的薄膜尺寸断言（≈coverRect 计算）在当前值下仍成立。
   - **2026-08-23 数字人舞台/透视钢轨布局 Scene 权威 + rag 初始可拖（老板反馈三连）**：① DigitalHumanStage 布局 Scene 权威（M2 复制版自带，Setup 仅空布局设默认——否则 M5Setup 的 SetRect 覆盖 M2 布局导致数字人被裁切显示不全）；② 透视钢轨（RailPerspective）与普通钢轨（RailBackground）**同布局**（anchor/pivot/size/pos 复制 railBg，原 `Stretch` 导致两视图大小不统一，老板定稿以普通视图为准）；③ M5 为单步交互，`M5RagDrag` 初始即 `unlocked=true` 可拖（Home 置灰仅视觉非锁定，Reset 后仍可拖）——原设计初始锁定导致无法开始擦拭，Smoke 断言同步改为初态/Reset 后可拖。
   - **2026-08-23 CouplantOverlay 布局 Scene 权威（老板二次定稿）**：老板调 CouplantOverlay 的 position/scale 让薄膜贴合钢轨，但 `EnsureViewport` 每次 Setup 的 `Stretch(overlay)` 会重置——改为仅空布局（size=0 且 scale=1 且 pos=0）时 Stretch，已调整的 Scene 值保留；薄膜实际显示走 CouplantMask（自身已 Scene 权威）。
+  - **2026-08-23 完成面板不显示 + QA/数字人 Bootstrap 壳模式（老板定稿）**：① 擦拭完成（Completed）后**不显示完成面板**（"M5 擦拭耦合剂完成"不出现，completionPanel 恒 inactive；onCompleted UnityEvent 保留可配置），Smoke 断言同步；② M5 数字人/QA 走 **M3DigitalHumanBootstrap 壳模式**（prd 原口径）：M2 复制版带残缺 M1 组件（presenter/QAPanel 字段全空，数字人不工作）与旧 FullBodyView（y=0），Adapt 清理——移除 M1QAPanel/M1DeepSeekClient/M1DigitalHumanPresenter/M1PressDetector，清空 QAPanel 与 DigitalHumanStage 为**空壳**，Bootstrap 运行时装配全套（BuildPanel/BuildViews + 字段注入）；M5Setup 的 EnsureQa/EnsureStage 跳过已存在壳。
   - 验收：M5RuntimeSmoke 5 组断言（初态铺满/进度跟手+视图切换/拖出工作态/100% 完成+结束模块/Reset+QA 暂停）；M5Shot 三视口；M5Setup 幂等（连跑两次 SHA 一致）。
 
 ## 6. 目录与模块约定
