@@ -78,19 +78,20 @@ namespace M4
             }
             ApplyView(false);
             EnterPositioning();
-            // 数字人台词气泡（PPT）：M4 不创建独立云朵，文字放场景 dialog 节点（老板后续自行添加）
+            // 数字人台词气泡（PPT）：文字放场景 dialog 节点（dialog/bg 已就位，与 M3 同结构）；配置与 M2/M3 合同一致（老板 2026-08-23）
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
+            speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2/M3 合同一致）
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
             if (dialog != null)
             {
                 speechBubble.SetAnchor(dialog);
                 speechBubble.useExistingCloud = true;
-                speechBubble.anchorOffset = Vector2.zero; // 老板加节点后按云朵位置调
-                speechBubble.bubbleSize = new Vector2(280f, 220f);
+                speechBubble.anchorOffset = new Vector2(-339f, 30f); // 对齐云朵（dialog/bg）中心，与 M2/M3 合同一致（老板 2026-08-23）
+                speechBubble.bubbleSize = new Vector2(264f, 198f);   // 云朵内部文字区（dialog 局部像素）
                 speechBubble.Show(SpeechLines[0]);
             }
-            else speechBubble.createOnlyWhenAnchored = true; // 云朵节点就位前不显示
+            else speechBubble.createOnlyWhenAnchored = true; // 云朵节点未就位前不显示
         }
         private static void Bind(Button button, UnityAction action) { if (!button) return; button.onClick.RemoveListener(action); button.onClick.AddListener(action); }
         private static void EnableRaycast(Component comp) { if (!comp) return; foreach (var img in comp.GetComponentsInChildren<Image>(true)) img.raycastTarget = true; }

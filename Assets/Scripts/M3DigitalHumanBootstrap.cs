@@ -42,6 +42,10 @@ namespace M3
         private const float AvatarSize = 120f;
         private const float StageAspect = 1080f / 1450f;
         private const float HiddenOffsetX = 960f;
+        // M2 合同（M4 复刻）：M2 场景 FullBodyView pos (6,-81)；M2 显示宽 223px（320×0.6972654）；
+        // M3/M4 DigitalHumanStage 自带 localScale 0.74068，故运行时 FullBodyView 宽换算为 301（=320×0.697/0.74068）、localScale 保持 1
+        private const float M2ContractWidth = 301f;
+        private static readonly Vector2 M2FullBodyPos = new Vector2(6f, -81f);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Init()
@@ -132,7 +136,7 @@ namespace M3
             if (presenter.thinkingClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到思考视频：" + ThinkingClipRes);
             if (presenter.speakingClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到讲解视频：" + SpeakingClipRes);
             stageGo.SetActive(true);
-            if (SceneManager.GetActiveScene().name == "M3") presenter.SetShortPressEnabled(false); // M3 取消点击折叠（老板 2026-08-23）：保持全身，仅长按开面板（Awake 后解绑）
+            if (scene == "M3" || scene == "M4") presenter.SetShortPressEnabled(false); // M3/M4 取消点击折叠（老板 2026-08-23）：保持全身，仅长按开面板（Awake 后解绑）
 
             Debug.Log("[M3DigitalHumanBootstrap] " + scene + " 数字人/问答装配完成。");
         }
@@ -265,8 +269,10 @@ namespace M3
             if (preview != null) preview.gameObject.SetActive(false);
 
             var mat = CreateLumaKey();
-            // M5 数字人 = M2 合同（老板 2026-08-23：M5 是 M2 轨顶基线，数字人与 M2 一致）；M3/M4 用 StageCenterOffsetY=30 标定
-            var isM5 = SceneManager.GetActiveScene().name == "M5";
+            // M4/M5 数字人 = M2 合同（老板 2026-08-23：M5 是 M2 轨顶基线，数字人与 M2 一致；M4 FullBodyView 大小与 M2 一致）；M3 用 StageCenterOffsetY=30 标定
+            var sceneName = SceneManager.GetActiveScene().name;
+            var isM5 = sceneName == "M5";
+            var isM2Contract = sceneName == "M4" || isM5; // M2 合同：复刻 M2 场景参数（WidthControlsHeight + localScale，见下）
 
             // 复用 Scene 已序列化的 FullBodyView 壳（M5：M5Setup 创建，Scene 白色长方形可调整，布局 Scene 权威）；M3/M4 无壳则运行时创建
             var existingFb = stage.Find(FullBodyName);
@@ -292,7 +298,7 @@ namespace M3
                 {
                     // 老板 2026-08-23：M3 数字人跟随场景 FullBodyPreview 位置（x 取 preview，y 固定 44）；
                     // 大小与 M2 一致：显示宽 223px（M2 320×0.697）÷ Stage 缩放 0.74068 → sizeDelta 宽 301，高按视频比例 1080:1450
-                    var pw = 301f; // 与 M2 FullBodyView 显示宽度一致（223px 屏幕）
+                    var pw = M2ContractWidth; // 与 M2 FullBodyView 显示宽度一致（223px 屏幕）
                     frt.anchorMin = frt.anchorMax = new Vector2(0.5f, 0f);
                     frt.pivot = new Vector2(0.5f, 0f);
                     frt.anchoredPosition = new Vector2(prt.anchoredPosition.x, 44f); // 老板 2026-08-23：M3 FullBodyView y 调为 44
@@ -302,14 +308,16 @@ namespace M3
                 else
                 {
                     var fitter = fb.AddComponent<AspectRatioFitter>();
-                    if (isM5)
+                    if (isM2Contract)
                     {
-                        // M2 合同：底部全高锚定 + HeightControlsWidth（宽=高×ratio），pos (-13,-35)
+                        // M2 合同 = M2 场景 FullBodyView 参数换算（老板 2026-08-23：M4 与 M2 一致）：
+                        // 底部全高锚定 + WidthControlsHeight（高=宽/ratio）+ 宽 301（M4 Stage 自带 scale 0.74068 → 显示约 223×300 与 M2 相同）
                         frt.anchorMin = new Vector2(0.5f, 0f); frt.anchorMax = new Vector2(0.5f, 1f);
                         frt.pivot = new Vector2(0.5f, 0.5f);
-                        frt.anchoredPosition = new Vector2(-13f, -35f);
-                        frt.sizeDelta = new Vector2(320f, 0f);
-                        fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+                        frt.anchoredPosition = sceneName == "M4" ? new Vector2(-3f, 7f) : M2FullBodyPos; // M4 位置（老板 2026-08-23）：x=-3 y=7；M5 有 Scene 壳不走此分支，M2 值仅兜底
+                        frt.sizeDelta = new Vector2(M2ContractWidth, 0f);
+                        frt.localScale = Vector3.one;
+                        fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
                     }
                     else
                     {
@@ -335,7 +343,7 @@ namespace M3
             var art = av.GetComponent<RectTransform>();
             art.anchorMin = new Vector2(0.5f, 0.5f); art.anchorMax = new Vector2(0.5f, 0.5f);
             art.pivot = new Vector2(0.5f, 0.5f);
-            art.anchoredPosition = new Vector2(0f, isM5 ? -40f : StageCenterOffsetY); // M5 头像对齐 M2（pos y=-40）
+            art.anchoredPosition = new Vector2(0f, isM2Contract ? -40f : StageCenterOffsetY); // M4/M5 头像对齐 M2（pos y=-40）
             art.sizeDelta = new Vector2(AvatarSize, AvatarSize);
             var aimg = av.AddComponent<Image>();
             var sprites = Resources.LoadAll<Sprite>(AvatarSpriteRes);

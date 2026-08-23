@@ -85,11 +85,7 @@ namespace M4
                 if (img != null && img.sprite != null) _spriteAspect = img.sprite.rect.width / img.sprite.rect.height;
                 if (img != null)
                 {
-                    // 与 M2 探头同款阴影+描边（2026-08-16 老板：M3 探头统一 M2 视觉）
-                    var sh = img.GetComponent<Shadow>() ?? img.gameObject.AddComponent<Shadow>();
-                    sh.effectColor = new Color(0f, 0f, 0f, .48f); sh.effectDistance = new Vector2(7f, -7f);
-                    var ol = img.GetComponent<Outline>() ?? img.gameObject.AddComponent<Outline>();
-                    ol.effectColor = new Color(.1f, .12f, .15f, .6f); ol.effectDistance = new Vector2(2f, -2f);
+                    M2ProbeDrag.ApplyProbeEffects(img);
                 }
             }
             if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition; // 贴图初始位置（入射点旋转补偿基准，M2 同款）

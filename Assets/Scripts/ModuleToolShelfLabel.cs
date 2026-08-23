@@ -47,14 +47,47 @@ namespace M2
 
         private static void TryLabelAll()
         {
+            var isM2 = SceneManager.GetActiveScene().name == "M2";
             foreach (var rt in Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None))
             {
                 if (rt.name != ShelfName && rt.name != ShelfNameAlt) continue;
                 FixChipTextFonts(rt); // Chip 下 Text (TMP) 乱码：默认字体无中文 → 换中文 SDF
+                // M2 对齐 M3（老板 2026-08-23）：隐藏卡片内 Chip 标签 + 去掉卡片 Outline 描边，统一卡片下方 ~ToolLabel；M5 的 Chip（激活）保留
+                if (isM2)
+                {
+                    HideChipNodes(rt);
+                }
                 var probe = FindChild(rt, ProbeHomeName);
                 var ruler = FindChild(rt, RulerHomeName);
+                if (isM2)
+                {
+                    NormalizeM2SlotBackground(probe);
+                    NormalizeM2SlotBackground(ruler);
+                }
                 if (probe != null) EnsureLabel(probe, "K2.5探头", "K2.5");
                 if (ruler != null) EnsureLabel(ruler, "多功能尺", "多功能尺");
+            }
+        }
+
+        /// <summary>冻结 M2 的槽位 bg 是 Sliced 内置图；运行时改为 M3 同款无 Sprite 白底。</summary>
+        private static void NormalizeM2SlotBackground(Transform slot)
+        {
+            var image = slot != null ? slot.Find("bg")?.GetComponent<Image>() : null;
+            if (image == null) return;
+            foreach (var outline in image.GetComponents<Outline>()) outline.enabled = false;
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.color = new Color(1f, 1f, 1f, .9f);
+        }
+
+        /// <summary>递归隐藏 ToolShelf 下所有 Chip 节点（M2 专用：对齐 M3 卡片下方标签样式）。</summary>
+        private static void HideChipNodes(RectTransform root)
+        {
+            foreach (RectTransform child in root)
+            {
+                if (child == null) continue;
+                if (child.name == "Chip") child.gameObject.SetActive(false);
+                HideChipNodes(child);
             }
         }
 
@@ -108,12 +141,13 @@ namespace M2
             tmp.text = text;
         }
 
-        /// <summary>槽位子树内是否已有包含关键词的 TMP 文本（含 Chip 按钮内嵌工具名）。</summary>
+        /// <summary>槽位子树内是否已有激活的、包含关键词的 TMP 文本（含 Chip 按钮内嵌工具名；隐藏的 Chip 不算，M2 对齐 M3 用）。</summary>
         private static bool HasEmbeddedName(Transform slot, string keyword)
         {
             if (string.IsNullOrEmpty(keyword)) return false;
             foreach (var tmp in slot.GetComponentsInChildren<TextMeshProUGUI>(true))
             {
+                if (!tmp.gameObject.activeInHierarchy) continue; // M2 隐藏 Chip 后不再拦截 ~ToolLabel
                 if (!string.IsNullOrEmpty(tmp.text) && tmp.text.Contains(keyword)) return true;
             }
             return false;

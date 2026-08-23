@@ -13,8 +13,8 @@ namespace M2
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
         public Vector2 scanDirection = new Vector2(1f, 0f), probeEntryLocal = new Vector2(.5f, .25f), startLocal = new Vector2(-500f, 0f), damageUv = new Vector2(.4808f, .711f), placementTolerancePx = new Vector2(60f, 40f);
-        [Tooltip("Home 槽位内初始显示位置（老板 2026-08-23：y=-5；运行时覆盖 Scene 旧值不写回）")]
-        public Vector2 homeOffset = new Vector2(0f, -5f);
+        [Tooltip("Home 槽位内初始显示位置（老板 2026-08-23：对齐 M3 (-9,-8)；运行时覆盖 Scene 旧值不写回）")]
+        public Vector2 homeOffset = new Vector2(-9f, -8f);
         public float hitMm = 110f, beamHitTolerancePx = 8f, visualTiltAtTarget = 10f, probeBaseAngleDeg = 0f, beamBaseAngleDeg = 0f, beamLengthZeroMm = 550f, settleDuration = .5f, beamWidthPx = 14f, beamHitRadiusPx = 30f; // beamHitRadiusPx：射线末端命中伤损容差（老板 2026-08-16 A 方案：射线实际碰到伤损即检出；默认 30px 覆盖 10° 时末端与伤损最小距离 ~20px）
         public bool unlocked;
         public float currentDistanceMm = 150f;
@@ -41,7 +41,24 @@ namespace M2
         private float _angleDeg, _settle, _spriteAspect = 1f;
         private bool _placed, _inputLocked, _dragging, _beamVisible;
         private Vector2 _probeSize, _damage, _visualBasePos;
+        private Vector3 _homeScale = Vector3.one; // Home 槽位显示缩放（对齐 M3 0.8；归位恢复）
         private Image _beamImage;
+        /// <summary>探头效果统一使用 M3 样式；Outline 继承 Shadow，须按精确类型取得真正阴影组件。</summary>
+        public static void ApplyProbeEffects(Image image)
+        {
+            if (image == null) return;
+            Shadow shadow = null;
+            foreach (var effect in image.GetComponents<Shadow>())
+                if (effect.GetType() == typeof(Shadow)) { shadow = effect; break; }
+            if (shadow == null) shadow = image.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, .48f);
+            shadow.effectDistance = new Vector2(7f, -7f);
+
+            var outline = image.GetComponent<Outline>();
+            if (outline == null) outline = image.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(.1f, .12f, .15f, .6f);
+            outline.effectDistance = new Vector2(2f, -2f);
+        }
         private Vector2 EntryLocal()
         {
             var rw = Mathf.Min(_probeSize.x, _probeSize.y * _spriteAspect);
@@ -54,9 +71,11 @@ namespace M2
         public void Bind(M2FlowController owner)
         {
             flow = owner; if (probeRt == null) probeRt = transform as RectTransform; if (probeVisual == null) probeVisual = probeRt.Find("bg") as RectTransform; if (_probeSize == Vector2.zero) _probeSize = probeRt.sizeDelta;
-            // Home 初始显示位置（老板 2026-08-23：y=-5，运行时覆盖 Scene 旧值）
-            if (probeRt != null && probeHome != null) probeRt.anchoredPosition = homeOffset;
-            var probeImage = probeVisual != null ? probeVisual.GetComponent<Image>() : null; if (probeImage != null) { var sprites = Resources.LoadAll<Sprite>("probeFootage"); if (sprites != null && sprites.Length > 0) probeImage.sprite = sprites[0]; if (probeImage.sprite != null) _spriteAspect = probeImage.sprite.rect.width / probeImage.sprite.rect.height; var sh = probeImage.GetComponent<Shadow>() ?? probeImage.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0f, 0f, 0f, .48f); sh.effectDistance = new Vector2(7f, -7f); var ol = probeImage.GetComponent<Outline>() ?? probeImage.gameObject.AddComponent<Outline>(); ol.effectColor = new Color(.1f, .12f, .15f, .6f); ol.effectDistance = new Vector2(2f, -2f); }
+            _homeScale = probeRt != null ? probeRt.localScale : Vector3.one; // 记录 Home 缩放（Scene 0.8，对齐 M3）
+            homeOffset = new Vector2(-9f, -8f); // 冻结 Scene 旧序列化值 (0,-5) 不写回，运行时对齐 M3
+            // Home 初始显示位置（老板 2026-08-23：对齐 M3 (-9,-8)，运行时覆盖 Scene 旧值）
+            if (probeRt != null && probeHome != null) { probeRt.localScale = _homeScale; probeRt.anchoredPosition = homeOffset; }
+            var probeImage = probeVisual != null ? probeVisual.GetComponent<Image>() : null; if (probeImage != null) { if (probeImage.sprite != null) _spriteAspect = probeImage.sprite.rect.width / probeImage.sprite.rect.height; ApplyProbeEffects(probeImage); }
             CalibrateTrack(); if (beamLine != null) _beamImage = beamLine.GetComponentInChildren<Image>(); if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition;
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
             if (angleSlider == null) return;
@@ -189,7 +208,7 @@ namespace M2
         private Vector2 ProbeEntryWorld() => railViewport.InverseTransformPoint(probeRt.TransformPoint(EntryLocal()));
         private void ReturnHome()
         {
-            _placed = false; if (probeRt != null && probeHome != null) { Reparent(probeRt, probeHome, new Vector2(.5f, .5f)); probeRt.anchoredPosition = homeOffset; } if (beamLine != null) beamLine.anchoredPosition = new Vector2(9999f, 9999f);
+            _placed = false; if (probeRt != null && probeHome != null) { Reparent(probeRt, probeHome, new Vector2(.5f, .5f)); probeRt.localScale = _homeScale; probeRt.anchoredPosition = homeOffset; } if (beamLine != null) beamLine.anchoredPosition = new Vector2(9999f, 9999f);
         }
         private void Reparent(RectTransform child, RectTransform parent, Vector2 anchor)
         {
