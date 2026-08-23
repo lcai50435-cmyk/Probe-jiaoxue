@@ -122,6 +122,7 @@
   - **2026-08-23 CouplantOverlay 布局 Scene 权威（老板二次定稿）**：老板调 CouplantOverlay 的 position/scale 让薄膜贴合钢轨，但 `EnsureViewport` 每次 Setup 的 `Stretch(overlay)` 会重置——改为仅空布局（size=0 且 scale=1 且 pos=0）时 Stretch，已调整的 Scene 值保留；薄膜实际显示走 CouplantMask（自身已 Scene 权威）。
   - **2026-08-23 完成面板不显示 + QA/数字人 Bootstrap 壳模式（老板定稿）**：① 擦拭完成（Completed）后**不显示完成面板**（"M5 擦拭耦合剂完成"不出现，completionPanel 恒 inactive；onCompleted UnityEvent 保留可配置），Smoke 断言同步；② M5 数字人/QA 走 **M3DigitalHumanBootstrap 壳模式**（prd 原口径）：M2 复制版带残缺 M1 组件（presenter/QAPanel 字段全空，数字人不工作）与旧 FullBodyView（y=0），Adapt 清理——移除 M1QAPanel/M1DeepSeekClient/M1DigitalHumanPresenter/M1PressDetector，清空 QAPanel 与 DigitalHumanStage 为**空壳**，Bootstrap 运行时装配全套（BuildPanel/BuildViews + 字段注入）；M5Setup 的 EnsureQa/EnsureStage 跳过已存在壳。
   - **2026-08-23 M5 数字人 = M2 合同（老板定稿）**：Bootstrap BuildViews 对 M5 场景用 M2 参数（M3/M4 不变）——FullBodyView 底部全高锚定（0.5,0)-(0.5,1) + AspectRatioFitter **HeightControlsWidth**（ratio 1080/1450）+ pos (-13,-35)，数字人 369×496 与 M2 完全一致；AvatarView pos (0,-40) 对齐 M2。
+  - **2026-08-23 钢轨图 preserveAspect=false（M2 合同）**：M2 钢轨图拉伸填满 960×286 容器（preserveAspect=0），M5 的 SetRailSprite 误设 true 导致钢轨按比例缩小留白、看起来比 M2 小——改为 false 与 M2 一致（普通/透视视图同）。
   - 验收：M5RuntimeSmoke 5 组断言（初态铺满/进度跟手+视图切换/拖出工作态/100% 完成+结束模块/Reset+QA 暂停）；M5Shot 三视口；M5Setup 幂等（连跑两次 SHA 一致）。
 
 ## 6. 目录与模块约定

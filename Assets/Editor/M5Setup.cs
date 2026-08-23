@@ -681,14 +681,15 @@ namespace M5.EditorTools
             return null;
         }
 
-        /// <summary>M2 复制基线：钢轨图 Image 可能在容器子节点（RailBackground/bg），容器自身无 Image；伪 null 上设置会静默失败。</summary>
+        /// <summary>M2 复制基线：钢轨图 Image 可能在容器子节点（RailBackground/bg），容器自身无 Image；伪 null 上设置会静默失败。
+        /// preserveAspect=false（M2 合同：拉伸填满 960×286 容器，与 M2 钢轨大小一致；设 true 会按比例缩小留白）。</summary>
         private static void SetRailSprite(RectTransform container, string path)
         {
             var img = container.GetComponent<Image>();
             if (img == null) img = container.GetComponentInChildren<Image>(true);
             if (img == null) return;
             img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            img.preserveAspect = true;
+            img.preserveAspect = false;
             img.raycastTarget = false;
         }
 
