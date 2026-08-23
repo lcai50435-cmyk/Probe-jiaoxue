@@ -35,8 +35,6 @@ namespace M5.EditorTools
         private static readonly Color MutedColor = new Color(.38f, .42f, .46f);
         private static readonly Color PrimaryColor = new Color(.08f, .42f, .66f);
         private static readonly Color AccentColor = new Color(.93f, .55f, .12f);
-        private static readonly Color RagLockedColor = new Color(.45f, .47f, .5f, .9f); // 浅色 rag 置灰需加深+高不透明（0.62 会融入浅背景像透明）
-        private static readonly Color M2LockedColor = new Color(.55f, .57f, .6f, .62f); // M2 同款置灰（探头/尺子有深色细节，可见）
 
         public static void SetupM5Batch()
         {
