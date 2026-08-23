@@ -88,8 +88,8 @@ namespace M3
             {
                 speechBubble.SetAnchor(dialog);
                 speechBubble.useExistingCloud = true;
-                speechBubble.anchorOffset = Vector2.zero; // 老板加节点后按云朵位置调
-                speechBubble.bubbleSize = new Vector2(280f, 220f);
+                speechBubble.anchorOffset = new Vector2(-339f, 30f); // 对齐云朵（dialog/bg）中心，与 M2 合同一致（老板 2026-08-23）
+                speechBubble.bubbleSize = new Vector2(264f, 198f);   // 云朵内部文字区（dialog 局部像素）
                 speechBubble.Show(SpeechLines[0]);
             }
             else speechBubble.createOnlyWhenAnchored = true; // 云朵节点就位前不显示

@@ -132,6 +132,7 @@ namespace M3
             if (presenter.thinkingClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到思考视频：" + ThinkingClipRes);
             if (presenter.speakingClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到讲解视频：" + SpeakingClipRes);
             stageGo.SetActive(true);
+            if (SceneManager.GetActiveScene().name == "M3") presenter.SetShortPressEnabled(false); // M3 取消点击折叠（老板 2026-08-23）：保持全身，仅长按开面板（Awake 后解绑）
 
             Debug.Log("[M3DigitalHumanBootstrap] " + scene + " 数字人/问答装配完成。");
         }

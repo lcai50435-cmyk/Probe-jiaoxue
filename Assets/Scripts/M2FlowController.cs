@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using M1;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -79,8 +80,7 @@ namespace M2
             {
                 couplantFx = gameObject.AddComponent<M2CouplantFx>();
                 couplantFx.Bind(railBg, couplantMask.GetComponent<RectTransform>(), couplantOverlay.GetComponentInChildren<Image>(true), couplantOverlay.GetComponent<CanvasGroup>());
-            }
-            // 数字人台词气泡（PPT：替换底部提示；运行时创建，冻结 Scene 不改）
+            }            // 数字人台词气泡（PPT：替换底部提示；运行时创建，冻结 Scene 不改）
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
@@ -96,6 +96,13 @@ namespace M2
             speechBubble.Show(SpeechLines[0]);
             // Slide 5/6【4】删掉：场景静态 Hint 提示（冻结 Scene 不删节点，运行时隐藏）
             foreach (var t in GetComponentsInChildren<TMP_Text>(true)) if (t.name == "Hint") t.gameObject.SetActive(false);
+        }
+
+        private void Start()
+        {
+            // 老板 2026-08-23：取消 M2 点击切换全身/折叠头像（长按开问答面板保留）；Start 在 Presenter.Awake 之后执行
+            var presenter = Object.FindFirstObjectByType<M1DigitalHumanPresenter>();
+            if (presenter != null) presenter.SetShortPressEnabled(false);
         }
         private Button FindButton(string name) => GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == name);
         /// <summary>递归查找子物体（含未激活；支持斜杠路径）。</summary>

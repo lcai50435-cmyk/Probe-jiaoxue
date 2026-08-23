@@ -193,3 +193,13 @@ M5 擦拭耦合剂模块完整交付：M2 轨顶基线 + 耦合剂薄膜（初�
 ### Status
 
 [OK] **Completed**
+
+## 2026-08-23 M3 气泡文字进云朵 + 取消 M3 折叠（老板反馈二修）
+
+**问题 1：M3 台词文字出现在数字人后面，不在云朵气泡里**
+- 根因：M3 场景 `DigitalHumanStage/dialog`（scale 1.469，pos (-60,103)）内云朵 bg 在 dialog 中心左侧 339px（local (-339,-3)，scale 4.1×3.3 ≈ 410×331）；但 M3FlowController 用占位 `anchorOffset=(0,0)`，文字锚在 dialog 中心 = Stage 中心附近，被 Bootstrap 运行时创建的 FullBodyView（中心 0,30，AddChild 在 dialog 之后渲染）完全盖住。M2 定稿参数为 (-339,30)/(264,198)（M2 dialog scale 1.088，云朵同构）。
+- 修复：M3FlowController 对齐 M2 合同 `anchorOffset=(-339,30)`、`bubbleSize=(264,198)`（M3 dialog scale 1.469 同步放大云朵与文字，比例一致）。文字随 dialog 内部层级 SetAsLastSibling，云朵在数字人左侧不重叠，无需动层级。M3 场景 text 子节点为空 TMP，无重叠。冻结 M3.unity 零改动。
+
+**问题 2：取消 M3 数字人点击折叠**（老板撤销前一条需求）
+- 复用并发会话（LF）刚加的 `M1DigitalHumanPresenter.SetShortPressEnabled(bool)`（M2 已用它取消折叠）：Bootstrap 对 M3 在 `stageGo.SetActive(true)`（Awake 订阅后）调 `SetShortPressEnabled(false)` 解绑短按，保留长按开面板。撤销了我先前加的冗余 `shortPressToggle` 字段（DRY）。
+- 旁路发现：工作区存在并发修改——`M2.unity` 删除 AvatarView + presenter.avatarView/avatarPress 置 0（老板授权 M2 手工改），`M2FlowController.cs` 加 Start 调 SetShortPressEnabled(false)。非我改动，未干预。M3 折叠关闭后 AvatarView 保持 inactive（Bootstrap 创建但未激活），无副作用。
