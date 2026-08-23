@@ -64,6 +64,7 @@ namespace M5.EditorTools
             var canvas = EnsureCanvas(cnFont);
             AdaptFromM2Baseline(canvas);          // M2 复制基线：清理 M2 探测节点/组件并修复结构（幂等）
             EnsureSafeArea(canvas, cnFont);       // 幂等补齐 M5 层级（M2 复制版 Canvas 已存在时 EnsureCanvas 不建结构）
+            EnsureToolCompat(canvas.Find("SafeArea/MainScene/Tool")); // 老板工具架：Probe/Ruler 静态展示 + Rag 擦拭功能（幂等）
             EnsureAll(canvas, cnFont);
             EditorSceneManager.MarkSceneDirty(scene);
             var saved = EditorSceneManager.SaveScene(scene, existed ? null : ScenePath);
@@ -145,10 +146,14 @@ namespace M5.EditorTools
         private static void EnsureRailArea(Transform main, TMP_FontAsset font)
         {
             var railArea = EnsureGo(main, "RailArea"); Stretch(railArea);
-            var shelf = EnsureImage(railArea, "ToolShelf", new Color(0, 0, 0, .03f));
-            SetRect(shelf, new Vector2(0, 1), new Vector2(0, 1), new Vector2(202, -52), new Vector2(570, 88), new Vector2(.5f, .5f)); // 三槽位加宽（M2 两槽 372）
-            shelf.GetComponent<Image>().raycastTarget = false; // 工具架层不拦截拖拽
-            EnsureToolShelf(shelf);
+            if (main.Find("Tool") == null)
+            {
+                // 老板 2026-08-23 定稿：工具架用 MainScene/Tool 权威（老板添加）；Tool 不存在时才创建 M5 标准工具架
+                var shelf = EnsureImage(railArea, "ToolShelf", new Color(0, 0, 0, .03f));
+                SetRect(shelf, new Vector2(0, 1), new Vector2(0, 1), new Vector2(202, -52), new Vector2(570, 88), new Vector2(.5f, .5f)); // 三槽位加宽（M2 两槽 372）
+                shelf.GetComponent<Image>().raycastTarget = false; // 工具架层不拦截拖拽
+                EnsureToolShelf(shelf);
+            }
             var viewport = EnsureGo(railArea, "RailViewport");
             SetRect(viewport, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 0), new Vector2(-32, -32), new Vector2(.5f, .5f));
             EnsureViewport(viewport, font);
@@ -188,6 +193,63 @@ namespace M5.EditorTools
             var drag = rag.GetComponent<M5RagDrag>();
             if (drag == null) drag = rag.gameObject.AddComponent<M5RagDrag>(); // 伪 null 不能走 ??（Unity 6 对象语义）
             drag.ragRt = rag as RectTransform; drag.ragImage = rag.GetComponent<Image>();
+        }
+
+        /// <summary>老板 Tool 树（MainScene/Tool）工具槽适配（老板 2026-08-23 定稿：工具架用 MainScene/Tool 权威）。
+        /// Probe/Ruler 仅静态展示（M2 拖拽组件已由 Adapt 移除，M5 不参与交互）；RagHome 槽位工具节点改名为 Rag，
+        /// 补 rag.png/置灰/Outline 并挂 M5RagDrag（M5 擦拭功能）。幂等；不覆盖老板摆的布局。</summary>
+        private static void EnsureToolCompat(Transform tool)
+        {
+            if (tool == null) return;
+            // Probe 静态展示（无交互，M2 同款置灰）
+            var probe = FindDeep(tool, "Probe");
+            if (probe != null)
+            {
+                var img = probe.GetComponent<Image>();
+                if (img == null) img = probe.gameObject.AddComponent<Image>();
+                img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ProbePath);
+                if (img.sprite != null) img.preserveAspect = true;
+                img.raycastTarget = false;
+                img.color = M2LockedColor;
+            }
+            // Ruler 静态展示（无交互）
+            var rulerHome = FindDeep(tool, "RulerHome");
+            var ruler = rulerHome != null ? FindDeep(rulerHome, "Ruler") : null;
+            if (ruler != null)
+            {
+                var img = ruler.GetComponent<Image>();
+                if (img == null) img = ruler.gameObject.AddComponent<Image>();
+                img.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(RulerPath);
+                if (img.sprite != null) img.preserveAspect = true;
+                img.raycastTarget = false;
+                img.color = M2LockedColor;
+            }
+            // Rag 擦拭功能：RagHome 槽位工具节点（当前可能名为 Ruler）改名为 Rag，补 rag.png/置灰/Outline/M5RagDrag
+            var ragHome = FindDeep(tool, "RagHome");
+            if (ragHome == null) return;
+            Transform rag = null;
+            foreach (Transform child in ragHome)
+                if (child.name == "Rag") { rag = child; break; }
+            if (rag == null)
+                foreach (Transform child in ragHome)
+                    if (child.name != "bg" && child.name != "Chip") { rag = child; break; }
+            if (rag == null) return;
+            if (rag.name != "Rag") rag.name = "Rag";
+            var ragImg = rag.GetComponent<Image>();
+            if (ragImg == null) ragImg = rag.gameObject.AddComponent<Image>();
+            ragImg.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(RagPath);
+            if (ragImg.sprite != null) ragImg.preserveAspect = true;
+            ragImg.raycastTarget = true;
+            ragImg.color = RagLockedColor;
+            var outline = rag.GetComponent<Outline>();
+            if (outline == null) outline = rag.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(.2f, .22f, .25f, .6f);
+            outline.effectDistance = new Vector2(2, -2);
+            rag.SetAsLastSibling();
+            var drag = rag.GetComponent<M5RagDrag>();
+            if (drag == null) drag = rag.gameObject.AddComponent<M5RagDrag>();
+            drag.ragRt = rag as RectTransform;
+            drag.ragImage = ragImg;
         }
 
         private static void EnsureViewport(Transform viewport, TMP_FontAsset font)
@@ -310,15 +372,13 @@ namespace M5.EditorTools
             // 1) M2 运行时组件（会初始化 M2 探测流程，必须移除；幂等）。M2WaveformFx 保留——波形窗口视觉由它程序化绘制，
             //    独立于 M2 流程（初始即画深底/网格/始波/噪声线），M5 无外部 SetDistanceMm 驱动即静态呈现，与 M2 窗口一致且无实际作用
             //    老板 2026-08-23 添加 MainScene/Tool（M2 样式工具架，含 M2ProbeDrag/M2RulerDrag）——Tool 子树整体保留，不删不改
-            var tool = main != null ? main.Find("Tool") : null;
-            foreach (var c in canvas.GetComponentsInChildren<M2FlowController>(true).ToArray())
-                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2ProbeDrag>(true).ToArray())
-                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2RulerDrag>(true).ToArray())
-                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2IdleHelp>(true).ToArray())
-                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
+            // M2 运行时组件（会初始化 M2 探测流程，必须移除；幂等）。M2WaveformFx 保留——波形窗口视觉由它程序化绘制。
+            // 老板 2026-08-23 定稿：工具架用 MainScene/Tool，其中 Probe/Ruler 不参与 M5 交互（M2ProbeDrag/M2RulerDrag 一并移除，保留静态视觉），
+            // 擦拭布 Rag 由 EnsureToolCompat 赋予 M5 擦拭功能。
+            foreach (var c in canvas.GetComponentsInChildren<M2FlowController>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M2ProbeDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M2RulerDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M2IdleHelp>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
             RemoveMissingScripts(canvas);
 
             // 2) 删除 M2 探测流程专属节点（幂等：不存在即跳过）
@@ -444,8 +504,10 @@ namespace M5.EditorTools
             var mask = overlay != null ? (overlay.Find("CouplantMask") ?? overlay) : null; // M2 复制基线：薄膜即 CouplantOverlay 自身
             var perspective = viewport != null ? viewport.Find("RailPerspective") : null;
             var bar = viewport != null ? viewport.Find("PerspectiveBar_C") : null;
-            var rag = safeArea.Find("MainScene/RailArea/ToolShelf/RagHome/Rag");
-            var ragHome = safeArea.Find("MainScene/RailArea/ToolShelf/RagHome");
+            // 老板 2026-08-23：工具架用 MainScene/Tool（Rag 由 EnsureToolCompat 适配）；无 Tool 时回退 M5 标准 ToolShelf
+            var tool = safeArea.Find("MainScene/Tool");
+            var rag = tool != null ? FindDeep(tool, "Rag") : safeArea.Find("MainScene/RailArea/ToolShelf/RagHome/Rag");
+            var ragHome = tool != null ? FindDeep(tool, "RagHome") : safeArea.Find("MainScene/RailArea/ToolShelf/RagHome");
 
             if (rag != null)
             {
