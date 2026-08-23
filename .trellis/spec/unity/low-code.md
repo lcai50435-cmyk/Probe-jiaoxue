@@ -106,6 +106,17 @@
   - **测量姿态合同补缺**：`M2RulerDrag.Awake` 运行时强制 `measureAngleDeg=0`、`measureOffset=Vector2.zero`（PPT 合同：测量尺水平放置、0mm 锚点贴入射点；冻结 Scene 旧序列化 9.55/(19,28) 会破坏"测量尺未水平"烟测断言，不写回）。
   - **警告（2026-08-16 返工教训）**：尺子工作态 `localScale` 一律保持 `Vector3.one`（`EnterWorkMode` 强制），**禁止**为适配 Scene 根缩放（如 0.8）而折算 `PixelsPerMm`——ppm 是探头扫描起点/命中点几何（`damage - mm*ppm`）的唯一依据，ppm 变化会改变探头初始放置位置（老板硬性要求保持不变）。Scene 中 Ruler 根 `localScale` 仅影响工具架（Home）显示；工作态尺寸由 `measureSize` 决定。
 
+- **2026-08-18 M5 擦拭耦合剂（复用 M2 UGUI 骨架，单步交互结束模块）**：
+  - 流程：起始（M2 轨头顶面视角 + 钢轨顶面涂蓝色耦合剂）→ 玩家拖擦拭布（rag.png）至钢轨顶面 → 左右拖动控制擦拭范围（进度跟手）→ 100% 通过。**无探测流程、无下一模块**（完成面板显示"M5 擦拭耦合剂完成"，enterNextButton 不显示；onCompleted UnityEvent 保留可配置）。
+  - 耦合剂视觉 = 从 `俯视角.png` 切 `coverRect=(.005,.222,.993,.553)` 子矩形（铁轨主体，覆盖轨顶中央大部分，老板 2026-08-18 确认）的蓝色半透明薄膜（`M5CouplantFx`，filmColor=(.55,.8,.96,.45) 同 M2）。**状态与 M2CouplantFx 相反**：初始 `fillAmount=1` 铺满（M2 是 0→1 动画后淡出）；擦拭进度 p → `fillOrigin=1`（右对齐剩余）+ `fillAmount=1-p`（已擦左侧消失、剩余在右侧，与拖动方向一致）。
+  - 擦拭布拖拽（`M5RagDrag`）：Home（RagHome 槽位置灰锁定 color=(.55,.57,.6,.62)）→ 拖出进工作态（挂 RailViewport、锚定 pivot、跟手）；x 限制在钢轨顶面擦拭区间（wipeRect 同 coverRect 的 x 范围换算 railViewport 局部像素），y 贴 railBg 中心线；`progress = clamp((x-left)/(right-left))`。
+  - `M5FlowController`：Stage { Wipe, Completed }；`NotifyWipeProgress(p)` → `couplantFx.SetWipeProgress(p)`，p≥1-0.001 时锁定 + 正确音效 + Completed。Reset 恢复（铺满/归槽/回 Wipe）。普通/透视切换复用 M2 行为，**透视视图隐藏耦合剂层**（擦拭发生在普通视图）。
+  - Scene 由 `M5Setup.cs` 生成（未冻结模块）：复用 M2 骨架（Canvas 1920x1080/Match0.5、SafeArea/HeaderBar/MainScene(RailArea)/ControlDock_D/QALayer/DigitalHumanStage/ModalLayer），无波形窗口/探头/尺子流程节点；**ToolShelf 三槽位（570×88，2026-08-18 老板二轮）**：ProbeHome（176×88 @88，探头 probeFootage.png 静态展示不可交互）、RulerHome（176×88 @282，尺子 尺子正面.png 静态展示不可交互）、RagHome（176×88 @476，紧邻 RulerHome 右侧，rag 可拖）；探头/尺子用 M2 同款置灰 (0.55,0.57,0.6,0.62)（有深色细节可见）；ModalLayer 必须放 SafeArea 下且运行时用 `FindDeep` 查找（`transform.Find("ModalLayer")` 只查直接子节点会失效）。
+  - **浅色工具置灰坑（2026-08-18 老板反馈 rag 透明）**：rag 是浅灰白布，置灰 (0.55,0.57,0.6,0.62) 后几乎融入浅色背景（像透明）。浅色工具锁定色必须加深+高不透明 `(0.45,0.47,0.5,0.9)` 并加 Outline 深色描边（effectColor=(.2,.22,.25,.6) effectDistance=(2,-2)）与背景分离；深色工具（探头/尺子）用 M2 同款置灰即可。
+  - 数字人/QA 复用 `M3DigitalHumanBootstrap`（已支持 M3/M4/M5 场景名）：M5Setup 建 QAPanel 壳（含 Placeholder）+ Blocker + DigitalHumanStage（含 FullBodyPreview）即可，Bootstrap 运行时装配全套。
+  - 素材：rag.png（`Assets/probeFootage/rag.png`，Multiple sprite rag_0 internalID `1024226415114158248`，meta 已修 4096+Uncompressed）从 m4 分支并入；钢轨复用 `俯视角.png`/`俯视角透视.png`。
+  - 验收：M5RuntimeSmoke 5 组断言（初态铺满/进度跟手+视图切换/拖出工作态/100% 完成+结束模块/Reset+QA 暂停）；M5Shot 三视口；M5Setup 幂等（连跑两次 SHA 一致）。
+
 ## 6. 目录与模块约定
 
 - `Assets/Scripts/` — runtime 脚本（薄、通用、配置驱动）。
@@ -137,6 +148,9 @@
 - **`TextAnchor` 枚举无 `Top/Bottom`**：Unity 命名体系为 `Upper/Middle/Lower`（如 `UpperLeft`、`UpperRight`）。
 - **UI 场景音效必须强制 2D（`spatialBlend = 0`）**：AudioSource 挂在 UI 画板/普通场景物体上时，默认 3D 音效会随与 Main Camera 的距离衰减，画板远离相机则完全听不见。接入点播音效时在运行时获取 AudioSource 后立即设 `spatialBlend = 0f`（运行时兜底优于 Setup 创建时设置——Setup 只在新建时生效，用户手动挂的 AudioSource 覆盖不到）。
 - **Vector2/Vector3 混合运算符重载歧义（Unity 6000）**：`(Vector2)vector3 - vector2` 在 Unity 实际编译下报 CS0034（Vector3/Vector2 混合运算符使重载解析歧义）；改用逐分量运算 `new Vector2(a.x - b.x, a.y - b.y)` 规避（2026-08-11 M2RulerDrag）。
+- **Unity 6 伪 null 对象与 `??` 不兼容（2026-08-18 M5Setup 实战）**：`GetComponent<T>()`/`Find` 对缺失对象返回 **Unity 伪 null**（非 C# null，`== null` 为 true 但引用非空），`??` 运算符检查 C# 引用不触发，导致 `var cg = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();` 得到伪 null 组件，访问属性抛 `MissingComponentException`。**必须用 `if (x == null)` 分步**：`var cg = go.GetComponent<CanvasGroup>(); if (cg == null) cg = go.AddComponent<CanvasGroup>();`。同理 `GetComponent<T>() ?? AddComponent<T>()` 全部禁止。
+- **`TextAlignmentOptions` 无 `MiddleCenter`**：TMP 枚举为 `Center`/`MidlineLeft`/`MidlineRight` 等；`MiddleCenter` 编译报 CS0117（2026-08-18 M5Setup）。
+- **EventSystem 必须用 `InputSystemUIInputModule`（2026-08-18 M5 实战）**：项目 `activeInputHandler: 1`（Input System Package 模式），旧版 `StandaloneInputModule` 每帧调 `Input.GetButtonDown` 抛 `InvalidOperationException: You are trying to read Input using the UnityEngine.Input class...`（Console 疯狂刷错 999+）。**新建 EventSystem 必须 `typeof(EventSystem) + typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule)`**（M2/M3/M4 同款，guid `01614664b831546d2ae94a42149d80ac`）；此坑不影响拖拽模拟（PointerEventData 直接构造 + OnBeginDrag/OnDrag 调用绕过 InputModule）。
 - **离线编译 ≠ Unity 编译**：用外部 csc + `Managed/UnityEngine` impl dll 做离线编译可能漏报 Unity 实际编译错误（重载解析/引用集差异，实测 Vector2/Vector3 混合运算漏报）；编译验证一律以 Unity 编辑器/批处理为准（2026-08-11）。
 
 ## 8. 音效接入约定（M1 起）
