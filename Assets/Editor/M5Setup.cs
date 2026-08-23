@@ -238,6 +238,9 @@ namespace M5.EditorTools
             if (rag == null) return;
             if (rag.name != "Rag") rag.name = "Rag";
             RemoveDirectChild(rag, "bg");
+            // rag.png 为方形贴图（2010×2048）：M2 尺子残留的 150×32 扁条会把方形图挤压成重影感，改为适配 176×88 槽位的方形尺寸并居中
+            var ragRt = rag as RectTransform;
+            if (ragRt != null) { ragRt.sizeDelta = new Vector2(80f, 80f); ragRt.anchoredPosition = new Vector2(0f, 0f); }
             var ragImg = rag.GetComponent<Image>();
             if (ragImg == null) ragImg = rag.gameObject.AddComponent<Image>();
             ragImg.sprite = LoadFirstSprite(RagPath);
