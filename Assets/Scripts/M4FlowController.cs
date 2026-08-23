@@ -26,8 +26,8 @@ namespace M4
         public M4IdleHelp idleHelp;
         [System.NonSerialized] public ModuleSpeechBubble speechBubble; // 数字人台词气泡（运行时挂载）
         public float introDuration = 2f, targetAngle = 10f, targetDistance = 40f, peakTolerance = 1f;
-        /// <summary>伤损波移动速度倍率：2 = 探头移动 1mm 伤损波在波形 X 轴移动 2mm（老板 2026-08-16 定稿，可调）。</summary>
-        public float waveformSpeed = 2f;
+        /// <summary>伤损波移动速度倍率：1 = 探头移动 1mm 伤损波在波形 X 轴移动 1mm（2026-08-23 老板：波形变化太快要慢一倍；不能 <1 否则到不了 stopMm）。</summary>
+        public float waveformSpeed = 1f;
         public string[] stepHints = { "放置探头并调整偏角至向上 10°", "向前移动探头（55→40mm）", "拖动尺子：0 刻度对齐探头入射点，40mm 对齐伤损" };
         public UnityEvent onCompleted;
         public Stage CurrentStage { get; private set; } = Stage.Positioning;

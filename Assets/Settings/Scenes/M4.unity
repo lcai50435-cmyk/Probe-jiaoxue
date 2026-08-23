@@ -945,7 +945,7 @@ MonoBehaviour:
   targetAngle: 10
   targetDistance: 40
   peakTolerance: 1
-  waveformSpeed: 2
+  waveformSpeed: 1
   stepHints:
   - "\u653E\u7F6E\u63A2\u5934\u5E76\u8C03\u6574\u504F\u89D2\u81F3\u5411\u4E0A 10\xB0"
   - "\u5411\u524D\u79FB\u52A8\u63A2\u5934\uFF0855\u219240mm\uFF09"
