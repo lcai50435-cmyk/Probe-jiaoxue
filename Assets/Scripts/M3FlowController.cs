@@ -42,7 +42,7 @@ namespace M3
             "将探头放在轨头侧面，利用多功能尺将探头向下偏转13°", // Slide 8-【3】
             "将探头以13度偏角向前移动，注意观察波形变化",       // Slide 9-【3】
             "将定位尺0刻度对准探头入射点，进行测量",           // Slide 10-【3】
-            "轨头侧面探测完成"
+            "<b>轨头侧面探测完成</b>" // 2026-08-23 老板：完成文案加粗（与 M2 同款 <b> 标签）
         };
         private static readonly string[] StageNames = { "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：探头偏角/步骤2：移动探测/步骤3：测距确认）
         // 数字人台词气泡（2026-08-23 按 台词.pptx Slide 8-11）
@@ -279,7 +279,7 @@ namespace M3
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
-            if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "轨头侧面探测完成" : "下一模块待接入";
+            if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "<b>轨头侧面探测完成</b>" : "下一模块待接入"; // 完成文案加粗（老板 2026-08-23，与 M2 同款）
         }
     }
 }

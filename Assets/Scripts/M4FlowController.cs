@@ -49,10 +49,11 @@ namespace M4
             "角度正确！可以向前移动探头啦",                 // 校角确认（Slide 13-【1】）
             "轨腰部位也探测到伤损了！用多功能尺确认一下出波位置" // 检出（Slide 14-【1】）
         };
-        private static readonly string[] FinalSpeech = { // 测量完成 + 完成引导（分段展示）
-            "探头入射点距离本侧焊缝熔合线40mm，在轨腰部位也探测到了伤损！",
+        private static readonly string[] FinalSpeech = { // 测量完成（分段展示，逻辑同 M2/M3；2026-08-23 老板定稿）
+            "探头入射点距离本侧焊缝熔合线40mm",
+            "在轨腰部位也探测到了伤损！",
             "点击透视视图看一下超声波传播路径",
-            "三方位全部探测完成啦！但还有最后一步工作哦" // Slide 15-【1】
+            "三方位全部探测完成啦！但还有最后一步工作哦" // 全部完成引导（Slide 15-【1】）
         };
 
         private void Awake()
@@ -77,6 +78,13 @@ namespace M4
                 foreach (Transform child in waveformFx.transform) child.gameObject.SetActive(false);
             }
             ApplyView(false);
+            // 场景 instructionText 引用未绑定（Setup 后字段为 0）：运行时重绑 InstructionArea/Title 提示节点，
+            // 恢复 DefaultHints 随阶段实时更新（2026-08-23 老板反馈：Title 未更新；与 M3 同款修复）
+            if (instructionText == null)
+            {
+                var title = FindDeep(transform, "InstructionArea/Title");
+                if (title != null) instructionText = title.GetComponent<TMP_Text>();
+            }
             EnterPositioning();
             // 数字人台词气泡（PPT）：文字放场景 dialog 节点（dialog/bg 已就位，与 M3 同结构）；配置与 M2/M3 合同一致（老板 2026-08-23）
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
