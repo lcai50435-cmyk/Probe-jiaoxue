@@ -263,10 +263,13 @@ namespace M5.EditorTools
 
         private static void EnsureViewport(Transform viewport, TMP_FontAsset font)
         {
-            // M2 合同：RailViewport 白底面板（老板 2026-08-23：同步 M2 的 RailViewport/bg，白色 Stretch 底部内缩 99.828）；Scene 权威仅空布局设默认
+            // M2 合同：RailViewport 白底面板（老板 2026-08-23：同步 M2 的 RailViewport/bg）。
+            // 注意：Unity 新建 RectTransform 默认 sizeDelta=(100,100)，Scene 权威判断（sqrMagnitude<1）会误判为已配置——bg 用 offset 显式设置 M2 布局
             var viewportBg = EnsureImage(viewport, "bg", Color.white);
-            if (viewportBg.sizeDelta.sqrMagnitude < 1f)
-                SetRect(viewportBg, new Vector2(0, 0), new Vector2(1, 1), Vector2.zero, new Vector2(0, -99.828f), new Vector2(.5f, .5f));
+            var vbgRt = viewportBg as RectTransform;
+            vbgRt.anchorMin = Vector2.zero; vbgRt.anchorMax = Vector2.one;
+            vbgRt.offsetMin = Vector2.zero;
+            vbgRt.offsetMax = new Vector2(0f, -99.828f); // Stretch 底部内缩 99.828（M2 合同）
             viewportBg.GetComponent<Image>().raycastTarget = false;
 
             var railBg = EnsureImage(viewport, "RailBackground", Color.white);
