@@ -72,7 +72,7 @@ namespace M5.EditorTools
                         Require(_rag.ragRt.parent == _rag.ragHome, "擦拭布初态未归入 RagHome");
                         Require(_rag.unlocked, "擦拭布初态可拖（M5 单步交互，置灰仅视觉）");
                         Require(_rag.ragImage != null && _rag.ragImage.sprite != null, "擦拭布 Sprite 缺失（rag.png）");
-                        Require(_rag.ragImage.color.a < 1f, "擦拭布初态未置灰");
+                        Require(Mathf.Approximately(_rag.ragImage.color.a, 1f), "擦拭布初态清晰（不置灰，老板 2026-08-23）");
                         Require(_flow.CurrentStage == M5FlowController.Stage.Wipe && !_flow.Wiped, "初始阶段错误");
                         Require(_flow.completionPanel == null || !_flow.completionPanel.activeSelf, "完成面板初态不应显示");
                         Pass("初态通过：耦合剂铺满 / 擦拭布归槽锁定 / Wipe 阶段");

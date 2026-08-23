@@ -180,7 +180,7 @@ namespace M5.EditorTools
             // 探头（静态展示，与 M2 同款槽位，不可交互）
             var probeHome = EnsureGo(shelf, "ProbeHome");
             SetRect(probeHome, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(88, 0), new Vector2(176, 88), new Vector2(.5f, .5f));
-            var probe = EnsureImage(probeHome, "Probe", M2LockedColor);
+            var probe = EnsureImage(probeHome, "Probe", Color.white);
             SetRect(probe, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(166, 117), new Vector2(.5f, .5f));
             probe.GetComponent<Image>().sprite = LoadFirstSprite(ProbePath);
             probe.GetComponent<Image>().preserveAspect = true;
@@ -188,7 +188,7 @@ namespace M5.EditorTools
             // 尺子（静态展示，与 M2 同款槽位，不可交互）
             var rulerHome = EnsureGo(shelf, "RulerHome");
             SetRect(rulerHome, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(282, 0), new Vector2(176, 88), new Vector2(.5f, .5f));
-            var ruler = EnsureImage(rulerHome, "Ruler", M2LockedColor);
+            var ruler = EnsureImage(rulerHome, "Ruler", Color.white);
             SetRect(ruler, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(0, 10), new Vector2(150, 32), new Vector2(.5f, .5f));
             ruler.GetComponent<Image>().sprite = LoadFirstSprite(RulerPath);
             ruler.GetComponent<Image>().preserveAspect = true;
@@ -196,7 +196,7 @@ namespace M5.EditorTools
             // 擦拭布（可拖）：RagHome 紧邻 RulerHome 右侧
             var home = EnsureGo(shelf, "RagHome");
             SetRect(home, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(476, 0), new Vector2(176, 88), new Vector2(.5f, .5f));
-            var rag = EnsureImage(home, "Rag", RagLockedColor);
+            var rag = EnsureImage(home, "Rag", Color.white);
             SetRect(rag, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, new Vector2(132, 132), new Vector2(.5f, .5f));
             rag.GetComponent<Image>().sprite = LoadFirstSprite(RagPath);
             if (rag.GetComponent<Image>().sprite != null) rag.GetComponent<Image>().preserveAspect = true;
@@ -227,7 +227,7 @@ namespace M5.EditorTools
                 img.sprite = LoadFirstSprite(ProbePath);
                 if (img.sprite != null) img.preserveAspect = true;
                 img.raycastTarget = false;
-                img.color = M2LockedColor;
+                img.color = Color.white; // 工具清晰显示（老板 2026-08-23：不置灰半透明）
             }
             // Ruler 静态展示（无交互）
             var rulerHome = FindDeep(tool, "RulerHome");
@@ -240,7 +240,7 @@ namespace M5.EditorTools
                 img.sprite = LoadFirstSprite(RulerPath);
                 if (img.sprite != null) img.preserveAspect = true;
                 img.raycastTarget = false;
-                img.color = M2LockedColor;
+                img.color = Color.white; // 工具清晰显示（老板 2026-08-23）
             }
             // Rag 擦拭功能：RagHome 槽位工具节点（当前可能名为 Ruler）改名为 Rag，补 rag.png/置灰/Outline/M5RagDrag
             var ragHome = FindDeep(tool, "RagHome");
@@ -262,7 +262,7 @@ namespace M5.EditorTools
             ragImg.sprite = LoadFirstSprite(RagPath);
             if (ragImg.sprite != null) ragImg.preserveAspect = true;
             ragImg.raycastTarget = true;
-            ragImg.color = RagLockedColor;
+            ragImg.color = Color.white; // 工具清晰显示（老板 2026-08-23：不置灰半透明）
             var outline = rag.GetComponent<Outline>();
             if (outline == null) outline = rag.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(.2f, .22f, .25f, .6f);

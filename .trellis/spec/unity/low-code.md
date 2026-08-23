@@ -124,6 +124,7 @@
   - **2026-08-23 M5 数字人 = M2 合同（老板定稿）**：Bootstrap BuildViews 对 M5 场景用 M2 参数（M3/M4 不变）——FullBodyView 底部全高锚定（0.5,0)-(0.5,1) + AspectRatioFitter **HeightControlsWidth**（ratio 1080/1450）+ pos (-13,-35)，数字人 369×496 与 M2 完全一致；AvatarView pos (0,-40) 对齐 M2。
   - **2026-08-23 钢轨图 preserveAspect=false（M2 合同）**：M2 钢轨图拉伸填满 960×286 容器（preserveAspect=0），M5 的 SetRailSprite 误设 true 导致钢轨按比例缩小留白、看起来比 M2 小——改为 false 与 M2 一致（普通/透视视图同）。
   - **2026-08-23 RailViewport/bg 同步 M2 + 三节点 Scene 权威（老板定稿）**：① M5 的 RailViewport 补 M2 同款白底面板 bg（Image 白色、Stretch 底部内缩 99.828、raycastTarget=false、SetAsFirstSibling 最底——之前 Adapt 删它导致 M5 缺白底）；② RailBackground/RailPerspective/CouplantOverlay 三者 **scale/position 全部 Scene 权威**（老板手工调，Setup 仅空布局设默认/复制，不覆盖已调值）。
+  - **2026-08-23 工具清晰显示 + rag 拖出吸附最左（老板定稿）**：① Probe/Ruler/Rag 不再置灰（M2LockedColor .62 alpha / RagLockedColor 深灰改为 `Color.white` 原图色，Outline 描边保留分离）——M5 单步交互无解锁概念，工具清晰与 M2 一致；Smoke 初态断言改"清晰（a=1）"；② `M5RagDrag.EnterWorkFromPointer` 拖出后**直接吸附钢轨最左端**（擦拭区间 left）作擦拭起点，不跟鼠标位置（避免玩家先拖回最左再右拖）。
   - 验收：M5RuntimeSmoke 5 组断言（初态铺满/进度跟手+视图切换/拖出工作态/100% 完成+结束模块/Reset+QA 暂停）；M5Shot 三视口；M5Setup 幂等（连跑两次 SHA 一致）。
 
 ## 6. 目录与模块约定

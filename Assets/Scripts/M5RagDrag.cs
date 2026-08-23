@@ -52,7 +52,7 @@ namespace M5
                 ragRt.localScale = _homeScale; ragRt.localRotation = _homeRotation;
                 ragRt.SetAsLastSibling();
             }
-            if (ragImage != null) ragImage.color = new Color(.45f, .47f, .5f, .9f); // 浅色 rag 置灰需加深+高不透明（与 M5Setup RagLockedColor 一致）
+            if (ragImage != null) ragImage.color = Color.white; // Home 态清晰显示（老板 2026-08-23：不置灰半透明）
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -96,7 +96,7 @@ namespace M5
             ragRt.sizeDelta = ragSize;
             ragRt.localRotation = Quaternion.identity;
             var (left, right, y) = WipeBounds();
-            ragRt.anchoredPosition = new Vector2(Mathf.Clamp(local.x, left, right), y);
+            ragRt.anchoredPosition = new Vector2(left, y); // 老板 2026-08-23：拖出直接吸附钢轨最左边（擦拭起点），不跟鼠标位置
             if (ragImage != null) ragImage.color = Color.white; // 工作态不置灰
             ragRt.gameObject.SetActive(true);
             ModeNow = Mode.Wiping;
