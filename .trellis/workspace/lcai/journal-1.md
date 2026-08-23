@@ -131,3 +131,65 @@
 4. **模糊排查**：新素材 `probeFootage`(2610px)/`俯视角`(2469px) 超 `maxTextureSize 2048` 被降采样 + `textureCompression 1`（DXT 压缩）导致模糊。已把 3 个 Resources meta 改为 `maxTextureSize 4096` + `textureCompression 0`（无压缩）。
 
 M2.unity 新 SHA-256 = `4fd7a85ae8dcb8b448504aa82ae23d84eccdb07e4e9482faf8368793f769a074`（含老板数字人 x=-13 调整 + 本次 4 处 sprite 替换）。5 脚本 150/150/149/93/119 行。待老板编辑器内：Reload Scene（因我改了 Scene YAML）→ 重编译 → 目视校准 `probeEntryLocal`(约 0.25)/`damageUv`/`startLocal` 三个值。
+
+
+## Session 1: M5 擦拭耦合剂模块交付（M2 基线 + 擦拭交互 + m4 分支合并）
+
+**Date**: 2026-08-23
+**Task**: M5 擦拭耦合剂模块交付（M2 基线 + 擦拭交互 + m4 分支合并）
+**Branch**: `feature/m5`
+
+### Summary
+
+M5 擦拭耦合剂模块完整交付：M2 轨顶基线 + 耦合剂薄膜（初始铺满/擦拭递减）+ 擦拭布拖拽（拖出吸附钢轨最左/相对偏移跟随）+ MainScene/Tool 工具架（Probe/Ruler 静态展示、Rag 可拖、清晰不置灰）+ 保留 M2 波形窗口（M2WaveformFx 150/115/110）+ 数字人 Bootstrap 壳模式（FullBodyView Scene 壳 + ??AddComponent 伪 null 修复 + try-catch 日志）+ 完成面板不显示 + 多轮 Scene 权威约定（钢轨/透视/耦合剂/数字人舞台/工具架布局 Setup 不覆盖）；trellis-check 清理死代码常量并同步 prd 验收；最后合并 feature/m4-rail-web（M1/M2/M3/M4 以 m4 为准、M5 以当前分支为准，Bootstrap/rag meta 用当前分支版，AGENTS.md 手动合并）。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8868893` | (see git log) |
+| `fc63513` | (see git log) |
+| `2ad1f44` | (see git log) |
+| `a299270` | (see git log) |
+| `784758e` | (see git log) |
+| `f0e34ea` | (see git log) |
+| `36197e3` | (see git log) |
+| `7f4dace` | (see git log) |
+| `9c51a50` | (see git log) |
+| `fecdfce` | (see git log) |
+| `7f3473e` | (see git log) |
+| `7645685` | (see git log) |
+| `80d7ae5` | (see git log) |
+| `b3c4084` | (see git log) |
+| `26d266e` | (see git log) |
+| `9aede40` | (see git log) |
+| `ed218d6` | (see git log) |
+| `6cc6c9b` | (see git log) |
+| `b00727c` | (see git log) |
+| `3384d66` | (see git log) |
+| `54acb42` | (see git log) |
+| `c9ea4dd` | (see git log) |
+| `2d75339` | (see git log) |
+| `7f2a745` | (see git log) |
+| `53d53a0` | (see git log) |
+| `d6ea725` | (see git log) |
+| `9367be9` | (see git log) |
+| `ec63ff2` | (see git log) |
+| `0cb0e30` | (see git log) |
+| `4aa9fdd` | (see git log) |
+| `d4cf09c` | (see git log) |
+| `7b49749` | (see git log) |
+| `e364ad4` | (see git log) |
+| `bd9830d` | (see git log) |
+| `17a2fbc` | (see git log) |
+| `0140d85` | (see git log) |
+| `2bd853b` | (see git log) |
+| `ac78955` | (see git log) |
+| `964f0ad` | (see git log) |
+| `26b9ce2` | (see git log) |
+| `dc2a50d` | (see git log) |
+| `2e8d6f8` | (see git log) |
+
+### Status
+
+[OK] **Completed**
