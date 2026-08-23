@@ -232,14 +232,29 @@ namespace M3
             if (preview != null) preview.gameObject.SetActive(false);
 
             var mat = CreateLumaKey();
+            // M5 数字人 = M2 合同（老板 2026-08-23：M5 是 M2 轨顶基线，数字人与 M2 一致）；M3/M4 用 StageCenterOffsetY=30 标定
+            var isM5 = SceneManager.GetActiveScene().name == "M5";
 
             var fb = NewGo(FullBodyName, stage);
             var frt = fb.GetComponent<RectTransform>();
-            frt.anchorMin = new Vector2(0.5f, 0.5f); frt.anchorMax = new Vector2(0.5f, 0.5f);
-            frt.pivot = new Vector2(0.5f, 0.5f); frt.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
-            frt.sizeDelta = new Vector2(StageWidth, 0f);
             var fitter = fb.AddComponent<AspectRatioFitter>();
-            fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+            if (isM5)
+            {
+                // M2 合同：底部全高锚定 + HeightControlsWidth（宽=高×ratio），pos (-13,-35)
+                frt.anchorMin = new Vector2(0.5f, 0f); frt.anchorMax = new Vector2(0.5f, 1f);
+                frt.pivot = new Vector2(0.5f, 0.5f);
+                frt.anchoredPosition = new Vector2(-13f, -35f);
+                frt.sizeDelta = new Vector2(320f, 0f);
+                fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+            }
+            else
+            {
+                frt.anchorMin = new Vector2(0.5f, 0.5f); frt.anchorMax = new Vector2(0.5f, 0.5f);
+                frt.pivot = new Vector2(0.5f, 0.5f);
+                frt.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
+                frt.sizeDelta = new Vector2(StageWidth, 0f);
+                fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+            }
             fitter.aspectRatio = StageAspect;
             var raw = fb.AddComponent<RawImage>();
             raw.raycastTarget = true;
@@ -253,7 +268,8 @@ namespace M3
             var av = NewGo(AvatarName, stage);
             var art = av.GetComponent<RectTransform>();
             art.anchorMin = new Vector2(0.5f, 0.5f); art.anchorMax = new Vector2(0.5f, 0.5f);
-            art.pivot = new Vector2(0.5f, 0.5f); art.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
+            art.pivot = new Vector2(0.5f, 0.5f);
+            art.anchoredPosition = new Vector2(0f, isM5 ? -40f : StageCenterOffsetY); // M5 头像对齐 M2（pos y=-40）
             art.sizeDelta = new Vector2(AvatarSize, AvatarSize);
             var aimg = av.AddComponent<Image>();
             var sprites = Resources.LoadAll<Sprite>(AvatarSpriteRes);

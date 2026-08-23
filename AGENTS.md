@@ -41,7 +41,8 @@
 - **2026-08-23 耦合剂薄膜 CouplantMask 布局 Scene 权威**：老板手工对准钢轨（pos (-232,-32)），`M5CouplantFx.Init()` 仅空布局时按 coverRect 计算，非空不覆盖（与钢轨同约定）。
 - **2026-08-23 M5 三修复**：① 数字人舞台 DigitalHumanStage 布局 Scene 权威（Setup 不覆盖，避免数字人裁切）；② 透视钢轨与普通钢轨同布局（以普通视图为准，不再 Stretch）；③ rag 初始可拖（unlocked=true，单步交互，置灰仅视觉）。
 - **2026-08-23 CouplantOverlay 布局 Scene 权威**：老板调 position/scale 贴合钢轨，Setup 仅空布局才 Stretch（不重置已调布局）。
-- **2026-08-23 完成面板不显示 + QA/数字人 Bootstrap 壳**：擦拭完成后不弹"M5 擦拭耦合剂完成"；M5 数字人/QA 由 M3DigitalHumanBootstrap 装配（Adapt 清理 M2 旧 M1 组件/节点，QAPanel 与 DigitalHumanStage 保持空壳）。详见 low-code.md 5.4。
+- **2026-08-23 完成面板不显示 + QA/数字人 Bootstrap 壳**：擦拭完成后不弹"M5 擦拭耦合剂完成"；M5 数字人/QA 由 M3DigitalHumanBootstrap 装配（Adapt 清理 M2 旧 M1 组件/节点，QAPanel 与 DigitalHumanStage 保持空壳）。
+- **2026-08-23 M5 数字人 = M2 合同**：Bootstrap 对 M5 场景用 M2 参数（FullBodyView 底部全高 + HeightControlsWidth + pos(-13,-35)，AvatarView y=-40），M3/M4 不变。详见 low-code.md 5.4。
 - **Unity 6 伪 null 坑（2026-08-18）**：`GetComponent<T>()` 对缺失组件返回 Unity 伪 null，`??` 不触发——禁止 `GetComponent ?? AddComponent` 写法，必须 `if (x == null)` 分步；`TextAlignmentOptions` 无 `MiddleCenter`（用 `Center`）；EventSystem 必须用 `InputSystemUIInputModule`（项目 Input System 模式，旧 StandaloneInputModule 每帧抛 InvalidOperationException）。详见 low-code.md 7.1。
 - 细节规范见 `.trellis/spec/unity/`（low-code.md / video-intro.md / ugui-module-template.md；改规范先改它，再同步本摘要）。
 
