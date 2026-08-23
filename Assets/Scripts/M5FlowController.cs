@@ -125,10 +125,11 @@ namespace M5
         private void UpdateUi()
         {
             var i = Mathf.Min((int)CurrentStage, StageNames.Length - 1);
-            if (instructionText != null) instructionText.text = DefaultHints[i];
-            if (stepProgressText != null) stepProgressText.text = $"步骤 1/1 · {StageNames[i]}";
-            foreach (var panel in stepPanels ?? new GameObject[0]) if (panel != null) panel.SetActive(panel == stepPanels[i % stepPanels.Length]);
             var done = CurrentStage == Stage.Completed;
+            // 擦拭完成（Completed）后不显示步骤提示词（老板 2026-08-23 定稿）
+            if (instructionText != null) instructionText.text = done ? string.Empty : DefaultHints[i];
+            if (stepProgressText != null) stepProgressText.text = done ? string.Empty : $"步骤 1/1 · {StageNames[i]}";
+            foreach (var panel in stepPanels ?? new GameObject[0]) if (panel != null) panel.SetActive(panel == stepPanels[i % stepPanels.Length]);
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(false); // 结束模块：无下一模块按钮
             if (done && completionText != null) completionText.text = "M5 擦拭耦合剂完成";

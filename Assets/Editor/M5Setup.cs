@@ -579,13 +579,13 @@ namespace M5.EditorTools
             return clip;
         }
 
-        private static Transform EnsureGo(Transform parent, string name)
+        private static RectTransform EnsureGo(Transform parent, string name)
         {
             var hit = parent.Find(name);
-            if (hit != null) return hit;
+            if (hit != null) return hit as RectTransform;
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            return go.transform;
+            return go.transform as RectTransform;
         }
 
         private static RectTransform EnsureImage(Transform parent, string name, Color color)
