@@ -97,8 +97,10 @@ namespace M3
             var dummy = new GameObject("数字人", typeof(RectTransform));
             dummy.transform.SetParent(root.transform, false);
             dummy.SetActive(false);
-            var client = root.GetComponent<M1DeepSeekClient>() ?? root.AddComponent<M1DeepSeekClient>();
-            var qa = root.GetComponent<M1QAPanel>() ?? root.AddComponent<M1QAPanel>();
+            var client = root.GetComponent<M1DeepSeekClient>();
+            if (client == null) client = root.AddComponent<M1DeepSeekClient>(); // Unity 6 伪 null：?? 不触发，必须 if == null 分步
+            var qa = root.GetComponent<M1QAPanel>();
+            if (qa == null) qa = root.AddComponent<M1QAPanel>();
             qa.panelPath = "QAPanel"; qa.blockerPath = "Blocker";
             qa.closeButtonPath = "QAPanel/Header/CloseButton";
             qa.messageContentPath = "QAPanel/MessageList/Viewport/Content";
@@ -112,7 +114,8 @@ namespace M3
 
             // 5) 数字人 Presenter：Stage 先 inactive 再 AddComponent（激活时才 Awake，引用已就绪）
             stageGo.SetActive(false);
-            var presenter = stageGo.GetComponent<M1DigitalHumanPresenter>() ?? stageGo.AddComponent<M1DigitalHumanPresenter>();
+            var presenter = stageGo.GetComponent<M1DigitalHumanPresenter>();
+            if (presenter == null) presenter = stageGo.AddComponent<M1DigitalHumanPresenter>(); // Unity 6 伪 null 分步
             var fb = stageGo.transform.Find(FullBodyName);
             var av = stageGo.transform.Find(AvatarName);
             presenter.qaPanel = qa;
@@ -258,7 +261,8 @@ namespace M3
                 fb = existingFb.gameObject;
                 if (existingFb.GetComponent<AspectRatioFitter>() == null) existingFb.gameObject.AddComponent<AspectRatioFitter>();
                 raw = existingFb.GetComponent<RawImage>();
-                vp = existingFb.GetComponent<VideoPlayer>() ?? existingFb.gameObject.AddComponent<VideoPlayer>();
+                vp = existingFb.GetComponent<VideoPlayer>();
+                if (vp == null) vp = existingFb.gameObject.AddComponent<VideoPlayer>(); // Unity 6 伪 null：?? 不触发会抛 MissingComponentException
                 if (existingFb.GetComponent<M1PressDetector>() == null) existingFb.gameObject.AddComponent<M1PressDetector>();
             }
             else
