@@ -309,10 +309,16 @@ namespace M5.EditorTools
 
             // 1) M2 运行时组件（会初始化 M2 探测流程，必须移除；幂等）。M2WaveformFx 保留——波形窗口视觉由它程序化绘制，
             //    独立于 M2 流程（初始即画深底/网格/始波/噪声线），M5 无外部 SetDistanceMm 驱动即静态呈现，与 M2 窗口一致且无实际作用
-            foreach (var c in canvas.GetComponentsInChildren<M2FlowController>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2ProbeDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2RulerDrag>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
-            foreach (var c in canvas.GetComponentsInChildren<M2IdleHelp>(true).ToArray()) UnityEngine.Object.DestroyImmediate(c);
+            //    老板 2026-08-23 添加 MainScene/Tool（M2 样式工具架，含 M2ProbeDrag/M2RulerDrag）——Tool 子树整体保留，不删不改
+            var tool = main != null ? main.Find("Tool") : null;
+            foreach (var c in canvas.GetComponentsInChildren<M2FlowController>(true).ToArray())
+                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M2ProbeDrag>(true).ToArray())
+                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M2RulerDrag>(true).ToArray())
+                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
+            foreach (var c in canvas.GetComponentsInChildren<M2IdleHelp>(true).ToArray())
+                if (tool == null || !c.transform.IsChildOf(tool)) UnityEngine.Object.DestroyImmediate(c);
             RemoveMissingScripts(canvas);
 
             // 2) 删除 M2 探测流程专属节点（幂等：不存在即跳过）
