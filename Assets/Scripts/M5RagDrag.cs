@@ -32,7 +32,7 @@ namespace M5
         {
             flow = owner; CacheSceneHome();
             if (ragImage == null) ragImage = GetComponentInChildren<Image>(true);
-            unlocked = _dragging = _inputLocked = false;
+            unlocked = true; _dragging = _inputLocked = false; // M5 单步交互：擦拭布初始即可拖（Home 置灰仅视觉，非锁定）
         }
 
         public void Unlock() { unlocked = true; if (ragImage != null) ragImage.color = Color.white; }
@@ -42,7 +42,7 @@ namespace M5
         public void ResetTool()
         {
             CacheSceneHome();
-            unlocked = _dragging = _inputLocked = false; ModeNow = Mode.Home; WipeProgress = 0f;
+            unlocked = true; _dragging = _inputLocked = false; ModeNow = Mode.Home; WipeProgress = 0f; // Reset 后仍可拖（单步交互）
             if (ragRt != null && _homeCached)
             {
                 ragRt.gameObject.SetActive(true);

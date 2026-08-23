@@ -123,7 +123,9 @@ namespace M5.EditorTools
             var qaLayer = EnsureGo(sa, "QALayer"); Stretch(qaLayer);
             EnsureQa(qaLayer, font);
             var stage = EnsureImage(sa, "DigitalHumanStage", new Color(0, 0, 0, .02f));
-            SetRect(stage, new Vector2(1, 0), new Vector2(1, 1), new Vector2(-184, 257), new Vector2(320, -584), new Vector2(.5f, .5f));
+            // 数字人舞台布局 Scene 权威：M2 复制版自带（M2 数字人正常显示），Setup 不覆盖（仅空布局设默认，否则数字人会被裁切）
+            if (stage.sizeDelta.sqrMagnitude < 1f)
+                SetRect(stage, new Vector2(1, 0), new Vector2(1, 1), new Vector2(-184, 257), new Vector2(320, -584), new Vector2(.5f, .5f));
             EnsureStage(stage, font);
             var modal = EnsureGo(sa, "ModalLayer"); Stretch(modal); modal.gameObject.SetActive(false);
             EnsureModal(modal, font);
@@ -286,7 +288,13 @@ namespace M5.EditorTools
             }
 
             var perspective = EnsureImage(viewport, "RailPerspective", Color.white);
-            Stretch(perspective); perspective.gameObject.SetActive(false);
+            perspective.gameObject.SetActive(false);
+            // 透视钢轨与普通钢轨同布局（老板 2026-08-23：大小以普通视图状态为准；原 Stretch 会导致两视图大小不统一）
+            var perspRt = perspective as RectTransform;
+            perspRt.anchorMin = railBg.anchorMin; perspRt.anchorMax = railBg.anchorMax;
+            perspRt.pivot = railBg.pivot;
+            perspRt.sizeDelta = railBg.sizeDelta;
+            perspRt.anchoredPosition = railBg.anchoredPosition;
             SetRailSprite(perspective, RailPerspectivePath);
 
             var bar = EnsureImage(viewport, "PerspectiveBar_C", SurfaceColor);

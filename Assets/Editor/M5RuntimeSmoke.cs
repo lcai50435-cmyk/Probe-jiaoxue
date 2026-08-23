@@ -70,7 +70,7 @@ namespace M5.EditorTools
                         Require(Mathf.Abs(_fx.maskRt.sizeDelta.x - _flow.railBg.sizeDelta.x * _fx.coverRect.z) < 1f &&
                             Mathf.Abs(_fx.maskRt.sizeDelta.y - _flow.railBg.sizeDelta.y * _fx.coverRect.w) < 1f, "薄膜覆盖区域与 coverRect 不符（轨顶中央大部分）");
                         Require(_rag.ragRt.parent == _rag.ragHome, "擦拭布初态未归入 RagHome");
-                        Require(!_rag.unlocked, "擦拭布初态未锁定");
+                        Require(_rag.unlocked, "擦拭布初态可拖（M5 单步交互，置灰仅视觉）");
                         Require(_rag.ragImage != null && _rag.ragImage.sprite != null, "擦拭布 Sprite 缺失（rag.png）");
                         Require(_rag.ragImage.color.a < 1f, "擦拭布初态未置灰");
                         Require(_flow.CurrentStage == M5FlowController.Stage.Wipe && !_flow.Wiped, "初始阶段错误");
@@ -123,7 +123,7 @@ namespace M5.EditorTools
                         _flow.ResetAll();
                         Require(Mathf.Approximately(_fx.film.fillAmount, 1f), "Reset 后耦合剂未恢复铺满");
                         Require(_rag.ragRt.parent == _rag.ragHome, "Reset 后擦拭布未归槽");
-                        Require(!_rag.unlocked, "Reset 后擦拭布未锁定");
+                        Require(_rag.unlocked, "Reset 后擦拭布可拖（单步交互）");
                         Require(_flow.CurrentStage == M5FlowController.Stage.Wipe && !_flow.Wiped, "Reset 后阶段未回 Wipe");
                         Require(_flow.completionPanel == null || !_flow.completionPanel.activeSelf, "Reset 后完成面板未隐藏");
                         // QA 暂停契约
