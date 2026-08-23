@@ -298,7 +298,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 764641490021833716, guid: 0c635f4674df151408b7320c1b4564e9, type: 3}
+  m_Sprite: {fileID: -558466571640295740, guid: 1cb5273a874df1b488a3f78b2b1ed8de, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1457,6 +1457,17 @@ MonoBehaviour:
   digitalHumanPath: "\u753B\u677F/DigitalHumanStage/FullBodyView"
   hideWhilePlaying: []
   hideStagePath: "\u753B\u677F/DigitalHumanStage/FullBodyView"
+  subtitleText: {fileID: 0}
+  introVideoScale: 0.78
+  subtitlePath: "\u753B\u677F/\u5F15\u5BFC\u906E\u7F69/\u5F15\u5BFC\u5B57\u5E55"
+  subtitleSegments:
+  - "\u53EE\u549A\uFF01AI \u667A\u80FD\u966A\u7EC3\u94C1\u5C0F\u63A2\u4E0A\u7EBF\u5566\uFF5E"
+  - "\u4ECA\u5929\u6211\u4EEC\u8981\u7528\u201C\u4E09\u4F4D\u4E00\u4F53\u3001\u4EA4\u53C9\u9A8C\u8BC1\u201D\u65B0\u5DE5\u827A\uFF0C\u5B8C\u6210\u5BF9\u94DD\u70ED\u710A\u7F1D\u8F68\u5934\u4E0B\u989A\u4F24\u635F\u7684\u63A2\u6D4B\u3002"
+  - "\u6211\u4F1A\u5168\u7A0B\u8D34\u8EAB\u966A\u7EC3\uFF0C\u9047\u5230\u96BE\u9898\u968F\u65F6\u4E3A\u5927\u5BB6\u7B54\u7591\u3002\u51C6\u5907\u597D\uFF0C\u6211\u4EEC\u8FD9\u5C31\u5F00\u542F\u4ECA\u5929\u7684\u63A2\u6D4B\u5566\uFF01"
+  subtitleTimes:
+  - 0.5
+  - 4.2
+  - 10.2
   prepareTimeout: 5
 --- !u!114 &455248544
 MonoBehaviour:
@@ -2690,7 +2701,7 @@ RectTransform:
   m_GameObject: {fileID: 919438548}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.0362986, y: 0.603584, z: 0.603584}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1068568748}
@@ -2698,7 +2709,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -201, y: -0.69001}
+  m_AnchoredPosition: {x: -231, y: -0.69001}
   m_SizeDelta: {x: 450, y: 700}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &919438550
@@ -2721,7 +2732,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -6192215344775725389, guid: cb9b3e08d6492a2498191309320ec902, type: 3}
+  m_Sprite: {fileID: -2576023137440582333, guid: ce566300235c15f44b878f7d56ba5860, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3091,15 +3102,15 @@ RectTransform:
   m_GameObject: {fileID: 1068568747}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.964973, y: 1.65677, z: 1.65677}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 919438549}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -2.7468, y: 1.8312}
-  m_SizeDelta: {x: 377.6257, y: 603.0205}
+  m_AnchoredPosition: {x: 0, y: 47}
+  m_SizeDelta: {x: 280, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1068568749
 MonoBehaviour:
@@ -3121,7 +3132,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u8BF7\u9009\u62E9\u94A2\u8F68\u63A2\u4F24\u5DE5\u5177"
+  m_text: "\u90A3\u6211\u4EEC\u5F00\u59CB\u9009\u62E9\u63A2\u6D4B\u4EEA\u5668\u5427\uFF0C\u6709\u95EE\u9898\u968F\u65F6\u957F\u6309\u6211\u54E6\uFF01"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
   m_sharedMaterial: {fileID: 6561864774964401820, guid: 1e7b8a18efcb7f44e8ba2c0eb32978e8, type: 2}
@@ -3148,15 +3159,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1
@@ -3622,7 +3633,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 7324224578483814121, guid: d9a9e849c3ea4474eab1aab350dcc9bd, type: 3}
+  m_Sprite: {fileID: -2650417318906247225, guid: c9e9abfd50e5c8742b45a8207af7c232, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3848,13 +3859,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1287017173}
-  m_LocalRotation: {x: 0.000456679, y: 0.9999014, z: -0.0000064102046, w: 0.014035184}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 2.84, y: 2.84, z: 2.84}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 239322918}
-  m_LocalEulerAnglesHint: {x: 0.001, y: -181.608, z: 360.052}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 359, y: -110}
@@ -3880,7 +3891,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 6930837395702789667, guid: a5c4dde090dd554429b851ac0c16d178, type: 3}
+  m_Sprite: {fileID: 6930837395702789667, guid: 75ea6aff57520dd47a432fe759ef5a2b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4595,7 +4606,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1112249717286550703, guid: 9225d55ea0064ce4a87cb848061db2cd, type: 3}
+  m_Sprite: {fileID: -1112249717286550703, guid: dc803c13e99dd984eb38514d03f28741, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4987,11 +4998,11 @@ MonoBehaviour:
   probeIdleTimeout: 20
   autoHighlightColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   correctToolName: "\u8D85\u58F0\u6CE2\u710A\u7F1D\u63A2\u4F24\u4EEA"
-  textInitial: "\u8BF7\u9009\u62E9\u94A2\u8F68\u63A2\u4F24\u5DE5\u5177"
-  textWrong: "\u9009\u62E9\u9519\u4E86\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9"
-  textCorrect: "\u9009\u62E9\u6B63\u786E"
-  textM2Initial: "\u8BF7\u9009\u62E9\u63A2\u5934"
-  textProbeWrong: "\u8BF7\u9009\u62E9K2.5\u63A2\u5934"
+  textInitial: "\u90A3\u6211\u4EEC\u5F00\u59CB\u9009\u62E9\u63A2\u6D4B\u4EEA\u5668\u5427\uFF0C\u6709\u95EE\u9898\u968F\u65F6\u957F\u6309\u6211\u54E6\uFF01"
+  textWrong: "\u4E0D\u5BF9\u54E6\uFF0C\u8981\u4F7F\u7528\u710A\u7F1D\u8D85\u58F0\u6CE2\u63A2\u4F24\u4EEA"
+  textCorrect: "\u9009\u62E9\u6B63\u786E\uFF01"
+  textM2Initial: "\u73B0\u5728\u9009\u62E9\u63A2\u5934\u5427"
+  textProbeWrong: "K2.5\u63A2\u5934\u624D\u6B63\u786E\uFF0C\u518D\u627E\u627E\u770B\uFF01"
   textProbeCorrect: "\u9009\u62E9\u6B63\u786E\uFF01"
   shakeDuration: 0.4
   shakeAmplitude: 12
@@ -4999,6 +5010,7 @@ MonoBehaviour:
   wrongClip: {fileID: 8300000, guid: 8e130769cac1f554197dbcb1f66fa14d, type: 3}
   passClip: {fileID: 8300000, guid: 42d00cc799d68904cb56f3e8d569cf36, type: 3}
   pass2Clip: {fileID: 8300000, guid: 42d00cc799d68904cb56f3e8d569cf36, type: 3}
+  sfxVolume: 0.4
   _audioSource: {fileID: 1636157572}
 --- !u!114 &1636157570
 MonoBehaviour:

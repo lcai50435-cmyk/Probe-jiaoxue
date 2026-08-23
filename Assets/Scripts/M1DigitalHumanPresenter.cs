@@ -113,6 +113,9 @@ namespace M1
             { _restorePending = false; ApplyMode(_modeBeforePanel); } // 请求结束回 Idle：执行待恢复形态（R7）
         }
 
+        /// <summary>云朵台词驱动（M2-M5 数字人气泡逐字期间播说话动画，结束后回待机；M1 AI 回答仍由 QAPanel 驱动，不受影响）。</summary>
+        public void SetSpeechState(bool speaking) => OnAnswerState(speaking ? AnswerState.Speaking : AnswerState.Idle);
+
         private void OnPanelVisibility(bool open)
         {
             _panelOpen = open;

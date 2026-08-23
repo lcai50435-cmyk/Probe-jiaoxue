@@ -1,16 +1,10 @@
 fileFormatVersion: 2
-guid: ce566300235c15f44b878f7d56ba5860
+guid: dc803c13e99dd984eb38514d03f28741
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2576023137440582333
-    second: dialog_0
-  - first:
-      213: -4256190864735059936
-    second: dialog_1
-  - first:
-      213: -2222624260922231893
-    second: dialog_2
+      213: -1112249717286550703
+    second: K1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -132,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: dialog_0
+      name: K1_0
       rect:
         serializedVersion: 2
-        x: 31
-        y: 112
-        width: 474
-        height: 350
+        x: 0
+        y: 0
+        width: 2000
+        height: 1712
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -147,52 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 345baa7da90204cd0800000000000000
-      internalID: -2576023137440582333
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: dialog_1
-      rect:
-        serializedVersion: 2
-        x: 352
-        y: 82
-        width: 66
-        height: 61
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 020443375f8fee4c0800000000000000
-      internalID: -4256190864735059936
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: dialog_2
-      rect:
-        serializedVersion: 2
-        x: 396
-        y: 44
-        width: 41
-        height: 38
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: ba3b09ab207a721e0800000000000000
-      internalID: -2222624260922231893
+      spriteID: 1534b9b66ce7090f0800000000000000
+      internalID: -1112249717286550703
       vertices: []
       indices: 
       edges: []
@@ -211,9 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      dialog_0: -2576023137440582333
-      dialog_1: -4256190864735059936
-      dialog_2: -2222624260922231893
+      K1_0: -1112249717286550703
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

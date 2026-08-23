@@ -59,13 +59,17 @@ namespace M1
         [Header("判定与文案")]
         [Tooltip("正确工具物体名")]
         public string correctToolName = "超声波焊缝探伤仪";
-        public string textInitial = "请选择钢轨探伤工具";
-        public string textWrong = "选择错了，请重新选择";
-        public string textCorrect = "选择正确";
+        // 台词文案（2026-08-23 按 台词.pptx 更新）
+        [Tooltip("M1-1 初始提示文案")]
+        public string textInitial = "那我们开始选择探测仪器吧，有问题随时长按我哦！";
+        [Tooltip("M1-1 选错提示文案")]
+        public string textWrong = "不对哦，要使用焊缝超声波探伤仪";
+        [Tooltip("M1-1 选对提示文案")]
+        public string textCorrect = "选择正确！";
         [Tooltip("M1-2 初始提示文案")]
-        public string textM2Initial = "请选择探头";
+        public string textM2Initial = "现在选择探头吧";
         [Tooltip("M1-2 选错提示文案")]
-        public string textProbeWrong = "请选择K2.5探头";
+        public string textProbeWrong = "K2.5探头才正确，再找找看！";
         [Tooltip("M1-2 选对提示文案")]
         public string textProbeCorrect = "选择正确！";
 

@@ -103,8 +103,12 @@ namespace M1.EditorTools
             // M1→M2 串联：开始探测默认加载 M2（幂等规范化；Inspector 可改，空则不跳转）
             comp.nextSceneName = "M2";
             comp.probeIdleTimeout = 20f;
-            comp.textM2Initial = "请选择探头";
-            comp.textProbeWrong = "请选择K2.5探头";
+            // 台词文案（2026-08-23 按 台词.pptx 更新；幂等规范化，与 M1ToolSelection 默认值一致）
+            comp.textInitial = "那我们开始选择探测仪器吧，有问题随时长按我哦！";
+            comp.textWrong = "不对哦，要使用焊缝超声波探伤仪";
+            comp.textCorrect = "选择正确！";
+            comp.textM2Initial = "现在选择探头吧";
+            comp.textProbeWrong = "K2.5探头才正确，再找找看！";
             comp.textProbeCorrect = "选择正确！";
             if (comp.probeNames == null || comp.probeNames.Length == 0)
                 comp.probeNames = new[] { "K2.5", "K3", "K1", "0度" };

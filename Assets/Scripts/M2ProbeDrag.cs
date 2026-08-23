@@ -13,6 +13,8 @@ namespace M2
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
         public Vector2 scanDirection = new Vector2(1f, 0f), probeEntryLocal = new Vector2(.5f, .25f), startLocal = new Vector2(-500f, 0f), damageUv = new Vector2(.4808f, .711f), placementTolerancePx = new Vector2(60f, 40f);
+        [Tooltip("Home 槽位内初始显示位置（老板 2026-08-23：y=-5；运行时覆盖 Scene 旧值不写回）")]
+        public Vector2 homeOffset = new Vector2(0f, -5f);
         public float hitMm = 110f, beamHitTolerancePx = 8f, visualTiltAtTarget = 10f, probeBaseAngleDeg = 0f, beamBaseAngleDeg = 0f, beamLengthZeroMm = 550f, settleDuration = .5f, beamWidthPx = 14f, beamHitRadiusPx = 30f; // beamHitRadiusPx：射线末端命中伤损容差（老板 2026-08-16 A 方案：射线实际碰到伤损即检出；默认 30px 覆盖 10° 时末端与伤损最小距离 ~20px）
         public bool unlocked;
         public float currentDistanceMm = 150f;
@@ -52,6 +54,8 @@ namespace M2
         public void Bind(M2FlowController owner)
         {
             flow = owner; if (probeRt == null) probeRt = transform as RectTransform; if (probeVisual == null) probeVisual = probeRt.Find("bg") as RectTransform; if (_probeSize == Vector2.zero) _probeSize = probeRt.sizeDelta;
+            // Home 初始显示位置（老板 2026-08-23：y=-5，运行时覆盖 Scene 旧值）
+            if (probeRt != null && probeHome != null) probeRt.anchoredPosition = homeOffset;
             var probeImage = probeVisual != null ? probeVisual.GetComponent<Image>() : null; if (probeImage != null) { var sprites = Resources.LoadAll<Sprite>("probeFootage"); if (sprites != null && sprites.Length > 0) probeImage.sprite = sprites[0]; if (probeImage.sprite != null) _spriteAspect = probeImage.sprite.rect.width / probeImage.sprite.rect.height; var sh = probeImage.GetComponent<Shadow>() ?? probeImage.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0f, 0f, 0f, .48f); sh.effectDistance = new Vector2(7f, -7f); var ol = probeImage.GetComponent<Outline>() ?? probeImage.gameObject.AddComponent<Outline>(); ol.effectColor = new Color(.1f, .12f, .15f, .6f); ol.effectDistance = new Vector2(2f, -2f); }
             CalibrateTrack(); if (beamLine != null) _beamImage = beamLine.GetComponentInChildren<Image>(); if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition;
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
@@ -81,6 +85,7 @@ namespace M2
         }
         public void OnBeginDrag(PointerEventData eventData)
         {
+            if (flow != null && !flow.CouplantApplied) flow.NotifyBlockedDrag(); // 未涂耦合剂：数字人气泡提示（台词.pptx Slide 3-【5】）
             _dragging = unlocked && !_inputLocked && probeRt != null && railViewport != null; if (_dragging && !_placed) { Reparent(probeRt, railViewport, railViewport.pivot); if (TryGetRailPoint(eventData, out var p)) MoveToLocal(p); }
         }
         public void OnDrag(PointerEventData eventData)
@@ -184,7 +189,7 @@ namespace M2
         private Vector2 ProbeEntryWorld() => railViewport.InverseTransformPoint(probeRt.TransformPoint(EntryLocal()));
         private void ReturnHome()
         {
-            _placed = false; if (probeRt != null && probeHome != null) Reparent(probeRt, probeHome, new Vector2(.5f, .5f)); if (beamLine != null) beamLine.anchoredPosition = new Vector2(9999f, 9999f);
+            _placed = false; if (probeRt != null && probeHome != null) { Reparent(probeRt, probeHome, new Vector2(.5f, .5f)); probeRt.anchoredPosition = homeOffset; } if (beamLine != null) beamLine.anchoredPosition = new Vector2(9999f, 9999f);
         }
         private void Reparent(RectTransform child, RectTransform parent, Vector2 anchor)
         {

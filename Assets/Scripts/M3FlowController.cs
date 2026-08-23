@@ -24,6 +24,7 @@ namespace M3
         [Tooltip("音效播放音量（2026-08-18 老板要求整体调小）")]
         public float sfxVolume = 0.4f;
         public M3IdleHelp idleHelp;
+        [System.NonSerialized] public ModuleSpeechBubble speechBubble; // 数字人台词气泡（运行时挂载）
         public float introDuration = 2f, targetAngle = 13f, targetDistance = 120f, peakTolerance = 1f;
         /// <summary>伤损波移动速度倍率：2 = 探头移动 1mm 伤损波在波形 X 轴移动 2mm（老板 2026-08-16 定稿，可调）。</summary>
         public float waveformSpeed = 2f;
@@ -38,12 +39,23 @@ namespace M3
         private float _prevMm = 55f;
         private Sprite _damageMarkerSprite; // 伤损橙标记（椭圆）
         private static readonly string[] DefaultHints = {
-            "将 K2.5 探头放置在轨头侧面，无偏角",
-            "用定位尺向下偏转 13°",
-            "向前移动探头至入射点距伤损 120mm",
-            "拖动尺子：0 刻度对齐探头入射点，120mm 对齐伤损"
+            "将探头放在轨头侧面，利用多功能尺将探头向下偏转13°", // Slide 8-【3】
+            "将探头以13度偏角向前移动，注意观察波形变化",       // Slide 9-【3】
+            "将定位尺0刻度对准探头入射点，进行测量",           // Slide 10-【3】
+            "轨头侧面探测完成"
         };
-        private static readonly string[] StageNames = { "探头定位与偏角", "移动探测", "尺子测距", "完成" };
+        private static readonly string[] StageNames = { "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：探头偏角/步骤2：移动探测/步骤3：测距确认）
+        // 数字人台词气泡（2026-08-23 按 台词.pptx Slide 8-11）
+        private static readonly string[] SpeechLines = {
+            "把探头放在轨头侧面，准备进行探测",                 // 初始定位（Slide 8-【1】）
+            "角度正确！可以向前移动探头啦",                     // 校角确认（Slide 9-【1】）
+            "很棒，在轨头侧面也探测到了伤损！用多功能尺测量确认一下出波位置吧" // 检出（Slide 10-【1】）
+        };
+        private static readonly string[] FinalSpeech = { // 测量完成 + 完成引导（分段展示）
+            "探头入射点距离本侧焊缝熔合线120mm，这说明我们在轨头侧面也探测到了伤损！",
+            "点击透视视图看看超声波传播路径",
+            "轨头侧面伤损探测完成，点击进入轨腰部位探测吧" // Slide 11-【1】
+        };
 
         private void Awake()
         {
@@ -68,10 +80,45 @@ namespace M3
             }
             ApplyView(false);
             EnterPositioning();
+            // 数字人台词气泡（PPT）：M3 不创建独立云朵，文字放场景 dialog 节点（老板后续自行添加）
+            speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
+            if (instructionText != null) speechBubble.SetFont(instructionText.font);
+            var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
+            if (dialog != null)
+            {
+                speechBubble.SetAnchor(dialog);
+                speechBubble.useExistingCloud = true;
+                speechBubble.anchorOffset = Vector2.zero; // 老板加节点后按云朵位置调
+                speechBubble.bubbleSize = new Vector2(280f, 220f);
+                speechBubble.Show(SpeechLines[0]);
+            }
+            else speechBubble.createOnlyWhenAnchored = true; // 云朵节点就位前不显示
         }
         private static void Bind(Button button, UnityAction action) { if (!button) return; button.onClick.RemoveListener(action); button.onClick.AddListener(action); }
         private static void EnableRaycast(Component comp) { if (!comp) return; foreach (var img in comp.GetComponentsInChildren<Image>(true)) img.raycastTarget = true; }
         private Button FindButton(string name) { foreach (var b in GetComponentsInChildren<Button>(true)) if (b.name == name) return b; return null; }
+        /// <summary>递归查找子物体（含未激活；支持斜杠路径）。</summary>
+        private static Transform FindDeep(Transform root, string path)
+        {
+            if (root == null) return null;
+            if (path.Contains("/"))
+            {
+                var cur = root;
+                foreach (var p in path.Split('/')) { cur = FindChildByName(cur, p); if (cur == null) return null; }
+                return cur;
+            }
+            return FindChildByName(root, path);
+        }
+        private static Transform FindChildByName(Transform parent, string name)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name == name) return child;
+                var hit = FindChildByName(child, name);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
 
         private void EnterPositioning()
         {
@@ -100,6 +147,7 @@ namespace M3
             probeDrag?.SetAngleLocked(true);
             PlayCorrect();
             rulerDrag?.UnlockRetract();
+            speechBubble?.Show(SpeechLines[1]); // 角度正确（Slide 9-【1】）
         }
         /// <summary>尺子拖回 RulerHome 归槽（恢复 Home 初态）→ 进入扫描，解锁探头平移。</summary>
         public void NotifyRulerRetracted() { if (CurrentStage == Stage.Positioning && AngleVerifiedByRuler) Go(Stage.Scanning); }
@@ -129,6 +177,7 @@ namespace M3
             RefreshDamageMarker(); // 老板 2026-08-23：伤损变色仅透视可见（PerspectiveOn && Detected），检出本身只报警
             Go(Stage.Measuring);
             idleHelp?.ResetIdle();
+            speechBubble?.Show(SpeechLines[2]); // 检出（Slide 10-【1】）
         }
         /// <summary>检出反馈：钢轨红椭圆（伤损）变橙色——竖椭圆、半透明橙、对齐伤损中心（老板 2026-08-16 定稿）。</summary>
         private void ShowDamageMarker()
@@ -160,6 +209,7 @@ namespace M3
             if (measurementBubble != null) measurementBubble.SetActive(true);
             PlayCorrect();
             Go(Stage.Completed);
+            speechBubble?.ShowSegments(FinalSpeech); // 测量完成 120mm 结论 + 进入下一模块引导（分段）
         }
         /// <summary>正确提示音（探头放置成功 / 尺子校角吸附 / 测量完成共用，与 M2 一致）。</summary>
         public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }
@@ -199,6 +249,7 @@ namespace M3
             waveformFx?.ResetWave(160f);
             idleHelp?.ResetAll(); ApplyView(false);
             EnterPositioning();
+            speechBubble?.Show(SpeechLines[0]); // 重置：气泡回到初始引导
         }
         private void Go(Stage stage)
         {
@@ -214,7 +265,7 @@ namespace M3
         {
             var i = Mathf.Clamp((int)CurrentStage - 1, 0, 3);
             if (instructionText != null && i < DefaultHints.Length) instructionText.text = DefaultHints[i];
-            if (stepProgressText != null) stepProgressText.text = $"步骤 {Mathf.Clamp(i + 1, 1, 3)}/3 · {StageNames[i]}";
+            if (stepProgressText != null) stepProgressText.text = $"步骤{Mathf.Clamp(i + 1, 1, 3)}：{StageNames[i]}"; // 2026-08-23 按 台词.pptx：去 /3、中文冒号，改“步骤X：阶段名”
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
