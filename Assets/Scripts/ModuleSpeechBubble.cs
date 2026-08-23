@@ -43,8 +43,28 @@ namespace M2
         private bool _locked; // 分段台词一体播放中：忽略其他 Show（老板：播完前不插其他话）
         private static Sprite _cloudSprite;
 
-        /// <summary>分段台词是否播放中（一体锁定：其他台词暂不显示）。</summary>
-        public bool Busy => _locked;
+        /// <summary>台词是否播放中（分段一体锁定或逐字打字中）：其他台词不插入、长按不弹面板。</summary>
+        public bool Busy => _locked || _typing != null;
+
+        /// <summary>联动：QA 输入面板打开时隐藏气泡；气泡台词播放中（Busy）阻塞长按开面板（老板 2026-08-23，M2 规则，通用生效）。</summary>
+        private void Start()
+        {
+            var qa = Object.FindFirstObjectByType<M1QAPanel>();
+            if (qa != null) qa.OnPanelVisibilityChanged += OnPanelVisibility;
+            var presenter = Object.FindFirstObjectByType<M1DigitalHumanPresenter>();
+            if (presenter != null) presenter.longPressBlocked = () => Busy;
+        }
+
+        private void OnDestroy()
+        {
+            var qa = Object.FindFirstObjectByType<M1QAPanel>();
+            if (qa != null) qa.OnPanelVisibilityChanged -= OnPanelVisibility;
+        }
+
+        private void OnPanelVisibility(bool open)
+        {
+            if (open) Hide(); // 输入界面打开：气泡框消失（老板 2026-08-23）
+        }
 
         /// <summary>惰性创建气泡 UI（首次 Show 时；字体为空则取场景任意 TMP 字体）。</summary>
         private void EnsureCreated()
@@ -137,6 +157,7 @@ namespace M2
             if (_rt == null || _text == null) return;
             StopTyping(); StopSegments();
             _text.text = string.Empty;
+            if (anchor != null) anchor.gameObject.SetActive(true); // 云朵背景框一起显示
             _rt.gameObject.SetActive(true);
             var full = text ?? string.Empty;
             if (typeSpeed <= 0f || full.Length == 0) { _text.text = full; return; }
@@ -152,6 +173,7 @@ namespace M2
             if (_rt == null || _text == null) return;
             StopTyping(); StopSegments();
             _text.text = string.Empty;
+            if (anchor != null) anchor.gameObject.SetActive(true); // 云朵背景框一起显示
             _rt.gameObject.SetActive(true);
             _locked = true; // 一体播放：锁定直到全部段播完
             _segments = StartCoroutine(SegmentFlow(segments));
@@ -205,6 +227,7 @@ namespace M2
         {
             StopTyping(); StopSegments();
             SetSpeaking(false);
+            if (anchor != null) anchor.gameObject.SetActive(false); // 云朵背景框一起隐藏（老板 2026-08-23）
             if (_rt != null) _rt.gameObject.SetActive(false);
         }
 

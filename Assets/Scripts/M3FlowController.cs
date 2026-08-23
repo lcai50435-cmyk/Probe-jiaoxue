@@ -51,8 +51,9 @@ namespace M3
             "角度正确！可以向前移动探头啦",                     // 校角确认（Slide 9-【1】）
             "很棒，在轨头侧面也探测到了伤损！用多功能尺测量确认一下出波位置吧" // 检出（Slide 10-【1】）
         };
-        private static readonly string[] FinalSpeech = { // 测量完成 + 完成引导（分段展示）
-            "探头入射点距离本侧焊缝熔合线120mm，这说明我们在轨头侧面也探测到了伤损！",
+        private static readonly string[] FinalSpeech = { // 测量完成 + 完成引导（分段展示；2026-08-23 老板：结论句按 M2 风格逐句分段）
+            "探头入射点距离本侧焊缝熔合线120mm",
+            "这说明我们在轨头侧面也探测到了伤损！",
             "点击透视视图看看超声波传播路径",
             "轨头侧面伤损探测完成，点击进入轨腰部位探测吧" // Slide 11-【1】
         };
@@ -79,9 +80,18 @@ namespace M3
                 foreach (Transform child in waveformFx.transform) child.gameObject.SetActive(false);
             }
             ApplyView(false);
+            // 场景 instructionText 引用随 Hint 节点删除被置 0（老板手工删静态 Hint，冻结 Scene 不改）；
+            // 运行时重绑 InstructionArea/Title 提示节点，恢复 DefaultHints 随阶段更新（2026-08-23 老板反馈：标题未跟随进度；
+            // 实际层级 ControlDock_D/InstructionArea/Title，原 MainScene/Title 路径错误未生效，已修正）
+            if (instructionText == null)
+            {
+                var title = FindDeep(transform, "InstructionArea/Title");
+                if (title != null) instructionText = title.GetComponent<TMP_Text>();
+            }
             EnterPositioning();
             // 数字人台词气泡（PPT）：M3 不创建独立云朵，文字放场景 dialog 节点（老板后续自行添加）
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
+            speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2 合同一致）
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
             if (dialog != null)

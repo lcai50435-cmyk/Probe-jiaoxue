@@ -141,6 +141,22 @@ namespace M3
 
         private static void BuildPanel(Transform panel, TMP_FontAsset font)
         {
+            // M2 合同（老板 2026-08-23：输入界面位置参照 M2）：QALayer 下建 ChatArea 中间层（右侧预留 336px 给数字人），QAPanel 挂其下；
+            // M1QAPanel 滑入目标 x=0 是相对父节点的，直接改 QAPanel pos 会被 Open 覆盖，必须中间层缩位。
+            var qaLayer = panel.parent;
+            if (qaLayer != null)
+            {
+                var chat = FindDeep(qaLayer, "ChatArea");
+                if (chat == null)
+                {
+                    var cgo = NewGo("ChatArea", qaLayer);
+                    var chatRt = cgo.GetComponent<RectTransform>();
+                    chatRt.anchorMin = Vector2.zero; chatRt.anchorMax = Vector2.one;
+                    chatRt.offsetMin = Vector2.zero; chatRt.offsetMax = new Vector2(-336f, 0f);
+                    chat = cgo.transform;
+                }
+                panel.SetParent(chat, false);
+            }
             // 壳修正为 M2 合同：右侧全高贴边（运行时内存态，不写回）
             var prt = panel.GetComponent<RectTransform>();
             if (prt != null)
@@ -270,25 +286,41 @@ namespace M3
             {
                 fb = NewGo(FullBodyName, stage);
                 var frt = fb.GetComponent<RectTransform>();
-                var fitter = fb.AddComponent<AspectRatioFitter>();
-                if (isM5)
+                var prt = preview != null ? preview.GetComponent<RectTransform>() : null;
+                var followPreview = !isM5 && prt != null && SceneManager.GetActiveScene().name == "M3";
+                if (followPreview)
                 {
-                    // M2 合同：底部全高锚定 + HeightControlsWidth（宽=高×ratio），pos (-13,-35)
-                    frt.anchorMin = new Vector2(0.5f, 0f); frt.anchorMax = new Vector2(0.5f, 1f);
-                    frt.pivot = new Vector2(0.5f, 0.5f);
-                    frt.anchoredPosition = new Vector2(-13f, -35f);
-                    frt.sizeDelta = new Vector2(320f, 0f);
-                    fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+                    // 老板 2026-08-23：M3 数字人跟随场景 FullBodyPreview 位置（x 取 preview，y 固定 44）；
+                    // 大小与 M2 一致：显示宽 223px（M2 320×0.697）÷ Stage 缩放 0.74068 → sizeDelta 宽 301，高按视频比例 1080:1450
+                    var pw = 301f; // 与 M2 FullBodyView 显示宽度一致（223px 屏幕）
+                    frt.anchorMin = frt.anchorMax = new Vector2(0.5f, 0f);
+                    frt.pivot = new Vector2(0.5f, 0f);
+                    frt.anchoredPosition = new Vector2(prt.anchoredPosition.x, 44f); // 老板 2026-08-23：M3 FullBodyView y 调为 44
+                    frt.sizeDelta = new Vector2(pw, pw / StageAspect);
+                    frt.localScale = Vector3.one;
                 }
                 else
                 {
-                    frt.anchorMin = new Vector2(0.5f, 0.5f); frt.anchorMax = new Vector2(0.5f, 0.5f);
-                    frt.pivot = new Vector2(0.5f, 0.5f);
-                    frt.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
-                    frt.sizeDelta = new Vector2(StageWidth, 0f);
-                    fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+                    var fitter = fb.AddComponent<AspectRatioFitter>();
+                    if (isM5)
+                    {
+                        // M2 合同：底部全高锚定 + HeightControlsWidth（宽=高×ratio），pos (-13,-35)
+                        frt.anchorMin = new Vector2(0.5f, 0f); frt.anchorMax = new Vector2(0.5f, 1f);
+                        frt.pivot = new Vector2(0.5f, 0.5f);
+                        frt.anchoredPosition = new Vector2(-13f, -35f);
+                        frt.sizeDelta = new Vector2(320f, 0f);
+                        fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+                    }
+                    else
+                    {
+                        frt.anchorMin = new Vector2(0.5f, 0.5f); frt.anchorMax = new Vector2(0.5f, 0.5f);
+                        frt.pivot = new Vector2(0.5f, 0.5f);
+                        frt.anchoredPosition = new Vector2(0f, StageCenterOffsetY);
+                        frt.sizeDelta = new Vector2(StageWidth, 0f);
+                        fitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+                    }
+                    fitter.aspectRatio = StageAspect;
                 }
-                fitter.aspectRatio = StageAspect;
                 raw = fb.AddComponent<RawImage>();
                 vp = fb.AddComponent<VideoPlayer>();
                 fb.AddComponent<M1PressDetector>();

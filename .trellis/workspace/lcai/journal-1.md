@@ -203,3 +203,27 @@ M5 擦拭耦合剂模块完整交付：M2 轨顶基线 + 耦合剂薄膜（初�
 **问题 2：取消 M3 数字人点击折叠**（老板撤销前一条需求）
 - 复用并发会话（LF）刚加的 `M1DigitalHumanPresenter.SetShortPressEnabled(bool)`（M2 已用它取消折叠）：Bootstrap 对 M3 在 `stageGo.SetActive(true)`（Awake 订阅后）调 `SetShortPressEnabled(false)` 解绑短按，保留长按开面板。撤销了我先前加的冗余 `shortPressToggle` 字段（DRY）。
 - 旁路发现：工作区存在并发修改——`M2.unity` 删除 AvatarView + presenter.avatarView/avatarPress 置 0（老板授权 M2 手工改），`M2FlowController.cs` 加 Start 调 SetShortPressEnabled(false)。非我改动，未干预。M3 折叠关闭后 AvatarView 保持 inactive（Bootstrap 创建但未激活），无副作用。
+
+## 2026-08-23 M3 Title 提示未随进度更新（老板反馈三修）
+
+- 根因：老板手工删 M3 场景静态 Hint 节点时，`M3FlowController.instructionText` 序列化引用被置 0（原本指向 Hint 的 TMP），`UpdateUi()` 里 `if (instructionText != null)` 断链 → DefaultHints 永不写入，Title 固定显示场景静态文案。
+- 修复：M3FlowController.Awake 运行时重绑 `FindDeep(transform, "MainScene/Title")`（老板改文案的提示节点，SafeArea 挂载点，路径精确避免误绑 QAPanel 运行时 Title），恢复 DefaultHints 随阶段更新：定位「将探头放在轨头侧面…偏转13°」→ 扫描「将探头以13度偏角向前移动，注意观察波形变化」→ 测距「将定位尺0刻度对准探头入射点，进行测量」→ 完成「轨头侧面探测完成」。冻结 M3.unity 零改动。
+- 旁路确认：M4 场景 instructionText 引用有效（指向 M4 场景内节点，非 0），无此问题。
+
+## 2026-08-23 M3 测量完成台词逐句分段（老板反馈四修）
+
+- 需求：M3 FinalSpeech 首段两句挤一段，按 M2 三段风格逐句拆分。
+- 修复（M3FlowController.cs）：FinalSpeech 3 段 → 4 段：「探头入射点距离本侧焊缝熔合线120mm」「这说明我们在轨头侧面也探测到了伤损！」「点击透视视图看看超声波传播路径」「轨头侧面伤损探测完成，点击进入轨腰部位探测吧」；补 speechBubble.segmentInterval=1f（原默认 6f，与 M2 合同一致，段间停留 1 秒）。
+- 旁路发现（未改）：M4 FinalSpeech 首段同为两句挤一段（「…40mm，在轨腰部位也探测到了伤损！」），且 M4 也未设 segmentInterval（默认 6f）——同款问题待老板决定。
+
+## 2026-08-23 M3 Title 仍未更新（老板反馈五修）——上一轮路径错误
+
+- 根因复查：Title 实际层级 = SafeArea/ControlDock_D/**InstructionArea**/Title（GO 1631689085），不在 MainScene 下。上一轮 `FindDeep("MainScene/Title")` 路径错误 → 重绑未生效，instructionText 仍 null，DefaultHints 仍不写入。
+- 修复：路径改为 `FindDeep(transform, "InstructionArea/Title")`（语义稳定，不依赖 ControlDock_D 命名）；python 按场景数据模拟验证：InstructionArea(1898503260) 子节点含 Title RT(1631689086)，TMP 组件(1631689087) 存在。
+- 教训：场景父链必须从目标节点反查，不可凭 SafeArea children 名字猜测层级（ControlDock_D 名字与 MainScene 相邻易混淆）。
+
+## 2026-08-23 M3 数字人跟随 FullBodyPreview 布局（老板反馈六修）
+
+- 需求：老板在 Unity 手调 M3 FullBodyPreview scale/position（anchor (0.5,0)-(0.5,1)、pos (-50,2)、sizeDelta (304,-18)、scale 0.91，已存 M3.unity），play 时 FullBodyView 以该位置/大小为准。
+- 修复（M3DigitalHumanBootstrap.BuildViews，仅 M3 生效）：followPreview 分支——底部锚定 (0.5,0) 站地 + anchoredPosition 复制 preview + 宽=preview 有效宽（sizeDelta.x×localScale.x）+ 高按视频比例 1080:1450（不变形），不挂 AspectRatioFitter。M4/M5 保持原合同。
+- 说明：preview 矩形比例（≈0.39）≠ 视频比例（0.745），按 preview 宽度+视频比例定高，数字人站地在 preview 框内偏下；若老板要填满整个框需放弃比例（变形）或调 preview 比例。

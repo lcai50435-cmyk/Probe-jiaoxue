@@ -21,6 +21,8 @@ namespace M1
         public VideoClip idleClip;
         public VideoClip thinkingClip;
         public VideoClip speakingClip;
+        /// <summary>长按阻塞委托：非空且返回 true 时不响应长按（老板 2026-08-23：气泡台词说完前不能长按开输入界面）。</summary>
+        public System.Func<bool> longPressBlocked;
 
         private enum DisplayMode { FullBody, Avatar }
 
@@ -106,6 +108,7 @@ namespace M1
 
         private void OnLongPress()
         {
+            if (longPressBlocked != null && longPressBlocked()) return; // 台词播放中：长按不弹输入界面（老板 2026-08-23）
             // 面板打开或仍有待恢复形态时，再次长按不得覆盖首次记录（R5：头像恢复不被后续长按破坏）
             if (!_panelOpen && !_restorePending && _answer == AnswerState.Idle)
             {
