@@ -263,12 +263,19 @@ namespace M5.EditorTools
 
         private static void EnsureViewport(Transform viewport, TMP_FontAsset font)
         {
+            // M2 合同：RailViewport 白底面板（老板 2026-08-23：同步 M2 的 RailViewport/bg，白色 Stretch 底部内缩 99.828）；Scene 权威仅空布局设默认
+            var viewportBg = EnsureImage(viewport, "bg", Color.white);
+            if (viewportBg.sizeDelta.sqrMagnitude < 1f)
+                SetRect(viewportBg, new Vector2(0, 0), new Vector2(1, 1), Vector2.zero, new Vector2(0, -99.828f), new Vector2(.5f, .5f));
+            viewportBg.GetComponent<Image>().raycastTarget = false;
+
             var railBg = EnsureImage(viewport, "RailBackground", Color.white);
             // 钢轨布局 Scene 权威：老板手工调整的位置/尺寸不被 Setup 重置（仅新建/空布局时设置默认）
             if (railBg.sizeDelta.sqrMagnitude < 1f)
                 SetRect(railBg, new Vector2(.5f, .5f), new Vector2(.5f, .5f), new Vector2(-24, -32.979f), new Vector2(960.523f, 285.958f), new Vector2(.5f, .5f));
             SetRailSprite(railBg, RailNormalPath);
             railBg.SetAsFirstSibling();
+            viewportBg.SetAsFirstSibling(); // M2 合同：白底最底（bg 在 RailBackground 之前，避免盖住钢轨图）
 
             var overlay = EnsureGo(viewport, "CouplantOverlay");
             // CouplantOverlay 布局 Scene 权威（老板 2026-08-23：position/scale 手工调整贴合钢轨，Setup 不得 Stretch 重置）
@@ -294,12 +301,15 @@ namespace M5.EditorTools
 
             var perspective = EnsureImage(viewport, "RailPerspective", Color.white);
             perspective.gameObject.SetActive(false);
-            // 透视钢轨与普通钢轨同布局（老板 2026-08-23：大小以普通视图状态为准；原 Stretch 会导致两视图大小不统一）
+            // 透视钢轨布局 Scene 权威（老板 2026-08-23：手工调整 scale/position 需保存，Setup 不覆盖）；仅空布局时复制普通钢轨布局
             var perspRt = perspective as RectTransform;
-            perspRt.anchorMin = railBg.anchorMin; perspRt.anchorMax = railBg.anchorMax;
-            perspRt.pivot = railBg.pivot;
-            perspRt.sizeDelta = railBg.sizeDelta;
-            perspRt.anchoredPosition = railBg.anchoredPosition;
+            if (perspRt.sizeDelta.sqrMagnitude < 1f && perspRt.anchoredPosition.sqrMagnitude < 1f)
+            {
+                perspRt.anchorMin = railBg.anchorMin; perspRt.anchorMax = railBg.anchorMax;
+                perspRt.pivot = railBg.pivot;
+                perspRt.sizeDelta = railBg.sizeDelta;
+                perspRt.anchoredPosition = railBg.anchoredPosition;
+            }
             SetRailSprite(perspective, RailPerspectivePath);
 
             var bar = EnsureImage(viewport, "PerspectiveBar_C", SurfaceColor);
@@ -438,10 +448,7 @@ namespace M5.EditorTools
             // 3) 耦合剂层修复
             if (viewport != null)
             {
-                // M2 railViewport 白底子节点：删除（M5 MainScene 已是 SurfaceColor 白底，避免盖住钢轨图）
-                for (int i = viewport.childCount - 1; i >= 0; i--)
-                    if (viewport.GetChild(i).name == "bg") UnityEngine.Object.DestroyImmediate(viewport.GetChild(i).gameObject);
-                // M2 钢轨图旧子节点（RailBackground/bg、RailPerspective/bg）：M5 容器 Image 唯一贴图，删除避免叠层重影
+                // M2 钢轨图旧子节点（RailBackground/bg、RailPerspective/bg）：M5 容器 Image 唯一贴图，删除避免叠层重影（注意：不是 RailViewport 白底 bg）
                 foreach (var railName in new[] { "RailBackground", "RailPerspective" })
                 {
                     var rail = FindDeep(viewport, railName);
