@@ -242,6 +242,8 @@ namespace M3
             PerspectiveOn = on;
             if (railBg != null) railBg.gameObject.SetActive(!on);
             if (railPerspective != null) railPerspective.SetActive(on);
+            if (probeDrag != null) probeDrag.RefreshBeamVisibility();
+            else if (beamLayer != null) beamLayer.SetActive(false);
             RefreshDamageMarker(); // 伤损标记仅透视+检出可见（老板 2026-08-23：未开透视仅报警）
             var selected = new Color(.08f, .42f, .66f); var idle = new Color(.58f, .61f, .65f);
             if (normalBtnImg != null) { normalBtnImg.color = on ? idle : selected; SetButtonText(normalBtnImg, on ? new Color(.12f, .15f, .18f) : Color.white); }

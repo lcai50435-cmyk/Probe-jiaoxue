@@ -78,12 +78,20 @@ namespace M2
             var probeImage = probeVisual != null ? probeVisual.GetComponent<Image>() : null; if (probeImage != null) { if (probeImage.sprite != null) _spriteAspect = probeImage.sprite.rect.width / probeImage.sprite.rect.height; ApplyProbeEffects(probeImage); }
             CalibrateTrack(); if (beamLine != null) _beamImage = beamLine.GetComponentInChildren<Image>(); if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition;
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
+            RefreshBeamVisibility();
             if (angleSlider == null) return;
             angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged);
             _angleDeg = angleSlider.value; ApplyAngleVisual(_angleDeg); SetAngleLocked(true);
         }
         public void Unlock() => unlocked = true;
-        public void ShowBeam() { _beamVisible = true; UpdateBeam(); if (beamLine != null && beamLine.parent != null) beamLine.parent.gameObject.SetActive(true); }
+        public void ShowBeam() { _beamVisible = true; UpdateBeam(); RefreshBeamVisibility(); }
+        /// <summary>检测束仅在透视视图可见；放置与视图切换均通过此入口刷新。</summary>
+        public void RefreshBeamVisibility()
+        {
+            var visible = _beamVisible && flow != null && flow.PerspectiveOn;
+            if (beamLine != null && beamLine.parent != null) beamLine.parent.gameObject.SetActive(visible);
+            if (beamLine != null) beamLine.gameObject.SetActive(visible);
+        }
         public void SetAngleLocked(bool value) { if (angleSlider != null) angleSlider.interactable = !value; }
         public void SetInputLocked(bool value) => _inputLocked = value;
         public void OnAngleChanged(float degrees)
@@ -98,6 +106,7 @@ namespace M2
         public void ResetTool()
         {
             unlocked = _inputLocked = _dragging = false; _beamVisible = false; currentDistanceMm = StartMm; _angleDeg = 0f;
+            RefreshBeamVisibility();
             if (angleSlider != null) { angleSlider.SetValueWithoutNotify(0f); angleSlider.interactable = false; }
             if (angleStatusText != null) { angleStatusText.text = "请增大偏角"; angleStatusText.color = Color.red; } if (angleValueText != null) angleValueText.text = "0°";
             ApplyAngleVisual(0f); ReturnHome(); OnDistanceChanged?.Invoke(currentDistanceMm);

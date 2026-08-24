@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using M1;
 using TMPro;
 using UnityEditor;
@@ -32,6 +33,7 @@ namespace M1.EditorTools
         private const string IntroVideoName = "引导视频";
         private const string IntroSkipName = "跳过引导";
         private const string IntroHidePath = "DigitalHumanStage/FullBodyView"; // 引导播放期间隐藏的常驻数字人全身
+        private const string IntroDialoguePath = "白板背景/数字人/对话框"; // 引导播放期间同步隐藏的白板数字人对白框
         private const string SubtitleName = "引导字幕"; // 2026-08-18：视频静音后解说词改字幕
         // 引导期间需要暂停的常驻数字人视频（VideoPlayer 不受 timeScale 影响）
         private const string StageName = "DigitalHumanStage";
@@ -104,11 +106,11 @@ namespace M1.EditorTools
             comp.nextSceneName = "M2";
             comp.probeIdleTimeout = 20f;
             // 台词文案（2026-08-23 按 台词.pptx 更新；幂等规范化，与 M1ToolSelection 默认值一致）
-            comp.textInitial = "那我们开始选择探测仪器吧，有问题随时长按我哦！";
-            comp.textWrong = "不对哦，要使用焊缝超声波探伤仪";
+            comp.textInitial = M1ToolSelection.DefaultInitialDialogue;
+            comp.textWrong = "不对哦，要使用\n焊缝超声波探伤仪"; // 2026-08-23 老板：整体名词不断开
             comp.textCorrect = "选择正确！";
             comp.textM2Initial = "现在选择探头吧";
-            comp.textProbeWrong = "K2.5探头才正确，再找找看！";
+            comp.textProbeWrong = "K2.5探头才正确，\n再找找看！"; // 2026-08-23 老板：“再”落到下一行
             comp.textProbeCorrect = "选择正确！";
             if (comp.probeNames == null || comp.probeNames.Length == 0)
                 comp.probeNames = new[] { "K2.5", "K3", "K1", "0度" };
@@ -469,19 +471,29 @@ namespace M1.EditorTools
             return tmp;
         }
 
-        /// <summary>注入引导期间需隐藏的对象（常驻数字人全身）：仅当字段为空时赋值，不覆盖用户配置。</summary>
+        /// <summary>注入引导期间需隐藏的对象（常驻数字人全身与白板对白框）：合并引用，保留用户已有配置且重复执行稳定。</summary>
         private static void InjectIntroHide(M1IntroVideo intro, GameObject board)
         {
-            if (intro == null || (intro.hideWhilePlaying != null && intro.hideWhilePlaying.Length > 0)) return;
+            if (intro == null) return;
             var fb = FindDeep(board.transform, IntroHidePath);
+            var dialogue = FindDeep(board.transform, IntroDialoguePath);
+            var targets = new List<GameObject>();
+            if (intro.hideWhilePlaying != null)
+                foreach (var target in intro.hideWhilePlaying)
+                    if (target != null && !targets.Contains(target)) targets.Add(target);
+            if (fb != null && !targets.Contains(fb.gameObject)) targets.Add(fb.gameObject);
+            if (dialogue != null && !targets.Contains(dialogue.gameObject)) targets.Add(dialogue.gameObject);
             if (fb == null)
-            {
                 Debug.LogWarning("[M1Setup] 未找到引导期间隐藏对象（" + IntroHidePath + "），" +
-                                 "引导期间数字人将透出遮罩（可稍后重跑 Setup 补全）。");
-                return;
+                                 "引导期间常驻数字人可能透出遮罩（可稍后重跑 Setup 补全）。");
+            if (dialogue == null)
+                Debug.LogWarning("[M1Setup] 未找到引导期间隐藏对白框（" + IntroDialoguePath + "）。");
+            if (intro.hideWhilePlaying == null || intro.hideWhilePlaying.Length != targets.Count)
+            {
+                intro.hideWhilePlaying = targets.ToArray();
+                EditorUtility.SetDirty(intro);
+                Debug.Log("[M1Setup] 引导期间将隐藏常驻数字人与白板对白框。");
             }
-            intro.hideWhilePlaying = new[] { fb.gameObject };
-            Debug.Log("[M1Setup] 引导期间将隐藏常驻数字人：" + fb.gameObject.name);
         }
 
         /// 加载/创建黑底抠像材质（UI/LumaKey）。幂等：材质资产已存在则直接加载。

@@ -26,6 +26,8 @@ namespace M1
     /// </summary>
     public class M1ToolSelection : MonoBehaviour
     {
+        public const string DefaultInitialDialogue = "那我们开始选择探测仪器吧，有问题随时长按我进行提问哦！";
+
         [Header("场景解析路径（相对本物体）")]
         [Tooltip("M1-1 工具按钮所在容器")]
         public string toolsRootPath = "白板背景/M1物品";
@@ -61,15 +63,15 @@ namespace M1
         public string correctToolName = "超声波焊缝探伤仪";
         // 台词文案（2026-08-23 按 台词.pptx 更新）
         [Tooltip("M1-1 初始提示文案")]
-        public string textInitial = "那我们开始选择探测仪器吧，有问题随时长按我哦！";
+        public string textInitial = DefaultInitialDialogue;
         [Tooltip("M1-1 选错提示文案")]
-        public string textWrong = "不对哦，要使用焊缝超声波探伤仪";
+        public string textWrong = "不对哦，要使用\n焊缝超声波探伤仪"; // 2026-08-23 老板：整体名词不断开，“焊缝”落下一行
         [Tooltip("M1-1 选对提示文案")]
         public string textCorrect = "选择正确！";
         [Tooltip("M1-2 初始提示文案")]
         public string textM2Initial = "现在选择探头吧";
         [Tooltip("M1-2 选错提示文案")]
-        public string textProbeWrong = "K2.5探头才正确，再找找看！";
+        public string textProbeWrong = "K2.5探头才正确，\n再找找看！"; // 2026-08-23 老板：“再”落到下一行
         [Tooltip("M1-2 选对提示文案")]
         public string textProbeCorrect = "选择正确！";
 
@@ -119,6 +121,8 @@ namespace M1
 
         private void Awake()
         {
+            // 旧场景会反序列化历史台词；运行时统一使用 PPT 定稿，直接 Play 无需重跑 Setup。
+            textInitial = DefaultInitialDialogue;
             if (_audioSource == null) _audioSource = GetComponent<AudioSource>();
             if (_audioSource != null) _audioSource.spatialBlend = 0f; // 强制 2D：画板为 UI 场景，避免 3D 距离衰减导致听不见
 

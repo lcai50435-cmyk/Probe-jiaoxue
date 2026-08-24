@@ -122,9 +122,12 @@ namespace M1
 
         private void Awake()
         {
-            // DeepSeek 客户端兜底：Setup 注入优先；缺失时自动挂载，保证开箱即用
+            // DeepSeek 客户端兜底：Setup 注入优先；缺失时自动挂载，统一从共享配置资产读取。
             if (deepSeekClient == null)
-                deepSeekClient = GetComponent<M1DeepSeekClient>() ?? gameObject.AddComponent<M1DeepSeekClient>();
+            {
+                deepSeekClient = GetComponent<M1DeepSeekClient>();
+                if (deepSeekClient == null) deepSeekClient = gameObject.AddComponent<M1DeepSeekClient>();
+            }
 
             var panelGo = FindDeep(transform, panelPath)?.gameObject;
             if (panelGo == null)
@@ -319,8 +322,8 @@ namespace M1
             // 未配置 AI 服务：给出明确提示，不发请求
             var missing = deepSeekClient == null
                 ? "尚未配置 AI 服务：画板缺少 M1DeepSeekClient 组件，请运行 Setup AI 提问面板。"
-                : string.IsNullOrWhiteSpace(deepSeekClient.apiKey)
-                    ? "尚未配置 API Key：请在画板 Inspector 的 M1DeepSeekClient 中填写后重试。"
+                : !deepSeekClient.IsConfigured
+                    ? "尚未配置 AI 服务：请在 Assets/Resources/DeepSeekConfig.asset 中填写一次后重试。"
                     : null;
             if (missing != null)
             {

@@ -1,4 +1,5 @@
 using System.Linq;
+using M2;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -15,6 +16,7 @@ namespace M5
     {
         public enum Stage { Wipe, Completed }
         public M5RagDrag ragDrag;
+        [System.NonSerialized] public ModuleSpeechBubble speechBubble; // 数字人台词气泡（运行时挂载）
         public M5CouplantFx couplantFx;            // Scene 序列化（M5 未冻结）
         public RectTransform railBg, couplantOverlay;
         public GameObject railPerspective, completionPanel;
@@ -30,6 +32,8 @@ namespace M5
         private float _timeScaleBeforeDialog = 1f;
         private static readonly string[] DefaultHints = { "请将擦拭布拖至钢轨顶面，由左至右擦拭" };
         private static readonly string[] StageNames = { "擦拭耦合剂" };
+        private const string InitialSpeech = "根据《安规》规定“\n焊缝探伤作业后钢轨顶面上的焊缝探伤耦合剂必须擦除干净。”";
+        private const string CompletedSpeech = "恭喜你！完整掌握了“三位一体、交叉验证”新工艺！";
 
         private void Awake()
         {
@@ -43,6 +47,21 @@ namespace M5
             SwapRailSprites();
             ApplyView(false);
             UpdateUi();
+            // 复用 M2-M4 的场景云朵：仅运行时创建文字，不改 M5 Scene。
+            speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
+            speechBubble.segmentInterval = 1f;
+            if (instructionText != null) speechBubble.SetFont(instructionText.font);
+            var stage = FindDeep(transform, "DigitalHumanStage");
+            var dialog = stage != null ? FindDeep(stage, "dialog") : null;
+            if (dialog != null)
+            {
+                speechBubble.SetAnchor(dialog);
+                speechBubble.useExistingCloud = true;
+                speechBubble.anchorOffset = new Vector2(-384f, 1f);
+                speechBubble.bubbleSize = new Vector2(264f, 198f);
+                speechBubble.Show(InitialSpeech);
+            }
+            else speechBubble.createOnlyWhenAnchored = true;
         }
 
         private Button FindButton(string name) => GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == name);
@@ -113,12 +132,17 @@ namespace M5
             ragDrag?.ResetTool();
             couplantFx?.Reset();
             ApplyView(false); SetDialog(false); Go(Stage.Wipe);
+            speechBubble?.Show(InitialSpeech);
         }
 
         private void Go(Stage stage)
         {
             CurrentStage = stage;
-            if (stage == Stage.Completed) onCompleted?.Invoke();
+            if (stage == Stage.Completed)
+            {
+                onCompleted?.Invoke();
+                speechBubble?.Show(CompletedSpeech);
+            }
             UpdateUi();
         }
 

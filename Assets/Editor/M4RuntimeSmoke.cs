@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 namespace M4.EditorTools
 {
@@ -100,12 +101,16 @@ namespace M4.EditorTools
                         Require(_probe.unlocked && !_probe.angleSlider.interactable, "初始探头应解锁、角度滑块应锁定");
                         Require(_ruler.unlocked && !_ruler.positioned && _ruler.rulerRt.parent == _ruler.rulerHome, "初始定位尺应留在 RulerHome 且可拖拽");
                         Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg)) < .1f, "初始探头未保持平放基准角（bg z=15）");
+                        _flow.SetPerspectiveView();
+                        Require(!_flow.beamLayer.activeSelf, "未放置探头时切换透视视图不应显示预置光束");
+                        _flow.SetNormalView();
                         _flow.resetButton.onClick.Invoke();
                         Require(!_probe.angleSlider.interactable && !_ruler.unlocked, "重置按钮未打开模态锁定");
                         Click("CancelButton");
                         Require(_probe.unlocked && _ruler.unlocked && !_probe.angleSlider.interactable, "关闭重置对话框后角度滑块应保持锁定");
                         Require(Vector2.Distance(_probe.ScanStartLocal, _scanStart) < .001f, "扫描起点在初始定位后发生漂移");
                         _probe.AutoMoveToMm(55f); // 放探头（0°）
+                        Require(!_flow.beamLayer.activeSelf, "普通视图下放置探头不应显示检测束");
                         Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "仅探头就位不应进入扫描");
                         _probe.OnAngleChanged(10f);
                         Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "尺子未吸附时角度正确仍不应进入扫描");
@@ -147,8 +152,10 @@ namespace M4.EditorTools
                         var dmgColor = _flow.damageMarker.GetComponent<Image>().color;
                         Require(dmgColor.a > .3f, "伤损标记未变橙");
                         _flow.SetNormalView();
+                        Require(!_flow.beamLayer.activeSelf, "普通视图下检测束层应隐藏");
                         Require(!_flow.damageMarker.activeSelf, "普通视图下检出后伤损标记应隐藏（仅透视可见，2026-08-23 老板）");
                         _flow.SetPerspectiveView();
+                        Require(_flow.beamLayer.activeSelf, "切回透视后检测束层应重新显示");
                         Require(_flow.damageMarker.activeSelf, "切回透视后伤损标记应重新显示（2026-08-23 老板）");
                         Require(!_flow.detectionBanner.activeSelf, "检出后 DetectionBanner 应保持隐藏");
                         Require(_flow.CurrentStage == M4FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");
@@ -161,18 +168,18 @@ namespace M4.EditorTools
                     case 4:
                         AlignRuler();
                         Require(_flow.CurrentStage == M4FlowController.Stage.Completed && _flow.Measured, "尺子吸附后未完成");
-                        Require(_flow.completionText.text.Contains("下一模块待接入"), "M4 出口文案错误");
-                        _flow.ResetAll();
-                        Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "重置未回定位阶段");
-                        if (_flow.couplantOverlay != null) Require(!_flow.couplantOverlay.gameObject.activeSelf, "重置后耦合剂薄膜未隐藏");
-                        Require(_probe.unlocked && !_probe.angleSlider.interactable, "重置后探头应解锁、角度滑块应锁定");
-                        Require(_ruler.unlocked, "重置后尺子未解锁");
-                        Require(!_flow.damageMarker.activeSelf, "重置后 DamageMarker 未隐藏");
-                        Require(!_flow.beamLayer.activeSelf, "重置后 BeamLayer/射线未隐藏");
-                        Require(_ruler.rulerRt.parent == _ruler.rulerHome, "重置后尺子未回架");
-                        Require(Vector3.Distance(_probe.probeRt.position, _probeStartWorld) < .01f && Vector2.Distance(_probe.probeRt.anchoredPosition, _probeStartPos) < .01f, "重置后探头未回 Scene 初态");
-                        Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg)) < .1f, "重置后探头未保持平放基准角（bg z=15）");
-                        Pass("放探头→尺子中心吸白色点→10°稳定确认→撤尺→射线照伤损检出→直接测距→双点测距→重置 全链路通过。");
+                        Require(_flow.completionText.text.Contains("轨腰部位探测完成"), "M4 出口文案错误");
+                        Require(_flow.enterNextButton != null && _flow.enterNextButton.gameObject.activeInHierarchy, "完成后未显示下一模块按钮");
+                        _flow.enterNextButton.onClick.Invoke();
+                        _nextAt = EditorApplication.timeSinceStartup + .5f;
+                        break;
+                    case 5:
+                        Require(SceneManager.GetActiveScene().name == "M5", "点击下一模块后未进入 M5");
+                        var m5 = UnityEngine.Object.FindFirstObjectByType<M5.M5FlowController>();
+                        Require(m5 != null, "M5 主流程未启动");
+                        Require(m5.CurrentStage == M5.M5FlowController.Stage.Wipe, "M5 未进入擦拭阶段");
+                        Require(m5.ragDrag != null && m5.ragDrag.unlocked, "M5 擦拭布未解锁，无法开始流程");
+                        Pass("放探头→尺子中心吸白色点→10°稳定确认→撤尺→射线照伤损检出→直接测距→双点测距→进入可操作的 M5 全链路通过。");
                         break;
                 }
             }

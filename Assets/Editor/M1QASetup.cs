@@ -17,7 +17,7 @@ namespace M1.EditorTools
     ///   DigitalHumanStage（根级、置于最后：盖过 Blocker/QAPanel，不被压暗或拦截）
     ///     FullBodyView（RawImage+VideoPlayer+PressDetector，全身三态视频，UI-LumaKey 抠像、强制静音）
     ///     AvatarView（A-05 折叠头像 + PressDetector）
-    /// 并挂载 M1QAPanel / M1DigitalHumanPresenter 运行时脚本，注入中文字体、DeepSeek 客户端、
+    /// 并挂载 M1QAPanel / M1DigitalHumanPresenter 运行时脚本，注入中文字体、共享 DeepSeek 客户端、
     /// 三个指定 MP4（不加载对应 WebM）、常驻数字人专用 LumaKey 材质（同 shader 收窄羽化，不碰开场引导）。
     /// 幂等：重复执行不重复创建；重挂/自愈布局；仅当素材字段为空时注入（不覆盖用户替换）。
     /// </summary>
@@ -34,6 +34,7 @@ namespace M1.EditorTools
         private const string FullBodyName = "FullBodyView";
         private const string AvatarName = "AvatarView";
         private const string OldFaceName = "背景圆";
+        private const string SharedDeepSeekConfigPath = "Assets/Resources/DeepSeekConfig.asset";
 
         // 布局（1920x1080 基准；窄屏由 CanvasScaler 整体缩放）
         private const float PanelWidth = 580f;           // 问答面板宽度（设计区间 560-600）
@@ -79,6 +80,18 @@ namespace M1.EditorTools
             EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             SetupCore();
             Debug.Log("[M1QASetup] Batch 完成，场景：" + ScenePath);
+        }
+
+        [MenuItem("Tools/AI/配置共享 DeepSeek 服务")]
+        public static void ConfigureSharedDeepSeek()
+        {
+            var config = EnsureSharedDeepSeekConfig();
+            if (config == null) return;
+            EditorUtility.SetDirty(config);
+            AssetDatabase.SaveAssets();
+            Selection.activeObject = config;
+            EditorGUIUtility.PingObject(config);
+            Debug.Log("[M1QASetup] 已定位共享 DeepSeek 配置：" + SharedDeepSeekConfigPath);
         }
 
         private static void SetupCore()
@@ -128,9 +141,11 @@ namespace M1.EditorTools
             comp.hiddenOffsetX = HiddenOffsetX;
             comp.cnFont = cnFont;
 
-            // 4) DeepSeek 客户端（apiKey 由用户手填，Setup 不写值，重复执行保留）
+            // 4) DeepSeek 客户端：连接配置只保存在共享本地资产；首次 Setup 从 M1 旧字段迁移后清空。
             var client = board.GetComponent<M1DeepSeekClient>();
             if (client == null) client = board.AddComponent<M1DeepSeekClient>();
+            var config = EnsureSharedDeepSeekConfig();
+            if (config != null && client.MigrateLegacyConfiguration(config)) EditorUtility.SetDirty(config);
             comp.deepSeekClient = client;
 
             // 5) 数字人舞台（根级，置于最后）+ 全身/头像视图
@@ -162,10 +177,21 @@ namespace M1.EditorTools
             EditorUtility.SetDirty(client);
             EditorUtility.SetDirty(comp);
             EditorUtility.SetDirty(presenter);
+            AssetDatabase.SaveAssets();
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             var saved = EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
             Debug.Log($"[M1QASetup] 完成：面板={panelGo.name} 挡板={blockerGo.name} 舞台={stageGo.name} " +
                       $"挂载 {comp.GetType().Name}+{presenter.GetType().Name} 场景保存={saved}");
+        }
+
+        private static DeepSeekConfig EnsureSharedDeepSeekConfig()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<DeepSeekConfig>(SharedDeepSeekConfigPath);
+            if (config != null) return config;
+            config = ScriptableObject.CreateInstance<DeepSeekConfig>();
+            AssetDatabase.CreateAsset(config, SharedDeepSeekConfigPath);
+            Debug.Log("[M1QASetup] 已创建本地共享 DeepSeek 配置，请在 Inspector 填写：" + SharedDeepSeekConfigPath);
+            return config;
         }
 
         // ==================== 结构 Ensure（幂等，重复执行自愈布局） ====================

@@ -142,9 +142,13 @@ namespace M2.EditorTools
                         Require(Mathf.Abs(fx.maskRt.sizeDelta.x - _flow.railBg.sizeDelta.x * fx.coverRect.z) < 1f &&
                             Mathf.Abs(fx.maskRt.sizeDelta.y - _flow.railBg.sizeDelta.y * fx.coverRect.w) < 1f, "薄膜覆盖区域与 coverRect 不符");
                         Require(fx.film.fillAmount >= .99f, "动画完成后薄膜未铺满");
+                        _flow.SetPerspectiveView();
+                        Require(!_flow.beamLayer.activeSelf, "未放置探头时切换透视视图不应显示预置光束");
+                        _flow.SetNormalView();
                         var probe = _flow.probeDrag;
                         probe.PlaceAtStart();                           // 钢轨左侧中心线 0° 放置
                         Require(probe.Placed, "探头未完成放置");
+                        Require(!_flow.beamLayer.activeSelf, "普通视图下放置探头不应显示检测束");
                         Require(!probe.angleSlider.interactable, "放置后 Slider 应锁定（尺子吸附前）");
                         probe.OnAngleChanged(10f);
                         Require(_flow.CurrentStage == M2FlowController.Stage.Positioning, "无夹具时 Slider 单独 10° 不应进入扫描");
@@ -179,8 +183,9 @@ namespace M2.EditorTools
                         var initialBeam = _flow.probeDrag.beamLine.GetComponentInChildren<Image>();
                         Require(initialBeam != null && initialBeam.sprite != null && _flow.probeDrag.beamLine.sizeDelta.x <= 16f, "扫描首帧仍显示旧粗矩形束");
                         _flow.SetNormalView();
-                        Require(_flow.beamLayer.activeSelf, "普通视图检测束层被错误隐藏");
+                        Require(!_flow.beamLayer.activeSelf, "普通视图下检测束层应隐藏");
                         _flow.probeDrag.AutoMoveToMm(110f);             // 几何路径到 110mm
+                        Require(!_flow.beamLayer.activeSelf, "普通视图扫描/检出后检测束层不应重新显示");
                         Require(_flow.Detected, "110mm 几何位置未检出");
                         var entry = _flow.probeDrag.ProbeEntryPointInRail;
                         Require(Mathf.Abs(Vector2.Distance(entry, damage) - 110f * ppm) < 1f, "110mm 检出间距错误（应距红色损伤）");

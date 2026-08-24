@@ -119,6 +119,8 @@ ol.effectColor = new Color(.1f,.12f,.15f,.6f); ol.effectDistance = new Vector2(2
 - 伤损橙色椭圆标记（`GetEllipseSprite` 半透明橙 16×36 竖椭圆，对齐红椭圆中心）**只在透视视图显示**：显示条件 `PerspectiveOn && Detected`。
 - 三模块同构实现：`FlowController` 新增 `RefreshDamageMarker()` 作为显隐唯一入口（检出时与 `ApplyView` 切换视图时都调它）；`NotifyDetected()` 不再无条件 `ShowDamageMarker()`，`ApplyView()` 不再按 `!Detected` 保留标记。
 - 射线颜色不受影响：M2/M3/M4 射线恒绿色（2026-08-16 曾试行绿→橙，已回退）。
+- **检测束透视合同（2026-08-23）**：绿色检测束也只在透视视图显示。其最终显示条件为 `beamVisible && PerspectiveOn`，其中 `beamVisible` 仅代表探头已经放置并完成束几何更新；普通视图下放置、扫描、检出均不得重新显示束，切回透视后才恢复。三模块分别由 `M2ProbeDrag` / `M3ProbeDrag` / `M4ProbeDrag.RefreshBeamVisibility()` 作为唯一显隐入口，`ShowBeam()` 和 `FlowController.ApplyView()` 都必须调用它；禁止 `ShowBeam()` 直接 `SetActive(true)` 绕开当前视图状态。
+- **束显隐验证**：M2/M3/M4 烟测均须断言：未放置探头时切透视不显示预置束；已生成束时普通视图隐藏、切回透视恢复；普通视图扫描或检出后仍保持隐藏。
 - Reset / 未检出：标记保持隐藏，M3/M4 标记 Image.color 恢复红色（Scene 节点）。
 - M4 同款（轨腰 40mm 合同）：检出仅报警，橙色标记仅透视可见。
 
@@ -129,7 +131,7 @@ ol.effectColor = new Color(.1f,.12f,.15f,.6f); ol.effectDistance = new Vector2(2
 - 扫描：`scanStartMm=55`、`scanEndMm=40`；波形 `appearMm=65`、`peakMm=55`、`stopMm=50`（2026-08-18 右移 10mm 避开始波重叠，终点对齐 50mm 刻度）。
 - 测量：0 刻度对齐探头入射点，40mm 刻度对齐伤损；检出即测距、无下一步门控（同 M2/M3）。
 - 伤损橙色标记：透视视图可见合同同 §11；音效整体 `sfxVolume=0.4`（2026-08-18 老板）。
-- 完成出口：`EnterNextModule` 直接 `onCompleted?.Invoke()`（不 ResetTool），待下一模块接入。
+- 完成出口：`M4FlowController.nextSceneName` 代码默认 `"M5"`（M4 Scene 未序列化该字段，默认值直接生效）；完成后点击“下一模块”直接 `SceneManager.LoadScene(nextSceneName)` 进入 M5 擦拭耦合剂，且不先 `ResetTool` 归位。`M5.unity` 必须列入 Build Settings；完成文案显示“轨腰部位探测完成”。
 
 ---
 

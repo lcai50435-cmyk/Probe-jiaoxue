@@ -10,7 +10,8 @@ namespace M2
     /// <summary>
     /// 工具架槽位文字标注（台词.pptx Slide 3-【6】）：ProbeHome 槽下方加「K2.5探头」、RulerHome 槽下方加「多功能尺」。
     /// 冻结 Scene 不可建节点，故场景加载后自动装配（DontSave 内存态，幂等：已标注则跳过）。
-    /// 通用：M2/M3/M4/M5 的 ToolShelf 同款结构自动生效；RagHome 不标注（PPT 只要求探头/尺子）。
+    /// 通用：M2/M3/M4/M5 的 ToolShelf 同款结构自动生效；RagHome 仅 M5 有（标注「擦拭布」，老板 2026-08-23）。
+    /// M2/M5 同时隐藏槽位内 Chip 标签（M5 为老板手工添加的空 Chip），统一槽底 ~ToolLabel，位置与 M3/M4 一致。
     /// </summary>
     public static class ModuleToolShelfLabel
     {
@@ -18,6 +19,7 @@ namespace M2
         private const string ShelfNameAlt = "Tool"; // M5 方案 B：老板手工添加的 Tool（M2 样式三槽位）
         private const string ProbeHomeName = "ProbeHome";
         private const string RulerHomeName = "RulerHome";
+        private const string RagHomeName = "RagHome"; // M5 独有（擦拭布槽位）
         private const string LabelSuffix = "~ToolLabel";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -47,25 +49,30 @@ namespace M2
 
         private static void TryLabelAll()
         {
-            var isM2 = SceneManager.GetActiveScene().name == "M2";
+            var sceneName = SceneManager.GetActiveScene().name;
+            var isM2 = sceneName == "M2";
+            // M5 对齐 M2/M3/M4（老板 2026-08-23）：隐藏空 Chip，统一槽底 ~ToolLabel（位置与 M2/M3/M4 一致）
+            var hideChips = isM2 || sceneName == "M5";
             foreach (var rt in Object.FindObjectsByType<RectTransform>(FindObjectsSortMode.None))
             {
                 if (rt.name != ShelfName && rt.name != ShelfNameAlt) continue;
                 FixChipTextFonts(rt); // Chip 下 Text (TMP) 乱码：默认字体无中文 → 换中文 SDF
-                // M2 对齐 M3（老板 2026-08-23）：隐藏卡片内 Chip 标签 + 去掉卡片 Outline 描边，统一卡片下方 ~ToolLabel；M5 的 Chip（激活）保留
-                if (isM2)
+                if (hideChips)
                 {
                     HideChipNodes(rt);
                 }
                 var probe = FindChild(rt, ProbeHomeName);
                 var ruler = FindChild(rt, RulerHomeName);
-                if (isM2)
+                var rag = FindChild(rt, RagHomeName);
+                if (hideChips)
                 {
                     NormalizeM2SlotBackground(probe);
                     NormalizeM2SlotBackground(ruler);
+                    NormalizeM2SlotBackground(rag);
                 }
                 if (probe != null) EnsureLabel(probe, "K2.5探头", "K2.5");
                 if (ruler != null) EnsureLabel(ruler, "多功能尺", "多功能尺");
+                if (rag != null) EnsureLabel(rag, "擦拭布", "擦拭布"); // M5 独有（老板 2026-08-23：rag 工具名称="擦拭布"）；M2/M3/M4 无 RagHome 自动跳过
             }
         }
 
@@ -80,7 +87,7 @@ namespace M2
             image.color = new Color(1f, 1f, 1f, .9f);
         }
 
-        /// <summary>递归隐藏 ToolShelf 下所有 Chip 节点（M2 专用：对齐 M3 卡片下方标签样式）。</summary>
+        /// <summary>递归隐藏 ToolShelf/Tool 下所有 Chip 节点（M2/M5 共用：对齐 M3 槽底 ~ToolLabel 样式，空 Chip 不保留）。</summary>
         private static void HideChipNodes(RectTransform root)
         {
             foreach (RectTransform child in root)

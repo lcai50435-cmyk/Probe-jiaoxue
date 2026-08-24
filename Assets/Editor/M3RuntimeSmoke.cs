@@ -100,12 +100,16 @@ namespace M3.EditorTools
                         Require(_probe.unlocked && !_probe.angleSlider.interactable, "初始探头应解锁、角度滑块应锁定");
                         Require(_ruler.unlocked && !_ruler.positioned && _ruler.rulerRt.parent == _ruler.rulerHome, "初始定位尺应留在 RulerHome 且可拖拽");
                         Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg)) < .1f, "初始探头未保持平放基准角（bg z=15）");
+                        _flow.SetPerspectiveView();
+                        Require(!_flow.beamLayer.activeSelf, "未放置探头时切换透视视图不应显示预置光束");
+                        _flow.SetNormalView();
                         _flow.resetButton.onClick.Invoke();
                         Require(!_probe.angleSlider.interactable && !_ruler.unlocked, "重置按钮未打开模态锁定");
                         Click("CancelButton");
                         Require(_probe.unlocked && _ruler.unlocked && !_probe.angleSlider.interactable, "关闭重置对话框后角度滑块应保持锁定");
                         Require(Vector2.Distance(_probe.ScanStartLocal, _scanStart) < .001f, "扫描起点在初始定位后发生漂移");
                         _probe.AutoMoveToMm(160f); // 放探头（0°）
+                        Require(!_flow.beamLayer.activeSelf, "普通视图下放置探头不应显示检测束");
                         Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "仅探头就位不应进入扫描");
                         _probe.OnAngleChanged(13f);
                         Require(_flow.CurrentStage == M3FlowController.Stage.Positioning, "尺子未吸附时角度正确仍不应进入扫描");
@@ -145,8 +149,10 @@ namespace M3.EditorTools
                         Require(_probe.CurrentDistanceMm < _probe.scanStartMm, "检出未发生在扫描推进过程中");
                         Require(_flow.damageMarker.activeSelf, "检出后 DamageMarker 应显示且对齐红椭圆中心（2026-08-18 老板：M3/M4 统一）");
                         _flow.SetNormalView();
+                        Require(!_flow.beamLayer.activeSelf, "普通视图下检测束层应隐藏");
                         Require(!_flow.damageMarker.activeSelf, "普通视图下检出后伤损标记应隐藏（仅透视可见，2026-08-23 老板）");
                         _flow.SetPerspectiveView();
+                        Require(_flow.beamLayer.activeSelf, "切回透视后检测束层应重新显示");
                         Require(_flow.damageMarker.activeSelf, "切回透视后伤损标记应重新显示（2026-08-23 老板）");
                         Require(!_flow.detectionBanner.activeSelf, "检出后 DetectionBanner 应保持隐藏");
                         Require(_flow.CurrentStage == M3FlowController.Stage.Measuring, "检出后应直接进入测距（无需下一步门控）");

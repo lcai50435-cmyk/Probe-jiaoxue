@@ -30,6 +30,8 @@ namespace M4
         public float waveformSpeed = 1f;
         public string[] stepHints = { "放置探头并调整偏角至向上 10°", "向前移动探头（55→40mm）", "拖动尺子：0 刻度对齐探头入射点，40mm 对齐伤损" };
         public UnityEvent onCompleted;
+        /// <summary>M4 通关后加载的最后收尾模块；M4 Scene 未序列化该字段，代码默认值直接生效。</summary>
+        public string nextSceneName = "M5";
         public Stage CurrentStage { get; private set; } = Stage.Positioning;
         public bool Detected, Measured, PerspectiveOn, RulerDocked, AngleVerifiedByRuler;
         public float distanceToleranceMm = 2f;
@@ -220,7 +222,11 @@ namespace M4
         }
         /// <summary>正确提示音（探头放置成功 / 尺子校角吸附 / 测量完成共用，与 M2 一致）。</summary>
         public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }
-        public void EnterNextModule() { onCompleted?.Invoke(); } // 2026-08-18：不再先 ResetTool 归位，等下一模块接入后在此 LoadScene
+        public void EnterNextModule()
+        {
+            onCompleted?.Invoke();
+            if (!string.IsNullOrEmpty(nextSceneName)) UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
+        } // 不再先 ResetTool 归位，直接进入 M5 擦拭耦合剂
         public void ShowResetDialog() => SetDialog(true);
         public void HideResetDialog() => SetDialog(false);
         private void SetDialog(bool visible)
@@ -235,6 +241,8 @@ namespace M4
             PerspectiveOn = on;
             if (railBg != null) railBg.gameObject.SetActive(!on);
             if (railPerspective != null) railPerspective.SetActive(on);
+            if (probeDrag != null) probeDrag.RefreshBeamVisibility();
+            else if (beamLayer != null) beamLayer.SetActive(false);
             RefreshDamageMarker(); // 伤损标记仅透视+检出可见（老板 2026-08-23：未开透视仅报警）
             var selected = new Color(.08f, .42f, .66f); var idle = new Color(.58f, .61f, .65f);
             if (normalBtnImg != null) { normalBtnImg.color = on ? idle : selected; SetButtonText(normalBtnImg, on ? new Color(.12f, .15f, .18f) : Color.white); }
@@ -272,7 +280,7 @@ namespace M4
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
-            if (done && completionText != null) completionText.text = onCompleted != null && onCompleted.GetPersistentEventCount() > 0 ? "轨腰部位探测完成" : "下一模块待接入";
+            if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "<b>轨腰部位探测完成</b>" : "下一模块待接入";
         }
     }
 }

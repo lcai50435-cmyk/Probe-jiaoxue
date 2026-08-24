@@ -43,10 +43,11 @@
 - **2026-08-23 CouplantOverlay 布局 Scene 权威**：老板调 position/scale 贴合钢轨，Setup 仅空布局才 Stretch（不重置已调布局）。
 - **2026-08-23 完成面板不显示 + QA/数字人 Bootstrap 壳**：擦拭完成后不弹"M5 擦拭耦合剂完成"；M5 数字人/QA 由 M3DigitalHumanBootstrap 装配（Adapt 清理 M2 旧 M1 组件/节点，QAPanel 与 DigitalHumanStage 保持空壳）。
 - **2026-08-23 M5 数字人 = M2 合同**：Bootstrap 对 M5 场景用 M2 参数（FullBodyView 底部全高 + HeightControlsWidth + pos(-13,-35)，AvatarView y=-40），M3/M4 不变。
+- **2026-08-23 M5 云朵台词合同**：`M5FlowController` 运行时复用 `DigitalHumanStage/dialog` 与 `ModuleSpeechBubble`，仅创建 DontSave 文本层；M5 专属文字区 offset(-384,1)、264×198。开始/重置显示“根据《安规》规定“\n焊缝探伤作业后钢轨顶面上的焊缝探伤耦合剂必须擦除干净。””（首个“焊缝探伤”从第二行开始），擦拭完成显示“恭喜你！完整掌握了“三位一体、交叉验证”新工艺！”。无 dialog 时不显示漂浮文本；等待使用 realtime，不受 QA 暂停影响。详见 low-code.md 5.4。
 - **2026-08-23 钢轨 preserveAspect=false**：与 M2 一致（拉伸填满容器，不按比例缩小留白）。
 - **2026-08-23 RailViewport/bg 同步 M2 + 钢轨/透视/耦合剂 Scene 权威**：M5 补 M2 白底 bg（Stretch 底部内缩 99.828，最底）；RailBackground/RailPerspective/CouplantOverlay 的 scale/position 老板手调，Setup 仅空布局设默认不覆盖。详见 low-code.md 5.4。
 - **Unity 6 伪 null 坑（2026-08-18）**：`GetComponent<T>()` 对缺失组件返回 Unity 伪 null，`??` 不触发——禁止 `GetComponent ?? AddComponent` 写法，必须 `if (x == null)` 分步；`TextAlignmentOptions` 无 `MiddleCenter`（用 `Center`）；EventSystem 必须用 `InputSystemUIInputModule`（项目 Input System 模式，旧 StandaloneInputModule 每帧抛 InvalidOperationException）。详见 low-code.md 7.1。
-- **2026-08-18 M3→M4 链路**：M3 完成点击"下一模块"按钮 → `M3FlowController.nextSceneName`（代码默认 M4）LoadScene 进入 M4；完成文案同 M2 逻辑。**二轮：M2/M3/M4 `EnterNextModule` 不再先 `ResetTool` 归位尺子，点击直接切场景；波形始波改为紧贴左缘直接从峰顶向下（无陡升竖线），伤损波保留竖线不变**（M2WaveformFx DrawPulse 加 steepRise 参数）。详见 module-flow-contract.md §9 与 low-code.md 5.4。
+- **模块完成链路（2026-08-24）**：M3 完成点击“下一模块”按钮 → `M3FlowController.nextSceneName`（代码默认 M4）LoadScene 进入 M4；M4 完成点击同按钮 → `M4FlowController.nextSceneName`（代码默认 M5）LoadScene 进入 M5 擦拭耦合剂。M5 必须列入 Build Settings；M2/M3/M4 切换前均不 `ResetTool` 归位尺子。波形始波紧贴左缘直接从峰顶向下（无陡升竖线），伤损波保留竖线（`M2WaveformFx.DrawPulse` 的 `steepRise` 参数）。详见 module-flow-contract.md §9/§12 与 low-code.md 5.4。
 - **2026-08-18 M3/M4 数字人+AI 问答（参照 M2 补齐）**：M3/M4 原无 QA/数字人组件（只有静态 FullBodyPreview 与空 QAPanel 壳），现由 `M3DigitalHumanBootstrap`（RuntimeInitializeOnLoadMethod 自动装配，零改冻结 Scene）动态补全——复用 M1 全套组件（M1QAPanel/M1DeepSeekClient/M1DigitalHumanPresenter/M1PressDetector），运行时建 Header/MessageList/InputRow 与 FullBodyView/AvatarView，三态动画（待机/思考/讲解）+短按切全身/头像+长按开对话框，素材走 `Assets/Resources/DigitalHuman/`（meta 手写），LumaKey 用 Shader.Find 创建。详见 low-code.md 5.4 数字人段。
 - 细节规范见 `.trellis/spec/unity/`（low-code.md / video-intro.md / ugui-module-template.md；改规范先改它，再同步本摘要）。
 

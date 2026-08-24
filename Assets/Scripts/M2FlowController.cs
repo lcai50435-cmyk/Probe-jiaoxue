@@ -36,7 +36,7 @@ namespace M2
         private bool _perspectiveHintShown; // 首次点透视提示已显示（老板 2026-08-23：只第一次出现）
         private TMP_Text _bubbleText;
         private Image _damageMarker; private Sprite _damageMarkerSprite; // 伤损橙标记（运行时椭圆，检出时显示）
-        private static readonly string[] DefaultHints = { "", "将探头放置在轨头顶面，用多功能尺将探头向内偏转10°", "将探头以10度偏角向前移动，注意观察波形变化", "将定位尺0刻度对准探头入射点，进行测量", "<b>轨头顶面探测完成</b>" }; // 2026-08-23 按 台词.pptx；[0] 涂耦合剂提示已删（改由数字人气泡承载）
+        private static readonly string[] DefaultHints = { "", "将探头放置在轨头顶面，用多功能尺将探头偏转10°", "将探头以10度偏角向前移动，注意观察波形变化", "将定位尺0刻度对准探头入射点，进行测量", "<b>轨头顶面探测完成</b>" }; // 2026-08-23 按 台词.pptx；[0] 涂耦合剂提示已删（改由数字人气泡承载）
         private static readonly string[] StageNames = { "涂抹耦合剂", "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：涂抹耦合剂/步骤2：探头偏角/步骤3：移动探测/步骤4：测距确认）
         // 数字人台词气泡（2026-08-23 按 台词.pptx Slide 3-6）
         private static readonly string[] SpeechLines = {
@@ -229,6 +229,8 @@ namespace M2
         {
             PerspectiveOn = on;
             if (railBg != null) railBg.gameObject.SetActive(!on); if (railPerspective != null) railPerspective.SetActive(on);
+            if (probeDrag != null) probeDrag.RefreshBeamVisibility();
+            else if (beamLayer != null) beamLayer.SetActive(false);
             // 首次点击透视视图（且探头已放置、分段台词未在播）：数字人云朵气泡提示（老板 2026-08-23，Slide 7-【1】）
             if (on && !_perspectiveHintShown && probeDrag != null && probeDrag.Placed && speechBubble != null && !speechBubble.Busy)
             {

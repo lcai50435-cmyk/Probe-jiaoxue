@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -38,11 +39,14 @@ namespace M1
         [Tooltip("运行时兜底：pauseWhilePlaying 未配置时按此路径自动发现常驻数字人视频（Setup 注入后此项失效；M2 无此路径自动跳过）")]
         public string digitalHumanPath = "画板/DigitalHumanStage/FullBodyView";
 
-        [Tooltip("引导播放期间隐藏、结束/跳过时恢复的对象（如常驻数字人全身）：优先禁用 Graphic（视频继续播放、恢复无停帧），无 Graphic 才 SetActive(false)")]
+        [Tooltip("引导播放期间隐藏、结束/跳过时恢复的对象（如常驻数字人全身和对白框）：禁用对象及其子级 Graphic；无 Graphic 才 SetActive(false)")]
         public GameObject[] hideWhilePlaying;
 
-        [Tooltip("运行时兜底：hideWhilePlaying 未配置时按此路径自动发现（Setup 注入后此项失效）")]
+        [Tooltip("运行时兜底：按此路径自动发现常驻数字人全身并补入隐藏列表（Setup 注入后仍会补全缺失项）")]
         public string hideStagePath = "画板/DigitalHumanStage/FullBodyView";
+
+        [Tooltip("运行时兜底：按此路径自动发现白板数字人对白框并补入隐藏列表（Setup 注入后仍会补全缺失项）")]
+        public string hideDialoguePath = "画板/白板背景/数字人/对话框";
 
         [Tooltip("引导字幕 TMP（2026-08-18 老板定稿：视频静音、解说词改字幕；Setup 注入，可为空则不显示）")]
         public TextMeshProUGUI subtitleText;
@@ -67,7 +71,8 @@ namespace M1
         private int _subtitleIndex = -1;
 
         private bool[] _hiddenActive;
-        private bool[] _hiddenGraphicEnabled;
+        private Graphic[][] _hiddenGraphics;
+        private bool[][] _hiddenGraphicEnabled;
 
         [Tooltip("预解码超时兜底（秒）：超过仍未准备好则直接播放")]
         public float prepareTimeout = 5f;
@@ -94,12 +99,8 @@ namespace M1
                 var vp = dh != null ? dh.GetComponent<VideoPlayer>() : null;
                 if (vp != null) pauseWhilePlaying = new[] { vp };
             }
-            // 运行时兜底：Setup 未注入隐藏列表时，按路径自动发现（防引导期间右侧数字人透出遮罩）
-            if ((hideWhilePlaying == null || hideWhilePlaying.Length == 0) && !string.IsNullOrEmpty(hideStagePath))
-            {
-                var stage = GameObject.Find(hideStagePath);
-                if (stage != null) hideWhilePlaying = new[] { stage };
-            }
+            // 运行时兜底：补齐全身数字人与白板对白框，防旧场景未重跑 Setup 时在半黑遮罩下透出。
+            EnsureHideTargets();
             // 运行时兜底：Setup 未注入字幕引用时，按路径自动发现（防引导视频无字幕）
             if (subtitleText == null && !string.IsNullOrEmpty(subtitlePath))
             {
@@ -265,20 +266,31 @@ namespace M1
             return tmp;
         }
 
-        /// <summary>隐藏引导期间需暂隐的对象：优先禁用 Graphic（视频继续后台播放，恢复无停帧），无 Graphic 才 SetActive(false)。</summary>
+        /// <summary>隐藏引导期间需暂隐的对象：禁用对象及子级 Graphic，保证对白框文字不会残留；无 Graphic 才 SetActive(false)。</summary>
         private void HideWhilePlaying()
         {
             if (hideWhilePlaying == null) return;
             _hiddenActive = new bool[hideWhilePlaying.Length];
-            _hiddenGraphicEnabled = new bool[hideWhilePlaying.Length];
+            _hiddenGraphics = new Graphic[hideWhilePlaying.Length][];
+            _hiddenGraphicEnabled = new bool[hideWhilePlaying.Length][];
             for (int i = 0; i < hideWhilePlaying.Length; i++)
             {
                 var go = hideWhilePlaying[i];
                 if (go == null) continue;
                 _hiddenActive[i] = go.activeSelf;
-                var g = go.GetComponent<Graphic>();
-                if (g != null) { _hiddenGraphicEnabled[i] = g.enabled; g.enabled = false; }
-                else go.SetActive(false);
+                var graphics = go.GetComponentsInChildren<Graphic>(true);
+                if (graphics.Length == 0)
+                {
+                    go.SetActive(false);
+                    continue;
+                }
+                _hiddenGraphics[i] = graphics;
+                _hiddenGraphicEnabled[i] = new bool[graphics.Length];
+                for (var j = 0; j < graphics.Length; j++)
+                {
+                    _hiddenGraphicEnabled[i][j] = graphics[j].enabled;
+                    graphics[j].enabled = false;
+                }
             }
         }
 
@@ -290,10 +302,35 @@ namespace M1
             {
                 var go = hideWhilePlaying[i];
                 if (go == null) continue;
-                var g = go.GetComponent<Graphic>();
-                if (g != null) g.enabled = _hiddenGraphicEnabled != null && i < _hiddenGraphicEnabled.Length && _hiddenGraphicEnabled[i];
-                else if (_hiddenActive != null && i < _hiddenActive.Length && _hiddenActive[i]) go.SetActive(true);
+                var graphics = _hiddenGraphics != null && i < _hiddenGraphics.Length ? _hiddenGraphics[i] : null;
+                if (graphics == null)
+                {
+                    if (_hiddenActive != null && i < _hiddenActive.Length && _hiddenActive[i]) go.SetActive(true);
+                    continue;
+                }
+                var enabled = _hiddenGraphicEnabled[i];
+                for (var j = 0; j < graphics.Length; j++)
+                    if (graphics[j] != null) graphics[j].enabled = enabled != null && j < enabled.Length && enabled[j];
             }
+        }
+
+        /// <summary>合并场景已配置对象与运行时路径发现结果，保证旧场景不重跑 Setup 也能隐藏完整数字人区域。</summary>
+        private void EnsureHideTargets()
+        {
+            var targets = new List<GameObject>();
+            if (hideWhilePlaying != null)
+                foreach (var target in hideWhilePlaying)
+                    if (target != null && !targets.Contains(target)) targets.Add(target);
+            AddHideTarget(targets, hideStagePath);
+            AddHideTarget(targets, hideDialoguePath);
+            hideWhilePlaying = targets.ToArray();
+        }
+
+        private static void AddHideTarget(List<GameObject> targets, string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            var target = GameObject.Find(path);
+            if (target != null && !targets.Contains(target)) targets.Add(target);
         }
 
         private void OnDestroy()

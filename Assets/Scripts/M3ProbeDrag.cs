@@ -180,10 +180,15 @@ namespace M3
         public void ShowBeam()
         {
             _beamVisible = true;
-            if (beamLine != null && beamLine.parent != null) beamLine.parent.gameObject.SetActive(true);
-            if (beamLine != null) beamLine.gameObject.SetActive(true);
-            if (reflectedBeam != null) reflectedBeam.gameObject.SetActive(showReflectedBeam);
-            UpdateBeam(); ApplyBeamColor();
+            UpdateBeam(); ApplyBeamColor(); RefreshBeamVisibility();
+        }
+        /// <summary>检测束仅在透视视图可见；放置与视图切换均通过此入口刷新。</summary>
+        public void RefreshBeamVisibility()
+        {
+            var visible = _beamVisible && flow != null && flow.PerspectiveOn;
+            if (beamLine != null && beamLine.parent != null) beamLine.parent.gameObject.SetActive(visible);
+            if (beamLine != null) beamLine.gameObject.SetActive(visible);
+            if (reflectedBeam != null) reflectedBeam.gameObject.SetActive(visible && showReflectedBeam);
         }
         private void HideBeam()
         {

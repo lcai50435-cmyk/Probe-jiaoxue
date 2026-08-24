@@ -110,7 +110,17 @@
   - 背景：M3/M4 场景只有静态 `FullBodyPreview` 与空 `QAPanel` 壳（仅一个 Placeholder 子节点），无任何 QA/数字人组件；M2 则是场景序列化的 `M1QAPanel`+`M1DeepSeekClient`+`M1DigitalHumanPresenter` 全套。
   - 方案：`M3DigitalHumanBootstrap`（`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` + `SceneManager.sceneLoaded` 订阅，场景名 M3/M4 时装配）——**复用 M1 全套组件零改动**，运行时动态构建：QAPanel 壳下建 Header/MessageList/InputRow（M1QAPanel 路径依赖）、Stage 下建 FullBodyView（RawImage+AspectRatioFitter+VideoPlayer+M1PressDetector）/AvatarView（Image+M1PressDetector），隐藏 FullBodyPreview，Blocker 补 Button，SafeArea 挂 M1QAPanel/M1DeepSeekClient，Stage 先 inactive 再 AddComponent<M1DigitalHumanPresenter> 注入后激活（保证 Awake 时引用就绪）。
   - 素材走 `Assets/Resources/DigitalHuman/`（待机/思考/讲解动画2 三 mp4 + 折叠头像，meta 手写照抄原素材）；LumaKey 材质运行时 `Shader.Find("UI/LumaKey")` + `_KeyThreshold=0.02/_KeySmooth=0.006` 创建（不复制 .mat 资产）。
-  - 交互合同与 M2 一致：三态动画（待机/思考/讲解随 QA 问答状态切换）、短按全身/头像、长按打开对话框；`pauseGameOnOpen` 默认全局暂停；cnFont 从场景现有 TMP 复制（M3/M4 唯一字体 guid 1e7b8a18...）；apiKey 运行时组件无法持久填写（演示为"尚未配置 API Key"提示），如需真实 AI 回复由 M4Setup 后续 Scene 化注入。
+  - 交互合同与 M2 一致：三态动画（待机/思考/讲解随 QA 问答状态切换）、短按全身/头像、长按打开对话框；`pauseGameOnOpen` 默认全局暂停；cnFont 从场景现有 TMP 复制（M3/M4 唯一字体 guid 1e7b8a18...）；AI 连接配置统一由 `Resources/DeepSeekConfig` 提供，冻结 Scene 的运行时客户端不得写入或读取自身序列化配置字段。
+
+### 5.5 共享 DeepSeek 配置（2026-08-23）
+
+1. **范围/触发**：M1-M5 的 `M1DeepSeekClient` 统一从 `Resources.Load<DeepSeekConfig>("DeepSeekConfig")` 读取 `baseUrl`、`apiKey`、`model`、`temperature`、`systemPrompt`、`timeout`；禁止给各场景客户端单独配置。
+2. **资产合同**：唯一实际资产固定为 `Assets/Resources/DeepSeekConfig.asset`，由 `Tools/AI/配置共享 DeepSeek 服务` 或 `Tools/M1/Setup AI 提问面板` 创建。该资产及 `.meta` 必须被 `.gitignore` 排除；可追踪的 `DeepSeekConfig.template.asset` 必须无 Key。
+3. **迁移与冻结**：`M1QASetup` 可把旧 M1 客户端字段迁到本地资产后清空。M2/M3 不保存、不重建、不写新序列化字段；它们保留的旧字段只允许通过 `FormerlySerializedAs` 兼容读取，网络请求不得使用它们。
+4. **校验/错误**：资产缺失、`apiKey` 为空或端点/模型为空时，`M1DeepSeekClient.IsConfigured` 为 false，问答面板提示在固定资产中一次填写且不发起网络请求。
+5. **正反例**：正确做法是 `var config = DeepSeekConfig.Load()` 后用 `config.apiKey` 请求；错误做法是访问 `M1DeepSeekClient.apiKey` 或向冻结场景序列化写入连接参数。
+6. **验证**：静态搜索客户端不再访问场景级连接字段；`git check-ignore` 覆盖实际资产及其 meta；M1 场景无明文 Key；M2/M3 文件哈希前后相同；Unity Play Mode 验证 M1 与至少一个运行时装配模块都能共享同一配置请求。
+7. **风险**：忽略资产不会从既有 Git 历史删除旧 Key；已进入历史或外部日志的 Key 应在服务端轮换。
   - FullBodyView/AvatarView 共用视觉中心 `StageCenterOffsetY=30`（2026-08-18 老板定稿：M3/M4 数字人 Y=30，不用 M1 的 -248；Stage 本体 320 宽 + scale 0.74 为 M3 视觉权威）。
   - 装配器超 150 行（335 行）理由：M3 冻结无法序列化组件，M1QASetup 的 Editor 结构需运行时镜像构建，属 M3/M4 共享装配胶水；全部内存态修改，M3/M4 Scene 哈希不变。
   - **M3→M4 完成出口（2026-08-18 老板追加）**：`M3FlowController` 加 `nextSceneName="M4"`（场景未序列化，代码默认生效）+ `EnterNextModule` 内 `LoadScene`（与 M2 同款），完成文案判断同步；M3 脚本变更属老板明确授权。
@@ -131,6 +141,7 @@
   - **2026-08-23 CouplantOverlay 布局 Scene 权威（老板二次定稿）**：老板调 CouplantOverlay 的 position/scale 让薄膜贴合钢轨，但 `EnsureViewport` 每次 Setup 的 `Stretch(overlay)` 会重置——改为仅空布局（size=0 且 scale=1 且 pos=0）时 Stretch，已调整的 Scene 值保留；薄膜实际显示走 CouplantMask（自身已 Scene 权威）。
   - **2026-08-23 完成面板不显示 + QA/数字人 Bootstrap 壳模式（老板定稿）**：① 擦拭完成（Completed）后**不显示完成面板**（"M5 擦拭耦合剂完成"不出现，completionPanel 恒 inactive；onCompleted UnityEvent 保留可配置），Smoke 断言同步；② M5 数字人/QA 走 **M3DigitalHumanBootstrap 壳模式**（prd 原口径）：M2 复制版带残缺 M1 组件（presenter/QAPanel 字段全空，数字人不工作）与旧 FullBodyView（y=0），Adapt 清理——移除 M1QAPanel/M1DeepSeekClient/M1DigitalHumanPresenter/M1PressDetector，清空 QAPanel 与 DigitalHumanStage 为**空壳**，Bootstrap 运行时装配全套（BuildPanel/BuildViews + 字段注入）；M5Setup 的 EnsureQa/EnsureStage 跳过已存在壳。
   - **2026-08-23 M5 数字人 = M2 合同（老板定稿）**：Bootstrap BuildViews 对 M5 场景用 M2 参数（M3/M4 不变）——FullBodyView 底部全高锚定（0.5,0)-(0.5,1) + AspectRatioFitter **HeightControlsWidth**（ratio 1080/1450）+ pos (-13,-35)，数字人 369×496 与 M2 完全一致；AvatarView pos (0,-40) 对齐 M2。
+  - **2026-08-23 M5 云朵台词合同（老板定稿）**：`M5FlowController.Awake` 运行时 `AddComponent<ModuleSpeechBubble>`，复用已有 `DigitalHumanStage/dialog` 云朵背景，仅创建 `HideFlags.DontSave` 的文本层；M5 专属文字区参数为 `anchorOffset=(-384,1)`、`bubbleSize=(264,198)`、`segmentInterval=1`（仅调整文字位置，字号、尺寸、换行和云朵背景均保持不变）。`Awake` 与 `ResetAll` 显示“根据《安规》规定“\n焊缝探伤作业后钢轨顶面上的焊缝探伤耦合剂必须擦除干净。””（首个“焊缝探伤”从第二行开始）；`Go(Stage.Completed)` 显示“恭喜你！完整掌握了“三位一体、交叉验证”新工艺！”。路径不存在时设 `createOnlyWhenAnchored=true`，不得创建漂浮文字或写入 M5 Scene；逐字和分段等待由 `ModuleSpeechBubble` 的 `WaitForSecondsRealtime` 保证，不受问答暂停影响。
   - **2026-08-23 钢轨图 preserveAspect=false（M2 合同）**：M2 钢轨图拉伸填满 960×286 容器（preserveAspect=0），M5 的 SetRailSprite 误设 true 导致钢轨按比例缩小留白、看起来比 M2 小——改为 false 与 M2 一致（普通/透视视图同）。
   - **2026-08-23 RailViewport/bg 同步 M2 + 三节点 Scene 权威（老板定稿）**：① M5 的 RailViewport 补 M2 同款白底面板 bg（Image 白色、Stretch 底部内缩 99.828、raycastTarget=false、SetAsFirstSibling 最底——之前 Adapt 删它导致 M5 缺白底）；② RailBackground/RailPerspective/CouplantOverlay 三者 **scale/position 全部 Scene 权威**（老板手工调，Setup 仅空布局设默认/复制，不覆盖已调值）。
   - **2026-08-23 工具清晰显示 + rag 拖出吸附最左（老板定稿）**：① Probe/Ruler/Rag 不再置灰（M2LockedColor .62 alpha / RagLockedColor 深灰改为 `Color.white` 原图色，Outline 描边保留分离）——M5 单步交互无解锁概念，工具清晰与 M2 一致；Smoke 初态断言改"清晰（a=1）"；② `M5RagDrag.EnterWorkFromPointer` 拖出后**直接吸附钢轨最左端**（擦拭区间 left）作擦拭起点，不跟鼠标位置（避免玩家先拖回最左再右拖）。

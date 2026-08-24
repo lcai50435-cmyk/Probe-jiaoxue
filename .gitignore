@@ -120,3 +120,7 @@ InitTestScene*.unity*
 
 # M5 临时 PPT 截图目录（不提交）
 .tmp_m5_ppt/
+
+# 本地 DeepSeek 凭据：由 Tools/AI/配置共享 DeepSeek 服务或 M1 QA Setup 创建，不纳入版本控制。
+/Assets/Resources/DeepSeekConfig.asset
+/Assets/Resources/DeepSeekConfig.asset.meta

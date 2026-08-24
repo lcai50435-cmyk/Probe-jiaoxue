@@ -3,48 +3,76 @@ using System.Collections;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Serialization;
 
 namespace M1
 {
     /// <summary>
     /// DeepSeek API 客户端（OpenAI 兼容，非流式）。
-    /// 配置驱动：全部参数走 Inspector；M2/M3 模块可复用。
-    /// 由 M1QASetup 挂到 "画板" 上并注入引用。
+    /// 连接配置统一从 Resources/DeepSeekConfig 加载；所有模块复用同一资产。
+    /// 由 M1QASetup 挂到 M1 画板，M3DigitalHumanBootstrap 运行时挂到后续模块。
     /// </summary>
     public class M1DeepSeekClient : MonoBehaviour
     {
-        [Header("DeepSeek API 配置")]
-        [Tooltip("OpenAI 兼容端点")]
-        public string baseUrl = "https://api.deepseek.com/v1";
-        [Tooltip("API Key（platform.deepseek.com 申请；留空则不发起请求）")]
-        public string apiKey = "";
-        [Tooltip("对话模型")]
-        public string model = "deepseek-chat";
-        [Tooltip("随机性 0~2")]
-        public float temperature = 1.0f;
-        [Tooltip("人设提示词")]
-        [TextArea(2, 4)]
-        public string systemPrompt =
-            "你是“铁小探”，钢轨探伤仿真教学的 AI 讲师。请用简洁、专业的语言回答钢轨探伤原理、操作技巧、波形解读等问题。";
-        [Tooltip("请求超时（秒）")]
-        public float timeout = 30f;
+        // 仅用于从旧场景字段迁移到共享资产；运行时请求绝不读取这些值。
+        [SerializeField, HideInInspector, FormerlySerializedAs("baseUrl")] private string legacyBaseUrl;
+        [SerializeField, HideInInspector, FormerlySerializedAs("apiKey")] private string legacyApiKey;
+        [SerializeField, HideInInspector, FormerlySerializedAs("model")] private string legacyModel;
+        [SerializeField, HideInInspector, FormerlySerializedAs("temperature")] private float legacyTemperature;
+        [SerializeField, HideInInspector, FormerlySerializedAs("systemPrompt")] private string legacySystemPrompt;
+        [SerializeField, HideInInspector, FormerlySerializedAs("timeout")] private float legacyTimeout;
+
+        public bool IsConfigured
+        {
+            get
+            {
+                var config = DeepSeekConfig.Load();
+                return config != null && config.IsConfigured;
+            }
+        }
+
+        /// <summary>仅供 M1QASetup 在非冻结 M1 场景中执行旧配置迁移。</summary>
+        public bool MigrateLegacyConfiguration(DeepSeekConfig config)
+        {
+            if (config == null) return false;
+            var changed = false;
+            if (string.IsNullOrWhiteSpace(config.apiKey) && !string.IsNullOrWhiteSpace(legacyApiKey))
+            {
+                config.baseUrl = legacyBaseUrl;
+                config.apiKey = legacyApiKey;
+                config.model = legacyModel;
+                config.temperature = legacyTemperature;
+                config.systemPrompt = legacySystemPrompt;
+                config.timeout = legacyTimeout;
+                changed = true;
+            }
+            ClearLegacyConfiguration();
+            return changed;
+        }
+
+        public void ClearLegacyConfiguration()
+        {
+            legacyBaseUrl = legacyApiKey = legacyModel = legacySystemPrompt = string.Empty;
+            legacyTemperature = legacyTimeout = 0f;
+        }
 
         /// <summary>发起对话请求。成功回调回复文本；失败回调中文错误提示。协程需要外部 StartCoroutine 驱动。</summary>
         public IEnumerator ChatAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
         {
-            if (string.IsNullOrWhiteSpace(apiKey))
+            var config = DeepSeekConfig.Load();
+            if (config == null || !config.IsConfigured)
             {
-                onError?.Invoke("尚未配置 API Key：请在画板 Inspector 的 M1DeepSeekClient 中填写。");
+                onError?.Invoke("尚未配置 AI 服务：请在 Assets/Resources/DeepSeekConfig.asset 中填写一次。");
                 yield break;
             }
 
-            var body = JsonUtility.ToJson(new RequestBody(model, temperature, systemPrompt, userMessage));
-            using var req = new UnityWebRequest(baseUrl.TrimEnd('/') + "/chat/completions", "POST");
+            var body = JsonUtility.ToJson(new RequestBody(config.model, config.temperature, config.systemPrompt, userMessage));
+            using var req = new UnityWebRequest(config.baseUrl.TrimEnd('/') + "/chat/completions", "POST");
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("Authorization", "Bearer " + apiKey);
-            req.timeout = Mathf.RoundToInt(timeout);
+            req.SetRequestHeader("Authorization", "Bearer " + config.apiKey);
+            req.timeout = Mathf.RoundToInt(config.timeout);
 
             yield return req.SendWebRequest();
 
