@@ -87,6 +87,12 @@ raw.raycastTarget = true;
 - **RenderTexture 高质量缩小**：`useMipMap = true` + `autoGenerateMips = false`（filterMode Bilinear），RT 保持视频原生分辨率。开启 `VideoPlayer.sendFrameReadyEvents`，在 `frameReady` 回调中调用 `RenderTexture.GenerateMips()`；禁止在普通 `Update` 中首帧未写入时调用（会报 `render texture is not rendered into yet`），也禁止在 `autoGenerateMips = true` 时手动调用（会报 mip 自动生成冲突）。
 - **收窄 KeySmooth 只影响边缘羽化带宽（更硬更锐利），不移动阈值**：人物暗部 sRGB ≥8/255 仍远高于“阈值+羽化上界”，不会误抠；背景 ≤2/255 仍远低于阈值。
 
+### 引导视频绿色分隔线（2026-08-24 真机）
+
+- 引导视频内若存在黑底以外的绿色分隔线，基础亮度键控不会抠除，屏幕上会显示为绿线；半黑遮罩下的低亮帧还会残留成黑线。
+- `UI/LumaKey` 的 `_RemoveGreenGuide` 默认 `0`，`_GreenGuideThreshold` 和 `_GreenGuideDominance` 默认 `0.02`；只有 `M1IntroVideo.removeGreenGuide=true` 时才给引导 `RawImage` 材质设为 `1`。判定为绿色显著高于红、蓝的像素透明，黄色帽徽、橙色工装不命中。
+- 常驻数字人继续使用独立 `UI-LumaKey-DigitalHuman.mat`，不得在该材质上开启 `_RemoveGreenGuide`。视频换源或调整阈值后，必须覆盖亮绿和暗绿帧截图确认人物完整且无竖线。
+
 ## 4. Editor 搭建契约（幂等）
 
 - 嵌套 Canvas 创建后**必须** `StretchFullScreen`（anchor 0~1），否则默认 100×100 内容挤在屏幕中心
@@ -105,4 +111,4 @@ raw.raycastTarget = true;
 
 - 复制"引导遮罩"层级 + 换 VideoClip 即可复用到 M2/M3
 - 无需抠像的视频：去掉 RawImage 的 LumaKey 材质
-- 调参走材质 Inspector（Key Threshold / Key Smooth），不改 shader（文件头已注明勿手改）
+- 常规调参走材质 Inspector（Key Threshold / Key Smooth）；新增键控能力时必须保持默认关闭，并由引导运行时组件显式开启，不能污染常驻数字人材质。

@@ -16,6 +16,9 @@ Shader "UI/LumaKey"
         // 黑底抠像参数：max(r,g,b)（sRGB 空间）低于 _KeyThreshold 的像素视为背景（透明）
         _KeyThreshold ("Key Threshold", Range(0, 0.5)) = 0.02
         _KeySmooth ("Key Smooth", Range(0, 0.1)) = 0.015
+        _RemoveGreenGuide ("Remove Green Guide", Range(0, 1)) = 0
+        _GreenGuideThreshold ("Green Guide Threshold", Range(0, 0.5)) = 0.02
+        _GreenGuideDominance ("Green Guide Dominance", Range(0, 0.5)) = 0.02
 
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
@@ -92,6 +95,9 @@ Shader "UI/LumaKey"
             float4 _MainTex_ST;
             float _KeyThreshold;
             float _KeySmooth;
+            float _RemoveGreenGuide;
+            float _GreenGuideThreshold;
+            float _GreenGuideDominance;
 
             /// 统一到 sRGB 空间：Linear 项目下 RT 内为线性值，转回 sRGB 再做亮度键控，
             /// 否则人物暗部（黑裤/帽檐等）在线性空间会低于阈值被误抠成透明。
@@ -127,6 +133,8 @@ Shader "UI/LumaKey"
                 half lum = max(srgb.r, max(srgb.g, srgb.b));
                 half keyAlpha = smoothstep(_KeyThreshold, _KeyThreshold + _KeySmooth, lum);
                 color.a *= keyAlpha;
+                half greenGuide = step(_GreenGuideThreshold, srgb.g) * step(srgb.r + _GreenGuideDominance, srgb.g) * step(srgb.b + _GreenGuideDominance, srgb.g);
+                color.a *= 1 - _RemoveGreenGuide * greenGuide;
 
                 #ifdef UNITY_UI_CLIP_RECT
                 color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);

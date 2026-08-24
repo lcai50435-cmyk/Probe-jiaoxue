@@ -32,7 +32,7 @@ namespace M1
         private bool _panelOpen;
         private AnswerState _answer = AnswerState.Idle;
         private RenderTexture _rt;
-        private bool _shortPressEnabled = true; // 点击切换全身/折叠头像（M2 已取消；长按开问答面板保留）
+        private bool _shortPressEnabled; // 全模块禁用点击切换全身/折叠头像，长按开问答面板保留
 
         private void Awake()
         {
@@ -87,11 +87,15 @@ namespace M1
         private void Bind(M1PressDetector detector, bool on)
         {
             if (detector == null) return;
-            if (on) { detector.OnShortPress += OnShortPress; detector.OnLongPress += OnLongPress; }
+            if (on)
+            {
+                if (_shortPressEnabled) detector.OnShortPress += OnShortPress;
+                detector.OnLongPress += OnLongPress;
+            }
             else { detector.OnShortPress -= OnShortPress; detector.OnLongPress -= OnLongPress; }
         }
 
-        /// <summary>取消点击切换全身/折叠头像（老板 2026-08-23，M2）：解绑短按，保留长按开问答面板。Start 后调用生效。</summary>
+        /// <summary>保留兼容入口；默认全模块禁用短按切换，长按问答不受影响。</summary>
         public void SetShortPressEnabled(bool enabled)
         {
             if (_shortPressEnabled == enabled) return;

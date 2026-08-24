@@ -54,6 +54,9 @@ namespace M1
         [Tooltip("引导视频等比缩放（2026-08-18：数字人缩小、与字幕分离；Setup 已设值时不覆盖）")]
         public float introVideoScale = 0.78f;
 
+        [Tooltip("移除引导视频内的纯绿色分隔线")]
+        public bool removeGreenGuide = true;
+
         [Tooltip("运行时兜底：subtitleText 未注入时按此路径自动发现（Setup 注入后此项失效）")]
         public string subtitlePath = "画板/引导遮罩/引导字幕";
 
@@ -112,6 +115,8 @@ namespace M1
             // 运行时兜底：引导视频等比缩小（数字人变小；Setup 已设 0.78 则不覆盖）
             if (videoImage != null && Mathf.Approximately(videoImage.rectTransform.localScale.x, 1f))
                 videoImage.rectTransform.localScale = new Vector3(introVideoScale, introVideoScale, 1f);
+            if (videoImage != null && videoImage.material != null && videoImage.material.HasProperty("_RemoveGreenGuide"))
+                videoImage.material.SetFloat("_RemoveGreenGuide", removeGreenGuide ? 1f : 0f);
 
             _firstTime = PlayerPrefs.GetInt(seenPrefsKey, 0) == 0;
             var clip = player != null ? player.clip : null;

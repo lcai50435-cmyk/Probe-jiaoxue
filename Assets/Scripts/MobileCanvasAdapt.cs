@@ -14,7 +14,8 @@ public interface IMobileLayoutRefresh
 public sealed class MobileCanvasAdapt : MonoBehaviour
 {
     private static readonly Vector2 ReferenceSize = new Vector2(1920f, 1080f);
-    private static readonly Color PageColor = new Color(.925f, .935f, .945f);
+    private static readonly Color PageColor = Color.white;
+    private const string PageBackgroundName = "~MobilePageBackground";
     private readonly Dictionary<RectTransform, AnchorState> _anchors = new Dictionary<RectTransform, AnchorState>();
     private int _width;
     private int _height;
@@ -79,7 +80,9 @@ public sealed class MobileCanvasAdapt : MonoBehaviour
         foreach (var scaler in scalers)
         {
             if (!IsTarget(scaler)) continue;
-            FitDirectChildren(scaler.transform as RectTransform);
+            var canvasRt = scaler.transform as RectTransform;
+            EnsurePageBackground(canvasRt);
+            FitDirectChildren(canvasRt);
         }
         Canvas.ForceUpdateCanvases();
         foreach (var camera in Resources.FindObjectsOfTypeAll<Camera>())
@@ -90,8 +93,31 @@ public sealed class MobileCanvasAdapt : MonoBehaviour
     private static bool IsTarget(CanvasScaler scaler)
     {
         return scaler != null && scaler.gameObject.scene.isLoaded &&
+               (scaler.transform.parent == null || scaler.transform.parent.GetComponentInParent<Canvas>() == null) &&
                scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize &&
                scaler.referenceResolution == ReferenceSize;
+    }
+
+    private static void EnsurePageBackground(RectTransform canvasRt)
+    {
+        if (canvasRt == null) return;
+        foreach (Transform child in canvasRt)
+            if (child.name == PageBackgroundName && child.gameObject.hideFlags == HideFlags.DontSave) return;
+
+        var background = new GameObject(PageBackgroundName, typeof(RectTransform), typeof(Image))
+        {
+            hideFlags = HideFlags.DontSave
+        };
+        var rt = background.GetComponent<RectTransform>();
+        rt.SetParent(canvasRt, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+        var image = background.GetComponent<Image>();
+        image.color = PageColor;
+        image.raycastTarget = false;
+        rt.SetAsFirstSibling();
     }
 
     private void FitDirectChildren(RectTransform canvasRt)
@@ -101,6 +127,7 @@ public sealed class MobileCanvasAdapt : MonoBehaviour
         foreach (Transform child in canvasRt)
         {
             if (!(child is RectTransform rt)) continue;
+            if (rt.name == PageBackgroundName && rt.gameObject.hideFlags == HideFlags.DontSave) continue;
             if (!_anchors.TryGetValue(rt, out var state))
             {
                 state = new AnchorState { min = rt.anchorMin, max = rt.anchorMax };
