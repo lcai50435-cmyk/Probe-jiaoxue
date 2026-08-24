@@ -198,6 +198,57 @@
 - 暂停期间不受影响是设计前提：长按检测用 `Time.unscaledTime`、面板滑入/逐字用 `unscaledDeltaTime` / `WaitForSecondsRealtime`、DeepSeek 请求用 `UnityWebRequest`、数字人视频走 VideoPlayer（不受 timeScale 影响）。**新增问答链路组件必须遵循 unscaled 计时**，否则暂停时功能卡死。
 - 引导期间（M1IntroVideo 全屏遮罩挡点击）QA 入口不可达，与引导的 timeScale 管理无并发冲突；若未来出现并发场景需先协调。
 
+## 8.2 Android 超宽屏 1920x1080 坐标合同（2026-08-24 真机定稿）
+
+### 1. Scope / Trigger
+
+- 适用于所有 `CanvasScaler.referenceResolution=1920x1080` 的 M1-M5 横屏页面，尤其是 21:9、挖孔屏与左右横屏旋转。
+- 真机故障根因：宽屏仅设 `matchWidthOrHeight=1` 虽能保留 1080 设计高度，却会把 Canvas 逻辑宽度扩至约 2380；Stretch 的 `SafeArea/RailViewport` 随之变宽，普通/透视按钮左偏，`NormalizedToRailLocal` 摆放的尺子也偏离 Unity 1920x1080 Play 定稿位置。
+
+### 2. Signatures
+
+- 通用入口：`MobileCanvasAdapt`（`BeforeSceneLoad` 自动创建、`DontDestroyOnLoad`）。
+- 布局后几何刷新：`IMobileLayoutRefresh.RefreshMobileLayout()`；M2/M3/M4 Probe 在这里重算伤损、扫描端点与射线，进行中旋转按当前 mm 恢复探头位置。
+
+### 3. Contracts
+
+- 宽于 16:9：CanvasScaler Match=1，完整保留设计高度；窄于 16:9：Match=0，完整保留设计宽度。
+- Canvas 的直属 `RectTransform` 只在内存中映射到居中的虚拟 1920x1080 内容区：`mapped = 0.5 + (anchor - 0.5) * referenceSize / canvasLogicalSize`。M2-M5 因此固定 `SafeArea`；M1 多个直属业务层保持原父子路径，无需重挂 DesignRoot。
+- 额外屏幕空间只显示页面浅灰清屏色，不得进入 `RailViewport`、按钮或尺子业务坐标。
+- `androidRenderOutsideSafeArea=0` 时由系统约束渲染面，runtime 不再二次套 `Screen.safeArea` inset，避免双重内缩。
+- 所有修改均为运行时内存态；M2/M3 Scene 哈希必须不变，M4/M5 的 Scene/Inspector 手调数值不得被写回或覆盖。
+
+### 4. Validation & Error Matrix
+
+- Canvas 非 `ScaleWithScreenSize` 或 reference 非 1920x1080 -> 跳过，不误改其他 Canvas。
+- Canvas/直属根尺寸尚未生成 -> 本帧跳过，`sceneLoaded` 后下一帧重试。
+- Probe 尚未放置 -> 只重算几何缓存，不移动 Home 工具。
+- M2/M3 Scene 哈希变化、21:9 下业务根不是 1920x1080、按钮中心偏离钢轨中心 -> 验收失败。
+
+### 5. Good / Base / Bad Cases
+
+- Good：2780x1264 真机完整显示居中的 1920x1080 内容，M2-M5 分段控件保持钢轨教学面居中，M2-M4 尺子沿用 Scene/Inspector 定稿坐标。
+- Base：1920x1080 下映射系数为 1，表现与 Unity Play 模式一致。
+- Bad：只把 Match 从 0.5 改成 1，或给 M2/M3/M4/M5 分别硬编码 x 偏移；前者污染父级尺寸，后者旋转/换设备再次失效。
+
+### 6. Tests Required
+
+- Unity 编译无 `error CS`；Android Debug Build `BuildResult.Succeeded`。
+- 真机至少截图 M1 完整内容与 M2 分段控件/尺子；完整验收覆盖 M3/M4/M5、左右横屏、问答长按和拖拽。
+- 构建前后核对 M2/M3 Scene 字节哈希；`logcat` 不得出现适配相关 NullReference/MissingComponent。
+
+### 7. Wrong vs Correct
+
+```csharp
+// Wrong：高度完整，但逻辑宽度扩展，Stretch/RailViewport 坐标漂移
+scaler.matchWidthOrHeight = 1f;
+
+// Correct：先按短边完整显示，再把直属业务根锚点映射进虚拟 1920x1080 内容区
+scaler.matchWidthOrHeight = wide ? 1f : 0f;
+rt.anchorMin = MapAnchor(sceneAnchorMin, canvasRt.rect.size);
+rt.anchorMax = MapAnchor(sceneAnchorMax, canvasRt.rect.size);
+```
+
 ## 9. 与 AGENTS.md 的同步契约
 
 - 本文档为权威来源；`AGENTS.md` 总纲只存放摘要（项目速览、五条规则、约定速查）。

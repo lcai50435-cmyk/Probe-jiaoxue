@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 namespace M2
 {
-    public class M2ProbeDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public class M2ProbeDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IMobileLayoutRefresh
     {
         public RectTransform probeRt, probeVisual, probeHome, railViewport, beamLine;
         public M2FlowController flow;
@@ -82,6 +82,16 @@ namespace M2
             if (angleSlider == null) return;
             angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged);
             _angleDeg = angleSlider.value; ApplyAngleVisual(_angleDeg); SetAngleLocked(true);
+        }
+        public void RefreshMobileLayout()
+        {
+            var distance = currentDistanceMm;
+            CalibrateTrack();
+            if (!_placed) return;
+            var t = Mathf.InverseLerp(StartMm, hitMm, distance);
+            MoveToLocal(Vector2.Lerp(ScanStart, HitPoint, t));
+            currentDistanceMm = distance;
+            UpdateBeam();
         }
         public void Unlock() => unlocked = true;
         public void ShowBeam() { _beamVisible = true; UpdateBeam(); RefreshBeamVisibility(); }

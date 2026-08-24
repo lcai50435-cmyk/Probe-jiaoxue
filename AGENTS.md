@@ -27,6 +27,7 @@
   新模块只换 VideoClip；调参走材质 Inspector）。H.264 `yuv420p` 黑底视频无 Alpha，仍需 LumaKey；视频 UI 节点只放一个 Graphic，点击由 RawImage 自身或独立子节点承载。常驻数字人（小尺寸）用独立 LumaKey 材质资产收窄 KeySmooth + RT 开 mipmap（关闭 autoGenerateMips 后在 VideoPlayer.frameReady 中显式 GenerateMips），不碰开场引导材质。详见 `.trellis/spec/unity/video-intro.md`。
 - **问答面板打开即全局暂停**（`M1QAPanel.pauseGameOnOpen` 默认开）：`Time.timeScale=0` 含模块计时/拖拽/动画，关闭时恢复打开前值；问答链路组件必须走 unscaled 计时（长按/滑入/逐字/请求/视频）。详见 `.trellis/spec/unity/low-code.md` 8.1。
 - **探测模块统一采用 M3 验收的 UGUI 基线**：1920x1080/Match0.5，浅灰页面与白色教学面、左上局部工具架、右上全身数字人、右下 460x240 深色波形、左下 364x64 视图分段、底部 176px 浅色操作带；M2 仅做保留业务合同的视觉迁移，M4/M5 只替换模块专属流程/参数/素材，禁止复制其他模块状态机。详见 `.trellis/spec/unity/ugui-module-template.md`。
+- **Android 超宽屏保持 1920x1080 业务坐标（2026-08-24）**：`MobileCanvasAdapt` 按短边完整显示并把 Canvas 直属业务根映射到居中的虚拟 1920x1080 内容区；额外宽度不得扩展 `SafeArea/RailViewport`，否则视图按钮和归一化尺子位置漂移。`androidRenderOutsideSafeArea=0` 时不再二次套 `Screen.safeArea`；布局后由 `IMobileLayoutRefresh` 重算探头几何。M2/M3 Scene 零改动。详见 low-code.md 8.2。
 - **冻结 Scene 的运行时文案与几何合同**（详见 low-code.md 5.4）：旧文案数组（如 stepHints）用代码默认数组覆盖不写回；尺子 0→110 锚点必须位于同一可见刻度基线并作为唯一 mm 比例（二维欧氏距离）；入射点锚点偏置必须在扫描端点反推补偿，否则欧氏距离合同失效；M1→M2 链路烟测须轮询等待场景加载。
 - **2026-08-14 PPT 四要点**：校角与测量统一尺子尺寸（420×91，ppm≈2.768）；测量尺水平放置（localRotation=0），扫描轨迹线与损伤点同线（scanLineY=damage.y）为前提；波形简化参考「焊筋轮廓波」——深底/网格/橙红基线+尖峰，隐藏 WaveStateText/CurrentDistanceText 等提示词，MeasurementBubble 的 110mm 字样改「测量完成」。
 - **2026-08-14 视觉反馈二轮（探头遮挡/悬空）**：探头发射面锚点 `probeEntryLocal=(0.89,0.04)`（probeFootage 右下楔形），校角发射面卡槽、测量与尺子平行无遮挡；损伤点 `damageUv.y=0.711→0.63`（红椭圆下部/下缘）使扫描线/探头下移贴普通视图钢轨踏面；均为运行时覆盖 Scene 旧值不写回。详见 low-code.md 5.4。
