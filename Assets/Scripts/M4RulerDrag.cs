@@ -51,6 +51,7 @@ namespace M4
             if (rulerRt != null) rulerRt.gameObject.SetActive(true);
             ComputeAnchors();
             if (rulerImage != null) { rulerImage.color = new Color(.55f, .57f, .6f, .62f); rulerImage.raycastTarget = true; }
+            TouchHitExpand.Ensure(rulerRt, new Vector2(24f, 64f)); // 手机抓取热区外扩（横向小防跨槽误抓，纵向大补指尖精度；幂等不写回 Scene）
         }
 
         private void CacheSceneHome()

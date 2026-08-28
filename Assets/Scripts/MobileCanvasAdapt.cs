@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -87,7 +88,17 @@ public sealed class MobileCanvasAdapt : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         foreach (var camera in Resources.FindObjectsOfTypeAll<Camera>())
             if (camera != null && camera.gameObject.scene.isLoaded) camera.backgroundColor = PageColor;
+        ApplyDragThreshold();
         RefreshLayoutGeometry();
+    }
+
+    /// <summary>拖拽启动距离按 DPI 换算（≈0.1 英寸）：默认固定 10 物理像素在高 DPI 手机上不足 1mm，
+    /// 手指按下微抖即被判定为拖拽，工具从槽位抓出时"还没拖就瞬移"。PC 96dpi 下结果仍为 10，行为不变。</summary>
+    private void ApplyDragThreshold()
+    {
+        var eventSystem = EventSystem.current;
+        if (eventSystem == null) return;
+        eventSystem.pixelDragThreshold = Mathf.Max(10, Mathf.RoundToInt(Screen.dpi * .1f));
     }
 
     private static bool IsTarget(CanvasScaler scaler)

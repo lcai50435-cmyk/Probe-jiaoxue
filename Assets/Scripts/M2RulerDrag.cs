@@ -48,6 +48,7 @@ namespace M2
             OnAngleRetracted -= flow.NotifyRulerRetracted; OnAngleRetracted += flow.NotifyRulerRetracted;
             unlocked = aligned = _dragging = false;
             ComputeAnchors();
+            TouchHitExpand.Ensure(rulerRt, new Vector2(24f, 64f)); // 手机抓取热区外扩（横向小防跨槽误抓，纵向大补指尖精度；幂等不写回 Scene）
         }
         public void Unlock() { unlocked = true; aligned = false; if (rulerImage != null) rulerImage.color = Color.white; }
         public void UnlockRetract() => aligned = false;

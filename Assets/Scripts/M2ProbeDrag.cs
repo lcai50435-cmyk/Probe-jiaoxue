@@ -79,6 +79,7 @@ namespace M2
             CalibrateTrack(); if (beamLine != null) _beamImage = beamLine.GetComponentInChildren<Image>(); if (probeVisual != null) _visualBasePos = probeVisual.anchoredPosition;
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
             RefreshBeamVisibility();
+            TouchHitExpand.Ensure(probeRt, new Vector2(20f, 56f)); // 手机抓取热区外扩（幂等不写回 Scene；须在 angleSlider 提前 return 前）
             if (angleSlider == null) return;
             angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged);
             _angleDeg = angleSlider.value; ApplyAngleVisual(_angleDeg); SetAngleLocked(true);

@@ -100,6 +100,7 @@ namespace M4
             if (angleSlider != null) { angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged); _angleDeg = angleSlider.value; initialAngleDeg = angleSlider.value; } // 初始角以 Scene 中滑块当前值为准
             if (angleValueText != null) angleValueText.text = $"{_angleDeg:0}°";
             currentDistanceMm = scanStartMm;
+            TouchHitExpand.Ensure(probeRt, new Vector2(20f, 56f)); // 手机抓取热区外扩（幂等不写回 Scene）
             ApplyAngleVisual(_angleDeg);
         }
 
