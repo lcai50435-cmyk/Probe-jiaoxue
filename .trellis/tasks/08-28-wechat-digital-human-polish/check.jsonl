@@ -1,0 +1,5 @@
+{"file":".trellis/spec/unity/video-intro.md","reason":"检查颜色、抠像、字幕间距和Android视频回归。"}
+{"file":".trellis/spec/unity/low-code.md","reason":"检查M2/M3哈希、runtime行数和问答暂停计时。"}
+{"file":".trellis/tasks/08-28-wechat-digital-human-polish/prd.md","reason":"逐项核对视觉、内存和跨平台验收。"}
+{"file":"Temp/atlas-stats.log","reason":"比较图集页格式、尺寸和Editor内存基线。"}
+{"file":"Temp/wx-export.log","reason":"检查最新图集构建占用、编译和资源异常。"}

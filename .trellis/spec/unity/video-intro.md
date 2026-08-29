@@ -36,6 +36,8 @@
 
 **引导视频静音 + 字幕（2026-08-18 老板定稿）**：视频音轨不再播放（`M1IntroVideo.Awake` 与 `M1Setup` 均强制 `VideoPlayer.audioOutputMode = None`，画面照播；防场景旧序列化 Direct 覆盖），解说词改字幕：`M1Setup.EnsureSubtitle` 在引导遮罩下创建「引导字幕」TMP（底部 1100×150、白字 34px + 黑色 Outline/Shadow 描边，**无背景条**，直接叠在画面上；2026-08-18 二轮去掉半透明黑条），台词官方文件 `Assets/DigitalHuman/A-04 引导动画/引导动画-1/引导动画-1 台词.txt`，按 `M1IntroVideo.subtitleSegments`/`subtitleTimes`（默认 0.5/4.2/10.2 秒，视频约 15.2s）在 `Update` 按 `player.time` 切换，`FinishIntro` 清空；运行时兜底 `subtitlePath` 自动发现，缺失时 `CreateRuntimeSubtitle` 动态创建（DontSave，字体从跳过按钮 TMP 复制）。**数字人缩小**：引导视频等比缩放 `IntroVideoScale=0.78`（Setup 创建/幂等 + `M1IntroVideo.introVideoScale` 运行时兜底，仅 scale≈1 时覆盖），视频视觉底部上移约 119px，字幕文字与数字人脚部分离不重叠。换新引导视频时同步更新台词分段与时间点。
 
+**微信 WebGL 单行字幕（2026-08-29 开发者工具定稿）**：微信端宽 1700、高 52、最大字号 30/最小 24 自动缩小，`TextWrappingModes.NoWrap`，三段台词均强制单行；布局仍按人物实际底边、20px 间距与底部 40px 安全线计算。不得通过自动换行规避溢出；长句优先缩小字号。Android/Editor 继续使用 Setup 单行布局，运行时兜底 anchoredPosition 必须保持 y=16。
+
 ## 3. 黑底抠像（LumaKey）契约
 
 **适用前提**：视频背景纯黑（sRGB 亮度 ≤ 2）、主体亮色。本项目引导视频背景 0~2、人物暗部 8~40，阈值 0.02/羽化 0.015 分离清晰。

@@ -27,10 +27,7 @@ namespace M3
         private const string FullBodyName = "FullBodyView";
         private const string AvatarName = "AvatarView";
 
-        // 素材（Resources 路径，与 M1QASetup 同款素材）
-        private const string IdleClipRes = "DigitalHuman/待机动画";
-        private const string ThinkingClipRes = "DigitalHuman/思考动画";
-        private const string SpeakingClipRes = "DigitalHuman/讲解动画2";
+        // 素材（折叠头像仍走 Resources；三态视频由 VideoDeliveryConfig 提供本地/远程 URL）
         private const string AvatarSpriteRes = "DigitalHuman/折叠头像";
 
         // 布局（1920x1080 基准，与 M1QASetup 合同一致）
@@ -129,12 +126,16 @@ namespace M3
             presenter.avatarView = av.gameObject;
             presenter.fullBodyPress = fb.GetComponent<M1PressDetector>();
             presenter.avatarPress = av.GetComponent<M1PressDetector>();
-            presenter.idleClip = Resources.Load<VideoClip>(IdleClipRes);
-            presenter.thinkingClip = Resources.Load<VideoClip>(ThinkingClipRes);
-            presenter.speakingClip = Resources.Load<VideoClip>(SpeakingClipRes);
-            if (presenter.idleClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到待机视频：" + IdleClipRes);
-            if (presenter.thinkingClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到思考视频：" + ThinkingClipRes);
-            if (presenter.speakingClip == null) Debug.LogWarning("[M3DigitalHumanBootstrap] 未找到讲解视频：" + SpeakingClipRes);
+            var delivery = VideoDeliveryConfig.Load();
+            if (delivery == null)
+            {
+                Debug.LogError("[M3DigitalHumanBootstrap] 未找到 Resources/VideoDeliveryConfig。");
+                return;
+            }
+            presenter.forceUrlPlayback = true;
+            presenter.idleUrl = delivery.IdleUrl;
+            presenter.thinkingUrl = delivery.ThinkingUrl;
+            presenter.speakingUrl = delivery.SpeakingUrl;
             stageGo.SetActive(true);
             if (scene == "M3" || scene == "M4") presenter.SetShortPressEnabled(false); // M3/M4 取消点击折叠（老板 2026-08-23）：保持全身，仅长按开面板（Awake 后解绑）
 

@@ -16,6 +16,7 @@ Shader "UI/LumaKey"
         // 黑底抠像参数：max(r,g,b)（sRGB 空间）低于 _KeyThreshold 的像素视为背景（透明）
         _KeyThreshold ("Key Threshold", Range(0, 0.5)) = 0.02
         _KeySmooth ("Key Smooth", Range(0, 0.1)) = 0.015
+        _VideoInputIsSRGB ("Video Input Is SRGB", Range(0, 1)) = 0
         _RemoveGreenGuide ("Remove Green Guide", Range(0, 1)) = 0
         _GreenGuideThreshold ("Green Guide Threshold", Range(0, 0.5)) = 0.02
         _GreenGuideDominance ("Green Guide Dominance", Range(0, 0.5)) = 0.02
@@ -95,6 +96,7 @@ Shader "UI/LumaKey"
             float4 _MainTex_ST;
             float _KeyThreshold;
             float _KeySmooth;
+            float _VideoInputIsSRGB;
             float _RemoveGreenGuide;
             float _GreenGuideThreshold;
             float _GreenGuideDominance;
@@ -107,7 +109,7 @@ Shader "UI/LumaKey"
                 #ifdef UNITY_COLORSPACE_GAMMA
                 return c;
                 #else
-                return LinearToGammaSpace(c);
+                return _VideoInputIsSRGB > 0.5 ? c : LinearToGammaSpace(c);
                 #endif
             }
 
@@ -125,16 +127,30 @@ Shader "UI/LumaKey"
 
             fixed4 frag(v2f IN) : SV_Target
             {
-                half4 color = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd) * IN.color;
+                // 1) 原始纹理输入（不含 UI tint）：键控与颜色空间转换都必须基于原始值，
+                //    否则非白 tint 会扭曲键控阈值，且 WebGL 路径会二次乘 tint。
+                half4 raw = tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd;
 
-                // 黑底抠像：按 max(r,g,b) 亮度键控（纯黑背景 ~0，人物暗部 >= 8/255）
+                // 2) 黑底抠像：按 max(r,g,b) 亮度键控（纯黑背景 ~0，人物暗部 >= 8/255）
                 // 注意 smoothstep(edge0, edge1, x) 要求 edge0 < edge1：x<=edge0→0(透明)，x>=edge1→1(保留)。
-                half3 srgb = ToSRGB(color.rgb);
+                half3 srgb = ToSRGB(raw.rgb);
                 half lum = max(srgb.r, max(srgb.g, srgb.b));
                 half keyAlpha = smoothstep(_KeyThreshold, _KeyThreshold + _KeySmooth, lum);
-                color.a *= keyAlpha;
+                half alpha = raw.a * keyAlpha;
                 half greenGuide = step(_GreenGuideThreshold, srgb.g) * step(srgb.r + _GreenGuideDominance, srgb.g) * step(srgb.b + _GreenGuideDominance, srgb.g);
-                color.a *= 1 - _RemoveGreenGuide * greenGuide;
+                alpha *= 1 - _RemoveGreenGuide * greenGuide;
+
+                // 3) 显示 RGB：微信 WebGL（_VideoInputIsSRGB=1）视频纹理是 sRGB 编码值、
+                //    RT 未做 sRGB 采样解码，输出前必须转回线性，否则显示端二次 gamma 编码导致整体偏白。
+                //    Android/Editor（=0）：RT 采样已完成 sRGB→Linear，raw.rgb 即线性值，保持现状。
+                half3 display = raw.rgb;
+                #if !UNITY_COLORSPACE_GAMMA
+                if (_VideoInputIsSRGB > 0.5)
+                    display = GammaToLinearSpace(srgb);
+                #endif
+
+                // 4) UI tint 只在此乘一次
+                half4 color = half4(display * IN.color.rgb, alpha * IN.color.a);
 
                 #ifdef UNITY_UI_CLIP_RECT
                 color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);

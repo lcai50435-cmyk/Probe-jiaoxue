@@ -13,25 +13,25 @@ MonoBehaviour:
   m_Name: MiniGameConfig
   m_EditorClassIdentifier: wx-editor.dll::WeChatWASM.WXEditorScriptObject
   ProjectConf:
-    projectName: 
-    Appid: 
-    CDN: 
+    projectName:
+    Appid: wxcc66e002c508ed83
+    CDN: https://cloud1-d6gmycfs6b37edb43-1476749432.tcloudbaseapp.com/rail-inspection
     assetLoadType: 0
     compressDataPackage: 0
-    VideoUrl: 
+    VideoUrl:
     relativeDST: Builds/WXExport
     DST: E:\Project\UnityGame\Probe-jiaoxue\Builds\WXExport
-    StreamCDN: 
+    StreamCDN:
     bundleHashLength: 32
     bundlePathIdentifier: StreamingAssets;
     bundleExcludeExtensions: json;
-    AssetsUrl: 
-    MemorySize: 256
+    AssetsUrl:
+    MemorySize: 496
     HideAfterCallMain: 1
-    preloadFiles: 
-    Orientation: 0
+    preloadFiles:
+    Orientation: 1
     bgImageSrc: Assets/WX-WASM-SDK-V2/Runtime/wechat-default/images/background.jpg
-    dataFileSubPrefix: 
+    dataFileSubPrefix:
     maxStorage: 200
     defaultReleaseSize: 31457280
     texturesHashLength: 8
@@ -52,13 +52,13 @@ MonoBehaviour:
     AutoProfile: 0
     ScriptOnly: 0
     Il2CppOptimizeSize: 1
-    profilingFuncs: 1
-    Webgl2: 0
+    profilingFuncs: 0
+    Webgl2: 1
     fbslim: 0
     DeleteStreamingAssets: 1
     ProfilingMemory: 0
     CleanBuild: 0
-    CustomNodePath: 
+    CustomNodePath:
     autoAdaptScreen: 0
     showMonitorSuggestModal: 1
     enableProfileStats: 0
@@ -76,8 +76,8 @@ MonoBehaviour:
     useDXT5: 0
     bundleSuffix: bundle
     parallelWithBundle: 0
-    bundleDir: 
-    dstMinDir: 
+    bundleDir:
+    dstMinDir:
     debugMode: 0
     force: 0
   PlayerPrefsKeys: []
@@ -100,15 +100,15 @@ MonoBehaviour:
     Arrows: 1
     Geometric_Shapes: 1
     Mathematical_Operators: 1
-    CustomUnicode: 
+    CustomUnicode:
   MultiPackageMerge:
-    outputPath: 
-    devPluginId: 
+    outputPath:
+    devPluginId:
     packageConditions:
     - condition: config.features?.preferThreads === true && canUseThread
       packageSuffix: mt
-      packagePath: 
-    defaultPackagePath: 
-    commonDirectories: 
-    commonFiles: 
+      packagePath:
+    defaultPackagePath:
+    commonDirectories:
+    commonFiles:
     framework: unity

@@ -1,0 +1,6 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"遵循共享 DeepSeek 配置、冻结 Scene、低代码和平台隔离合同。"}
+{"file":".trellis/tasks/08-28-wechat-digital-human-trial-release/prd.md","reason":"父任务要求体验版前消除客户端直连和密钥暴露。"}
+{"file":"Assets/Scripts/M1DeepSeekClient.cs","reason":"当前直接读取 Key、设置 Bearer 并调用 DeepSeek 的实现入口。"}
+{"file":"Assets/Scripts/DeepSeekConfig.cs","reason":"现有共享配置加载和 IsConfigured 合同。"}
+{"file":"Assets/Editor/WebGlVideoBuildProcessor.cs","reason":"复用现有 WebGL 构建期平台隔离模式。"}
+{"file":"Temp/wx-export.log","reason":"BuildReport 证明实际 DeepSeekConfig 已进入构建。"}

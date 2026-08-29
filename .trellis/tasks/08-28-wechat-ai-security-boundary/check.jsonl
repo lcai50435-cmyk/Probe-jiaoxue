@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"检查 M2/M3 哈希、共享配置和 Android 路径不回归。"}
+{"file":".trellis/tasks/08-28-wechat-ai-security-boundary/prd.md","reason":"逐项核对无密钥、无直连、代理降级和 Key 轮换证据。"}
+{"file":"Assets/Scripts/M1DeepSeekClient.cs","reason":"静态检查 WebGL 分支不访问 apiKey 或 Bearer。"}
+{"file":"Temp/wx-export.log","reason":"检查最新 BuildReport 不再包含实际配置资产。"}

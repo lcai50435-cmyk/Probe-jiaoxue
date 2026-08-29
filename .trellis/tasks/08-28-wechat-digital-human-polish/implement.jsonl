@@ -1,0 +1,8 @@
+{"file":".trellis/spec/unity/video-intro.md","reason":"权威LumaKey颜色空间、字幕、视频和常驻数字人合同。"}
+{"file":".trellis/spec/unity/low-code.md","reason":"冻结Scene、Android平台隔离和runtime行数限制。"}
+{"file":"Assets/Shaders/UI-LumaKey.shader","reason":"当前WebGL颜色修复和重复tint位置。"}
+{"file":"Assets/Scripts/M1IntroVideo.cs","reason":"当前WebGL人物缩放和字幕几何实现。"}
+{"file":"Assets/Editor/DigitalHumanAtlasTool.cs","reason":"固定2048页生成与导入压缩实现。"}
+{"file":"Assets/Scripts/M1DigitalHumanFramePlayer.cs","reason":"当前全部页加载、UV和卸载实现。"}
+{"file":"Assets/Scripts/M1DigitalHumanPresenter.cs","reason":"微信帧后端与Android视频后端选择。"}
+{"file":"Assets/Scripts/M3DigitalHumanBootstrap.cs","reason":"M2-M5冻结场景运行时装配。"}

@@ -69,6 +69,11 @@
 
 ### 5.4 冻结 Scene 的运行时文案与几何合同（2026-08-13 M2 重构）
 
+- **2026-08-28 微信小游戏数字人三合同（真机修复）**：
+  - **LumaKey sRGB 输出分离**：微信 WebGL 视频 RT 内是 sRGB 编码值（未走 sRGB 采样解码）。`UI/LumaKey` 的 `_VideoInputIsSRGB=1` 时键控用原始 sRGB 值，**最终 RGB 必须先 `GammaToLinearSpace` 再输出**（乘 tint 前转换），否则显示端二次 gamma 编码导致人物整体偏白；`=0`（Android/Editor 默认）路径保持现状。修改 shader 后必须同帧对比帽子/肤色/工装三区颜色。
+  - **微信引导字幕布局**：`M1IntroVideo` 微信专用 Inspector 字段（`webglIntroVideoScale=0.70` 起调、字幕锚定引导视频画面底边下方 `webglSubtitleGap=20`、宽 1700、最大字号 30/最小 24 自动缩小、`NoWrap` 强制单行、`webglSubtitleMinBottom=40` 避开底部手势区）；仅 WebGL 运行时覆盖，Android/Setup 的 0.78、底部 16px 单行合同不变；M1Setup 不写微信值（公共字段默认即配置）。
+  - **微信常驻数字人 = 透明帧图集（替代第二个 VideoPlayer，微信解码器单实例）**：Editor `DigitalHumanAtlasTool`（菜单 Tools/DigitalHuman）ffmpeg 按目标 fps 抽帧（idle 8/thinking 10/speaking 12，240px 宽）→ **按 LumaKey 同参数亮度键控合成 Alpha**（源 WebM 实测无 Alpha 通道，pix_fmt yuv420p）→ 2048 图集页（gutter=2 边缘外扩防渗色）→ `Resources/DigitalHuman/Frames` + `FrameAnimConfig.asset`，导入 ETC2_RGBA8Crunched（构建体积约 3.1MB，运行时单页 4MB 解码内存）。运行时 `M1DigitalHumanFramePlayer`（RawImage+uvRect 翻页，unscaled 计时，一次只加载当前状态页、切换后 `Resources.UnloadUnusedAssets`）；`M1DigitalHumanPresenter` 在 WebGL 自动创建并摘除 LumaKey 材质（帧图集自带 Alpha），配置缺失回退视频 URL 路径；M1-M5 Bootstrap 复用同一后端；帧后端不占视频解码器，引导期间即可加载待机帧。Android/Editor 保留 VideoPlayer 路径与素材；M2/M3 Scene 零改动。
+
 - **旧文案数组不能写回**：冻结 Scene 序列化的 `stepHints`（含“150→100mm”“0 刻度对齐焊缝”）等旧数组只能在冻结前改；运行时组件用代码静态默认数组（`DefaultHints`）覆盖 `instructionText`，Scene 反序列化对缺失字段直接忽略，不报错。
 - **唯一 mm 比例**：尺子 0→110 锚点标定跨度为唯一物理比例，`pixelsPerMm = distance(zero, ruler110) / 110`。两锚点必须位于正式尺同一条可见刻度基线上——M2 换用 `尺子正面.png`（1205×213）底边基线：0mm 左端底尖 `(0.005,0.038)`、110mm 竖刻线 `(0.73,0.038)`、10° 槽尖角 `(0.005,0.136)`，工作态 `measureSize=320×57`、`ppm≈2.109`（110mm 跨度≈232px）。再取 preserveAspect 渲染矩形中的二维欧氏距离；透明区域、字样位置或不同高度点均不是有效测量锚点。
 - **110mm 目标 = 红色损伤（2026-08-14 老板定稿，取代 PPTX「焊缝熔合线」口径）**：测量/检出/检测束目标为透视图中的红色损伤——`俯视角透视.png` 红椭圆，`M2ProbeDrag.CalibrateTrack` 用 `damageUv=(0.4808,0.63)`（底左 UV，2026-08-14 老板反馈「探头初始位置太高」后由红椭圆质心 `0.711` 下移至椭圆下部/下缘，视口本地约 `(-24,+93)`，使扫描线/探头下移贴普通视图钢轨踏面；110mm 刻线视觉上仍贴着红椭圆底部）从 `RailPerspective` Rect 换算 RailViewport 本地坐标；WeldLine 节点不再作目标。
@@ -197,6 +202,12 @@
 - `M1QAPanel.pauseGameOnOpen`（默认 true）：面板 Open 时 `Time.timeScale = 0` 全局暂停（含模块计时/拖拽/动画），Close 时恢复**打开前**的值（`_timeScaleBefore` 记录，不硬编码 1，避免覆盖引导等场景的 timeScale 设置）。
 - 暂停期间不受影响是设计前提：长按检测用 `Time.unscaledTime`、面板滑入/逐字用 `unscaledDeltaTime` / `WaitForSecondsRealtime`、DeepSeek 请求用 `UnityWebRequest`、数字人视频走 VideoPlayer（不受 timeScale 影响）。**新增问答链路组件必须遵循 unscaled 计时**，否则暂停时功能卡死。
 - 引导期间（M1IntroVideo 全屏遮罩挡点击）QA 入口不可达，与引导的 timeScale 管理无并发冲突；若未来出现并发场景需先协调。
+
+### 8.1.1 微信 TMP 输入键盘（2026-08-29 开发者工具实测）
+
+- 微信 SDK 的 `DisableKeyboardInput` 会在启动时把 `WebGLInput.mobileKeyboardSupport` 设为 false；SDK 自带触摸兜底只识别旧 `UnityEngine.UI.Text`，不会为 `TMP_InputField` 重新开启键盘。
+- `M1QAPanel.Open()` 在 `ActivateInputField()` 前必须仅于 WebGL Player 把 `WebGLInput.mobileKeyboardSupport=true`，关闭/销毁面板时恢复 false；M1-M5 复用同一组件，禁止逐模块复制微信键盘逻辑。
+- 开发者工具与真机都必须验证中文输入、字数计数、删除、确认和再次聚焦；AI 代理未配置只影响发送，不得影响输入框键盘。
 
 ## 8.2 Android 超宽屏 1920x1080 坐标合同（2026-08-24 真机定稿）
 

@@ -7,8 +7,8 @@ namespace M1
     {
         public const string ResourcePath = "DeepSeekConfig";
 
-        [Tooltip("OpenAI 兼容端点")]
-        public string baseUrl = "https://api.deepseek.com/v1";
+        [Tooltip("OpenAI 兼容端点（Android/Editor 直连用；WebGL 端本资产不进包，问答走 AiProxyConfig 代理）")]
+        public string baseUrl = "";
         [Tooltip("API Key（本地资产不纳入版本控制）")]
         public string apiKey = "";
         [Tooltip("对话模型")]

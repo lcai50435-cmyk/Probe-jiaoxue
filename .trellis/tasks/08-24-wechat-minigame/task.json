@@ -18,7 +18,9 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "08-28-wechat-digital-human-trial-release"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",

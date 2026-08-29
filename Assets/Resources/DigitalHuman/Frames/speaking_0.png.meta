@@ -1,0 +1,910 @@
+fileFormatVersion: 2
+guid: 93d934d955808ea4aa5fae420f613a34
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 269493111312858884
+    second: speaking_0_0
+  - first:
+      213: 6177897206325919559
+    second: speaking_0_1
+  - first:
+      213: 2707539630773891714
+    second: speaking_0_2
+  - first:
+      213: -8837426102944723156
+    second: speaking_0_3
+  - first:
+      213: -4464511109110194971
+    second: speaking_0_4
+  - first:
+      213: 4191212846406192766
+    second: speaking_0_5
+  - first:
+      213: -7539830513916985128
+    second: speaking_0_6
+  - first:
+      213: -5328951917913325381
+    second: speaking_0_7
+  - first:
+      213: 5432815542290045486
+    second: speaking_0_8
+  - first:
+      213: -3180019396193439359
+    second: speaking_0_9
+  - first:
+      213: 5351853732199402202
+    second: speaking_0_10
+  - first:
+      213: 4945578023476884332
+    second: speaking_0_11
+  - first:
+      213: 7214020054583114192
+    second: speaking_0_12
+  - first:
+      213: 4923800082277358659
+    second: speaking_0_13
+  - first:
+      213: -28216819839568623
+    second: speaking_0_14
+  - first:
+      213: -8970020360640441095
+    second: speaking_0_15
+  - first:
+      213: -4095610336413831088
+    second: speaking_0_16
+  - first:
+      213: -2196200728102889265
+    second: speaking_0_17
+  - first:
+      213: -1520188511486361162
+    second: speaking_0_18
+  - first:
+      213: 5909416775505730302
+    second: speaking_0_19
+  - first:
+      213: -1073533690483671514
+    second: speaking_0_20
+  - first:
+      213: 2038690871153852413
+    second: speaking_0_21
+  - first:
+      213: -3555136667652186367
+    second: speaking_0_22
+  - first:
+      213: 8671021193108978608
+    second: speaking_0_23
+  - first:
+      213: 8411345253582741802
+    second: speaking_0_24
+  - first:
+      213: 3155857595193597648
+    second: speaking_0_25
+  - first:
+      213: -8082626967447842991
+    second: speaking_0_26
+  - first:
+      213: 6869694458152642922
+    second: speaking_0_27
+  - first:
+      213: 1035768357041153919
+    second: speaking_0_28
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 65
+    textureCompression: 1
+    compressionQuality: 60
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 65
+    textureCompression: 1
+    compressionQuality: 60
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: speaking_0_0
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 40fb7319e8e6db300800000000000000
+      internalID: 269493111312858884
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_1
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 977
+        width: 219
+        height: 654
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 74f3fe9f6cc4cb550800000000000000
+      internalID: 6177897206325919559
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_2
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 282f193f2fc139520800000000000000
+      internalID: 2707539630773891714
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_3
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c2f073538c72b5580800000000000000
+      internalID: -8837426102944723156
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_4
+      rect:
+        serializedVersion: 2
+        x: 501
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ec93bddcceda02c0800000000000000
+      internalID: -4464511109110194971
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_5
+      rect:
+        serializedVersion: 2
+        x: 501
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e7e4818b0ed2a2a30800000000000000
+      internalID: 4191212846406192766
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_6
+      rect:
+        serializedVersion: 2
+        x: 745
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8d0c35768142d5790800000000000000
+      internalID: -7539830513916985128
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_7
+      rect:
+        serializedVersion: 2
+        x: 745
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb0c3a3f672cb06b0800000000000000
+      internalID: -5328951917913325381
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_8
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e2a5b6093fc356b40800000000000000
+      internalID: 5432815542290045486
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_9
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 181b907253d4ed3d0800000000000000
+      internalID: -3180019396193439359
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_10
+      rect:
+        serializedVersion: 2
+        x: 1233
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ada08953d9a954a40800000000000000
+      internalID: 5351853732199402202
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_11
+      rect:
+        serializedVersion: 2
+        x: 1233
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c637152720932a440800000000000000
+      internalID: 4945578023476884332
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_12
+      rect:
+        serializedVersion: 2
+        x: 1477
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d978f3a4095d1460800000000000000
+      internalID: 7214020054583114192
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_13
+      rect:
+        serializedVersion: 2
+        x: 1477
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 34c5e21661ad45440800000000000000
+      internalID: 4923800082277358659
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_14
+      rect:
+        serializedVersion: 2
+        x: 1721
+        y: 1629
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 11575cca3f0cb9ff0800000000000000
+      internalID: -28216819839568623
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_15
+      rect:
+        serializedVersion: 2
+        x: 1721
+        y: 1303
+        width: 217
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f45108d106148380800000000000000
+      internalID: -8970020360640441095
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_16
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 977
+        width: 218
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 050b2a739187927c0800000000000000
+      internalID: -4095610336413831088
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_17
+      rect:
+        serializedVersion: 2
+        x: 501
+        y: 977
+        width: 218
+        height: 328
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc819f1e2178581e0800000000000000
+      internalID: -2196200728102889265
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_18
+      rect:
+        serializedVersion: 2
+        x: 745
+        y: 0
+        width: 221
+        height: 1305
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b1c9356a9437eae0800000000000000
+      internalID: -1520188511486361162
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_19
+      rect:
+        serializedVersion: 2
+        x: 989
+        y: 0
+        width: 221
+        height: 1305
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: efad0c57f37720250800000000000000
+      internalID: 5909416775505730302
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_20
+      rect:
+        serializedVersion: 2
+        x: 1233
+        y: 0
+        width: 221
+        height: 1305
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62e7e4cdbca0a11f0800000000000000
+      internalID: -1073533690483671514
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_21
+      rect:
+        serializedVersion: 2
+        x: 1477
+        y: 0
+        width: 221
+        height: 1305
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dfff4fdbb82ea4c10800000000000000
+      internalID: 2038690871153852413
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_22
+      rect:
+        serializedVersion: 2
+        x: 1721
+        y: 0
+        width: 221
+        height: 1305
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10f10a4690e99aec0800000000000000
+      internalID: -3555136667652186367
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_23
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 0
+        width: 218
+        height: 327
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0bbf42785d7a55870800000000000000
+      internalID: 8671021193108978608
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_24
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 325
+        width: 216
+        height: 651
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a21a7f261f91bb470800000000000000
+      internalID: 8411345253582741802
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_25
+      rect:
+        serializedVersion: 2
+        x: 257
+        y: 0
+        width: 218
+        height: 327
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0de9b3b23cbdbcb20800000000000000
+      internalID: 3155857595193597648
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_26
+      rect:
+        serializedVersion: 2
+        x: 262
+        y: 325
+        width: 216
+        height: 651
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 15f4741c89db4df80800000000000000
+      internalID: -8082626967447842991
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_27
+      rect:
+        serializedVersion: 2
+        x: 501
+        y: 0
+        width: 218
+        height: 327
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6968a566be065f50800000000000000
+      internalID: 6869694458152642922
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: speaking_0_28
+      rect:
+        serializedVersion: 2
+        x: 506
+        y: 325
+        width: 216
+        height: 651
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f77270f35d9cf5e00800000000000000
+      internalID: 1035768357041153919
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    outline: []
+    customData:
+    physicsShape: []
+    bones: []
+    spriteID:
+    internalID: 0
+    vertices: []
+    indices:
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      speaking_0_0: 269493111312858884
+      speaking_0_1: 6177897206325919559
+      speaking_0_10: 5351853732199402202
+      speaking_0_11: 4945578023476884332
+      speaking_0_12: 7214020054583114192
+      speaking_0_13: 4923800082277358659
+      speaking_0_14: -28216819839568623
+      speaking_0_15: -8970020360640441095
+      speaking_0_16: -4095610336413831088
+      speaking_0_17: -2196200728102889265
+      speaking_0_18: -1520188511486361162
+      speaking_0_19: 5909416775505730302
+      speaking_0_2: 2707539630773891714
+      speaking_0_20: -1073533690483671514
+      speaking_0_21: 2038690871153852413
+      speaking_0_22: -3555136667652186367
+      speaking_0_23: 8671021193108978608
+      speaking_0_24: 8411345253582741802
+      speaking_0_25: 3155857595193597648
+      speaking_0_26: -8082626967447842991
+      speaking_0_27: 6869694458152642922
+      speaking_0_28: 1035768357041153919
+      speaking_0_3: -8837426102944723156
+      speaking_0_4: -4464511109110194971
+      speaking_0_5: 4191212846406192766
+      speaking_0_6: -7539830513916985128
+      speaking_0_7: -5328951917913325381
+      speaking_0_8: 5432815542290045486
+      speaking_0_9: -3180019396193439359
+  mipmapLimitGroupName:
+  pSDRemoveMatte: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:

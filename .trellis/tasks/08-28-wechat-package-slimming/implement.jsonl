@@ -1,0 +1,7 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"约束构建期内存替换、冻结 Scene 和低代码 Editor 工具。"}
+{"file":".trellis/tasks/08-28-wechat-digital-human-trial-release/design.md","reason":"父任务定义主包、wasmcode、40MB 门槛与远程组决策门。"}
+{"file":"Assets/Editor/WebGlVideoBuildProcessor.cs","reason":"现有 WebGL 构建期资源剥离入口。"}
+{"file":"Assets/Editor/WeChatMinigameExportRunner.cs","reason":"微信导出和发布配置入口。"}
+{"file":"Assets/Scripts/M3DigitalHumanBootstrap.cs","reason":"冻结模块运行时 TMP 字体装配点。"}
+{"file":"Temp/wx-export.log","reason":"当前 BuildReport 体积与 TMP 异常基线。"}
+{"file":"Builds/WXExport/minigame/game.js","reason":"当前 DATA_FILE_SIZE 权威输出。"}

@@ -77,13 +77,53 @@ namespace M1
         private Graphic[][] _hiddenGraphics;
         private bool[][] _hiddenGraphicEnabled;
 
+        [Header("微信 WebGL 布局（2026-08-28 真机定稿：字幕在人物正下方居中）")]
+        [Tooltip("微信端引导人物等比缩放（从 0.70 起调；仅 WebGL 覆盖，Android 保持 Setup 的 0.78）")]
+        public float webglIntroVideoScale = 0.70f;
+
+        [Tooltip("微信端人物缩放下限：20px 字幕间距与底部安全区冲突时逐步缩小人物，禁止把字幕压回人物")]
+        public float webglIntroVideoMinScale = 0.60f;
+
+        [Tooltip("微信端字幕与人物画面底边的可见间距（px，1920x1080 业务坐标）")]
+        public float webglSubtitleGap = 20f;
+
+        [Tooltip("微信端单行字幕宽度（px），超长台词通过自动字号缩小兜底")]
+        public float webglSubtitleWidth = 1700f;
+
+        [Tooltip("微信端单行字幕矩形高度（px）")]
+        public float webglSubtitleHeight = 52f;
+
+        [Tooltip("微信端字幕最大字号；过长时自动缩小至 24，禁止换行")]
+        public float webglSubtitleFontSize = 30f;
+
+        [Tooltip("微信端字幕矩形最低底部位置（px）：低于此值上移，避开底部手势区")]
+        public float webglSubtitleMinBottom = 40f;
+
         [Tooltip("预解码超时兜底（秒）：超过仍未准备好则直接播放")]
         public float prepareTimeout = 5f;
+
+        [Tooltip("微信 WebGL 视频准备超时（秒）：CDN 长时间未准备完成时关闭引导遮罩；0=关闭")]
+        public float webglPrepareTimeout = 30f;
+
+        [Tooltip("微信 WebGL 视频启动超时（秒）：准备完成后播放时间仍未推进时关闭引导遮罩；0=关闭")]
+        public float webglPlaybackStartTimeout = 8f;
 
         private RenderTexture _rt;
         private bool _firstTime;
         private bool _started;
         private bool _finished;
+        private int _lastScreenW;
+        private int _lastScreenH;
+        private bool _urlPlayback;
+        private bool _prepared;
+        private bool _playbackTimeoutStarted;
+        private float _playbackStartRealtime = -1f;
+        private int _remoteVideoWidth = 1080;
+        private int _remoteVideoHeight = 1450;
+        private Image _dimOverlay;
+        private Color _dimOverlayColor;
+        private RawImage _posterImage;
+        private bool _firstFrameShown;
 
         private void Awake()
         {
@@ -110,29 +150,63 @@ namespace M1
                 var sub = GameObject.Find(subtitlePath);
                 if (sub != null) subtitleText = sub.GetComponent<TextMeshProUGUI>();
             }
+            // 先确定播放后端：动态字幕创建必须立即使用正确的平台布局，不能等创建后再赋值。
+            var delivery = VideoDeliveryConfig.Load();
+            _urlPlayback = delivery != null && delivery.UseRemoteVideo;
             // 运行时兜底二：场景无字幕节点时动态创建（挂遮罩底部，字体从跳过按钮复制），保证不跑 Setup 也显示字幕
             if (subtitleText == null) subtitleText = CreateRuntimeSubtitle();
             // 运行时兜底：引导视频等比缩小（数字人变小；Setup 已设 0.78 则不覆盖）
             if (videoImage != null && Mathf.Approximately(videoImage.rectTransform.localScale.x, 1f))
                 videoImage.rectTransform.localScale = new Vector3(introVideoScale, introVideoScale, 1f);
-            if (videoImage != null && videoImage.material != null && videoImage.material.HasProperty("_RemoveGreenGuide"))
-                videoImage.material.SetFloat("_RemoveGreenGuide", removeGreenGuide ? 1f : 0f);
+            // 微信端人物缩放按真机定稿覆盖（字幕在人物正下方，0.70 起调；Android 保持 Setup 的 0.78）
+            if (Application.platform == RuntimePlatform.WebGLPlayer && videoImage != null)
+                videoImage.rectTransform.localScale = new Vector3(webglIntroVideoScale, webglIntroVideoScale, 1f);
+            if (videoImage != null && videoImage.material != null)
+            {
+                if (videoImage.material.HasProperty("_RemoveGreenGuide"))
+                    videoImage.material.SetFloat("_RemoveGreenGuide", removeGreenGuide ? 1f : 0f);
+                if (Application.platform == RuntimePlatform.WebGLPlayer && videoImage.material.HasProperty("_VideoInputIsSRGB"))
+                    videoImage.material.SetFloat("_VideoInputIsSRGB", 1f);
+            }
 
             _firstTime = PlayerPrefs.GetInt(seenPrefsKey, 0) == 0;
-            var clip = player != null ? player.clip : null;
-            if (clip == null)
+            if (player == null)
             {
-                Debug.LogError("[M1IntroVideo] 未配置 VideoClip，引导动画无法播放。请检查 Setup 是否正确执行。");
+                Debug.LogError("[M1IntroVideo] 未配置 VideoPlayer。");
+                return;
+            }
+            if (_urlPlayback)
+            {
+                player.source = VideoSource.Url;
+                player.url = delivery.IntroUrl;
+                _remoteVideoWidth = delivery.videoWidth;
+                _remoteVideoHeight = delivery.videoHeight;
+                CacheDimOverlay();
+                SetDimOverlayVisible(false); // 下载首帧期间保留正常教学画面，避免空黑遮罩
+                CreatePoster();
+                StartCoroutine(ApplyWebGlSubtitleLayoutWhenReady()); // 等 Canvas/ARF 布局完成后再定位字幕
+            }
+            var clip = player.clip;
+            if ((_urlPlayback && string.IsNullOrEmpty(player.url)) || (!_urlPlayback && clip == null))
+            {
+                Debug.LogError("[M1IntroVideo] 未配置可播放的引导视频源。");
                 return;
             }
 
             // 视频渲染到 RenderTexture，再由 RawImage 显示（保证视频层叠在遮罩之上）
-            _rt = new RenderTexture((int)clip.width, (int)clip.height, 0);
-            player.targetTexture = _rt;
-            videoImage.texture = _rt;
+            if (_urlPlayback) SetupRenderTexture(_remoteVideoWidth, _remoteVideoHeight);
+            else SetupRenderTexture((int)clip.width, (int)clip.height);
             player.loopPointReached += OnVideoEnd;
             player.prepareCompleted += OnPrepared;
+            player.errorReceived += OnVideoError;
+            player.sendFrameReadyEvents = true;
+            player.frameReady += OnFrameReady;
+            player.waitForFirstFrame = true;
+            player.playbackSpeed = 1f;
             player.audioOutputMode = VideoAudioOutputMode.None; // 老板 2026-08-18：引导视频静音，解说词改字幕（防场景旧序列化 Direct 覆盖）
+
+            // 微信小游戏视频解码器只支持一个实例；先阻止常驻数字人启动，直到引导播放器完全释放。
+            if (_urlPlayback) WebGlVideoPlaybackGate.IntroActive = true;
 
             // 场景加载即冻结游戏 + 后台预解码：避免玩家在准备期间操作，也避免播放开头卡顿
             Time.timeScale = 0f;
@@ -143,6 +217,7 @@ namespace M1
         /// <summary>引导播放期间强制冻结附带视频：VideoPlayer 不受 timeScale=0 影响，Presenter 可能在 Start 后重新播放，故每帧保持暂停。同时按播放进度切换字幕。</summary>
         private void Update()
         {
+            CheckWebGlSubtitleRelayout();
             UpdateSubtitle();
             if (_finished || pauseWhilePlaying == null) return;
             foreach (var p in pauseWhilePlaying)
@@ -162,30 +237,77 @@ namespace M1
             if (overlayButton != null) overlayButton.interactable = canSkip;
 
             // 视频可播放才隐藏常驻数字人（避免半黑遮罩两侧透出）；缺失时不隐藏，防止播放逻辑不触发导致永久消失
-            if (player != null && player.clip != null)
+            if (player != null && (player.clip != null || (_urlPlayback && !string.IsNullOrEmpty(player.url))))
             {
                 HideWhilePlaying();
-                TryPlay(); // 若已准备好立即播放；否则等 prepareCompleted
+                if (!_urlPlayback) TryPlay(); // 远程视频必须等待 prepareCompleted，避免首播速度异常
+                if (Application.platform == RuntimePlatform.WebGLPlayer && webglPrepareTimeout > 0f)
+                    StartCoroutine(WebGlPrepareTimeout());
             }
         }
 
         private void OnPrepared(VideoPlayer vp)
         {
+            _prepared = true;
+            if (_urlPlayback) SetupRenderTexture((int)vp.width, (int)vp.height);
             TryPlay();
+            if (_urlPlayback && webglPlaybackStartTimeout > 0f && !_playbackTimeoutStarted)
+            {
+                _playbackTimeoutStarted = true;
+                StartCoroutine(WebGlFirstFrameTimeout());
+            }
+        }
+
+        private void OnFrameReady(VideoPlayer vp, long frame)
+        {
+            if (!_urlPlayback || _firstFrameShown) return;
+            _firstFrameShown = true;
+            if (_posterImage != null) _posterImage.enabled = false;
+            SetDimOverlayVisible(true);
+            if (subtitleText != null) subtitleText.enabled = true;
+        }
+
+        private void OnVideoError(VideoPlayer vp, string message)
+        {
+            Debug.LogWarning("[M1IntroVideo] 视频播放失败：" + message);
+            if (Application.platform != RuntimePlatform.WebGLPlayer || _finished) return;
+            _finished = true;
+            FinishIntro();
         }
 
         /// <summary>预解码超时兜底：Prepare 长时间未完成（解码异常）时强制播放，避免永久黑屏。</summary>
         private IEnumerator PrepareTimeout()
         {
             yield return new WaitForSecondsRealtime(prepareTimeout); // 不受 timeScale=0 影响
-            TryPlay();
+            if (!_urlPlayback) TryPlay();
         }
 
         private void TryPlay()
         {
             if (_started || _finished) return;
             _started = true;
+            _playbackStartRealtime = Time.realtimeSinceStartup;
             player.Play();
+        }
+
+        private IEnumerator WebGlPrepareTimeout()
+        {
+            yield return new WaitForSecondsRealtime(webglPrepareTimeout);
+            if (_finished || _prepared) yield break;
+
+            Debug.LogWarning("[M1IntroVideo] 微信 WebGL 视频准备超时，跳过引导以避免黑屏。");
+            _finished = true;
+            FinishIntro();
+        }
+
+        private IEnumerator WebGlFirstFrameTimeout()
+        {
+            yield return new WaitForSecondsRealtime(webglPlaybackStartTimeout);
+            if (_finished || _firstFrameShown) yield break;
+
+            Debug.LogWarning("[M1IntroVideo] 微信 WebGL 视频首帧超时，跳过引导以避免永久冻结。");
+            _finished = true;
+            FinishIntro();
         }
 
         /// <summary>跳过引导（遮罩/跳过按钮点击触发；首次进入时不可用）。</summary>
@@ -205,22 +327,47 @@ namespace M1
 
         private void FinishIntro()
         {
-            player.Stop();
-            // 恢复引导期间被冻结的视频（数字人等）：从暂停位置继续播放
+            if (player != null)
+            {
+                player.Stop();
+                player.loopPointReached -= OnVideoEnd;
+                player.prepareCompleted -= OnPrepared;
+                player.errorReceived -= OnVideoError;
+                player.frameReady -= OnFrameReady;
+                // Stop 不会释放微信底层解码器；禁用组件后才能启动常驻数字人。
+                if (_urlPlayback) player.enabled = false;
+            }
+            WebGlVideoPlaybackGate.IntroActive = false;
+            RestoreWhilePlaying(); // 引导结束：先恢复常驻数字人显示
             if (pauseWhilePlaying != null)
                 foreach (var p in pauseWhilePlaying)
-                    if (p != null && p.isPaused) p.Play();
-            RestoreWhilePlaying(); // 引导结束：恢复常驻数字人显示
+                {
+                    if (p == null) continue;
+                    var presenter = p.GetComponentInParent<M1DigitalHumanPresenter>();
+                    if (presenter != null) presenter.ResumeAfterIntro();
+                    else if (p.isPaused) p.Play();
+                }
+            SetDimOverlayVisible(true);
             if (subtitleText != null) subtitleText.text = ""; // 字幕清空
             overlay.SetActive(false);
             Time.timeScale = 1f; // 恢复游戏
+        }
+
+        private void SetupRenderTexture(int width, int height)
+        {
+            if (_rt != null || player == null) return;
+            _rt = new RenderTexture(Mathf.Max(1, width), Mathf.Max(1, height), 0);
+            player.targetTexture = _rt;
+            if (videoImage != null) videoImage.texture = _rt;
         }
 
         /// <summary>按视频播放进度切换字幕分段；未到第一段或已结束时清空。</summary>
         private void UpdateSubtitle()
         {
             if (_finished || subtitleText == null || player == null || subtitleSegments == null || subtitleSegments.Length == 0) return;
-            var t = player.time;
+            var t = _urlPlayback && _playbackStartRealtime >= 0f
+                ? Time.realtimeSinceStartup - _playbackStartRealtime
+                : (float)player.time;
             var idx = -1;
             if (subtitleTimes != null)
                 for (var i = subtitleTimes.Length - 1; i >= 0; i--)
@@ -247,20 +394,43 @@ namespace M1
             textGo.hideFlags = HideFlags.DontSave;
             textGo.transform.SetParent(overlay.transform, false);
             var trt = textGo.GetComponent<RectTransform>();
-            trt.anchorMin = new Vector2(0.5f, 0f);
-            trt.anchorMax = new Vector2(0.5f, 0f);
-            trt.pivot = new Vector2(0.5f, 0f);
-            trt.anchoredPosition = new Vector2(0f, 16f);
-            trt.sizeDelta = new Vector2(1200f, 100f);
             var tmp = textGo.GetComponent<TextMeshProUGUI>();
-            tmp.fontSize = 28;
-            tmp.alignment = TextAlignmentOptions.Bottom; // 垂直底部对齐：文字贴底显示，与数字人脚部错开
-            tmp.enableWordWrapping = false; // 2026-08-18：单行显示，不换行
+            if (_urlPlayback)
+            {
+                // 微信初始布局（ApplyWebGlSubtitleLayout 会按视频底边精调，这里给同合同默认值）
+                trt.anchorMin = new Vector2(0.5f, 0f);
+                trt.anchorMax = new Vector2(0.5f, 0f);
+                trt.pivot = new Vector2(0.5f, 0f);
+                trt.anchoredPosition = new Vector2(0f, webglSubtitleMinBottom);
+                trt.sizeDelta = new Vector2(webglSubtitleWidth, webglSubtitleHeight);
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.textWrappingMode = TextWrappingModes.NoWrap;
+                tmp.enableAutoSizing = true;
+                tmp.fontSizeMin = 24f;
+                tmp.fontSizeMax = webglSubtitleFontSize;
+            }
+            else
+            {
+                trt.anchorMin = new Vector2(0.5f, 0f);
+                trt.anchorMax = new Vector2(0.5f, 0f);
+                trt.pivot = new Vector2(0.5f, 0f);
+                trt.anchoredPosition = new Vector2(0f, 16f);
+                trt.sizeDelta = new Vector2(1100f, 150f);
+                tmp.alignment = TextAlignmentOptions.Bottom;
+                tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            }
+            tmp.fontSize = _urlPlayback ? webglSubtitleFontSize : 34f;
             tmp.color = Color.white;
+            if (_urlPlayback) tmp.enabled = false;
             if (skipButton != null)
             {
                 var src = skipButton.GetComponentInChildren<TextMeshProUGUI>(true);
-                if (src != null && src.font != null) tmp.font = src.font; // 复用跳过按钮同款中文字体
+                if (src != null && src.font != null) tmp.font = src.font;
+            }
+            if (tmp.font == null)
+            {
+                foreach (var candidate in FindObjectsOfType<TextMeshProUGUI>(true))
+                    if (candidate.font != null) { tmp.font = candidate.font; break; }
             }
             var ol = textGo.AddComponent<Outline>();
             ol.effectColor = new Color(0f, 0f, 0f, 0.9f);
@@ -269,6 +439,111 @@ namespace M1
             sh.effectColor = new Color(0f, 0f, 0f, 0.7f);
             sh.effectDistance = new Vector2(2f, -3f);
             return tmp;
+        }
+
+        /// <summary>微信 WebGL 字幕合同（2026-08-29 真机修复）：人物正下方、水平居中、强制单行。
+        /// 字幕上缘锚定引导视频画面底边下方（按 webglSubtitleGap 留可见间距），随缩放/宽屏自适应；不越底部手势区。</summary>
+        private void ApplyWebGlSubtitleLayout()
+        {
+            if (subtitleText == null) return;
+            var rt = subtitleText.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.sizeDelta = new Vector2(webglSubtitleWidth, webglSubtitleHeight);
+            // 字幕矩形顶边 = 视频画面底边 - 间距；冲突时先缩小人物（至下限），禁止把字幕向上压回人物
+            var scale = webglIntroVideoScale;
+            var bottom = ComputeVideoBottomLocalY();
+            var y = bottom - webglSubtitleGap - webglSubtitleHeight;
+            while (y < webglSubtitleMinBottom && videoImage != null && scale > webglIntroVideoMinScale + 0.001f)
+            {
+                scale = Mathf.Max(scale - 0.02f, webglIntroVideoMinScale);
+                videoImage.rectTransform.localScale = new Vector3(scale, scale, 1f);
+                Canvas.ForceUpdateCanvases();
+                bottom = ComputeVideoBottomLocalY();
+                y = bottom - webglSubtitleGap - webglSubtitleHeight;
+            }
+            rt.anchoredPosition = new Vector2(0f, Mathf.Max(y, webglSubtitleMinBottom));
+            subtitleText.fontSize = webglSubtitleFontSize;
+            subtitleText.enableAutoSizing = true;
+            subtitleText.fontSizeMin = 24f;
+            subtitleText.fontSizeMax = webglSubtitleFontSize;
+            subtitleText.alignment = TextAlignmentOptions.Center;
+            subtitleText.textWrappingMode = TextWrappingModes.NoWrap;
+            // 布局协程可能晚于首帧回调执行；可见性必须由首帧状态决定，不能无条件再次隐藏。
+            subtitleText.enabled = _firstFrameShown;
+        }
+
+        /// <summary>Canvas/AspectRatioFitter 布局完成后再应用字幕几何；分辨率或方向变化时幂等重算。</summary>
+        private IEnumerator ApplyWebGlSubtitleLayoutWhenReady()
+        {
+            yield return null; // 等首帧布局
+            Canvas.ForceUpdateCanvases();
+            ApplyWebGlSubtitleLayout();
+            yield return null; // AspectRatioFitter 可能晚一帧稳定，再算一次（幂等）
+            Canvas.ForceUpdateCanvases();
+            ApplyWebGlSubtitleLayout();
+        }
+
+        /// <summary>分辨率/方向变化时重算字幕（ApplyWebGlSubtitleLayout 幂等；MonoBehaviour 无 Rect 变化回调，用屏幕尺寸轮询）。</summary>
+        private void CheckWebGlSubtitleRelayout()
+        {
+            if (Application.platform != RuntimePlatform.WebGLPlayer || _finished || subtitleText == null) return;
+            if (Screen.width == _lastScreenW && Screen.height == _lastScreenH) return;
+            _lastScreenW = Screen.width;
+            _lastScreenH = Screen.height;
+            Canvas.ForceUpdateCanvases();
+            ApplyWebGlSubtitleLayout();
+            // ApplyWebGlSubtitleLayout 按首帧状态恢复可见性，分辨率重算不会把字幕永久隐藏。
+        }
+
+        /// <summary>引导视频画面底边在字幕父级（引导遮罩）本地坐标系中的 Y（含 webglIntroVideoScale 缩放）。</summary>
+        private float ComputeVideoBottomLocalY()
+        {
+            if (videoImage == null)
+                return webglSubtitleMinBottom + webglSubtitleHeight + webglSubtitleGap; // 无视频引用退化为固定位置
+            var corners = new Vector3[4];
+            videoImage.rectTransform.GetWorldCorners(corners); // 0=左下 1=左上 2=右上 3=右下
+            var bottomCenter = (corners[0] + corners[3]) * 0.5f;
+            return transform.InverseTransformPoint(bottomCenter).y;
+        }
+
+        private void CreatePoster()
+        {
+            if (videoImage == null || videoImage.transform.parent == null) return;
+            var texture = Resources.Load<Texture2D>("DigitalHuman/IntroPoster");
+            if (texture == null) return;
+            var poster = new GameObject("~IntroPoster", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            poster.hideFlags = HideFlags.DontSave;
+            poster.transform.SetParent(videoImage.transform.parent, false);
+            var target = videoImage.rectTransform;
+            var rt = poster.GetComponent<RectTransform>();
+            rt.anchorMin = target.anchorMin;
+            rt.anchorMax = target.anchorMax;
+            rt.pivot = target.pivot;
+            rt.anchoredPosition = target.anchoredPosition;
+            rt.sizeDelta = target.sizeDelta;
+            rt.localScale = target.localScale;
+            poster.transform.SetSiblingIndex(videoImage.transform.GetSiblingIndex() + 1);
+            _posterImage = poster.GetComponent<RawImage>();
+            _posterImage.texture = texture;
+            _posterImage.raycastTarget = false;
+        }
+
+        private void CacheDimOverlay()
+        {
+            var dim = overlay != null ? overlay.transform.Find("半黑遮罩") : null;
+            if (dim == null) return;
+            _dimOverlay = dim.GetComponent<Image>();
+            if (_dimOverlay != null) _dimOverlayColor = _dimOverlay.color;
+        }
+
+        private void SetDimOverlayVisible(bool visible)
+        {
+            if (_dimOverlay == null) return;
+            var color = _dimOverlayColor;
+            color.a = visible ? _dimOverlayColor.a : 0f;
+            _dimOverlay.color = color;
         }
 
         /// <summary>隐藏引导期间需暂隐的对象：禁用对象及子级 Graphic，保证对白框文字不会残留；无 Graphic 才 SetActive(false)。</summary>
@@ -340,10 +615,13 @@ namespace M1
 
         private void OnDestroy()
         {
+            WebGlVideoPlaybackGate.IntroActive = false;
             if (player != null)
             {
                 player.loopPointReached -= OnVideoEnd;
                 player.prepareCompleted -= OnPrepared;
+                player.errorReceived -= OnVideoError;
+                player.frameReady -= OnFrameReady;
             }
             if (_rt != null)
             {

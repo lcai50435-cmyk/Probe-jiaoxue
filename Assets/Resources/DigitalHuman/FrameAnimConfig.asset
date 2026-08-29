@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f71e3a9ded049bb9401ac7ee69f4c0b, type: 3}
+  m_Name: FrameAnimConfig
+  m_EditorClassIdentifier: Assembly-CSharp::M1.DigitalHumanFrameConfig
+  states:
+  - key: idle
+    fps: 8
+    frameCount: 33
+    frameWidth: 240
+    frameHeight: 322
+    gutter: 2
+    cols: 8
+    rows: 6
+    pages:
+    - DigitalHuman/Frames/idle_0
+  - key: thinking
+    fps: 10
+    frameCount: 61
+    frameWidth: 240
+    frameHeight: 322
+    gutter: 2
+    cols: 8
+    rows: 6
+    pages:
+    - DigitalHuman/Frames/thinking_0
+    - DigitalHuman/Frames/thinking_1
+  - key: speaking
+    fps: 12
+    frameCount: 98
+    frameWidth: 240
+    frameHeight: 322
+    gutter: 2
+    cols: 8
+    rows: 6
+    pages:
+    - DigitalHuman/Frames/speaking_0
+    - DigitalHuman/Frames/speaking_1
+    - DigitalHuman/Frames/speaking_2

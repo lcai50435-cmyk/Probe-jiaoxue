@@ -1,0 +1,6 @@
+{"file":".trellis/tasks/08-28-wechat-trial-device-acceptance/prd.md","reason":"逐项核对构建、三平台真机、二维码和权限证据。"}
+{"file":".trellis/tasks/08-28-wechat-ai-security-boundary/check.jsonl","reason":"复核安全子任务检查结果。"}
+{"file":".trellis/tasks/08-28-wechat-package-slimming/check.jsonl","reason":"复核包体子任务检查结果。"}
+{"file":".trellis/tasks/08-28-wechat-digital-human-polish/check.jsonl","reason":"复核数字人子任务检查结果。"}
+{"file":"Temp/wx-export.log","reason":"最终Unity和微信导出日志。"}
+{"file":"Logs/minigame-preview.json","reason":"最终微信包统计。"}

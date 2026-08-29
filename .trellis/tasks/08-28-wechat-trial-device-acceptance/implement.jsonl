@@ -1,0 +1,8 @@
+{"file":".trellis/tasks/08-28-wechat-digital-human-trial-release/prd.md","reason":"父任务最终体验版和跨平台验收标准。"}
+{"file":".trellis/tasks/08-28-wechat-ai-security-boundary/prd.md","reason":"P0安全发布门禁。"}
+{"file":".trellis/tasks/08-28-wechat-package-slimming/prd.md","reason":"P0包体和字体发布门禁。"}
+{"file":".trellis/tasks/08-28-wechat-digital-human-polish/prd.md","reason":"数字人视觉、内存与Android回归门禁。"}
+{"file":"Assets/Editor/WeChatMinigameExportRunner.cs","reason":"微信导出入口。"}
+{"file":"Builds/WXExport/minigame/project.config.json","reason":"AppID、忽略规则和包配置。"}
+{"file":"Builds/WXExport/minigame/game.js","reason":"CDN、data大小和版本引用。"}
+{"file":"Logs/minigame-preview.json","reason":"开发者工具包统计基线。"}

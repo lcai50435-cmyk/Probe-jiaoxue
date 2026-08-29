@@ -1,0 +1,4 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"约束小游戏适配的低代码、构建期内存替换、冻结 Scene 和 Android 超宽屏合同。"}
+{"file":".trellis/spec/unity/video-intro.md","reason":"约束引导视频、LumaKey 颜色空间、字幕布局和常驻数字人视频质量。"}
+{"file":".trellis/tasks/08-24-wechat-minigame/design.md","reason":"父任务已确认小游戏数字人序列帧、远程资源和 CloudBase AI 边界。"}
+{"file":"文档/微信小游戏接入准备.md","reason":"记录微信产物边界、平台前置条件和发布准备。"}

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d9e47e25996e2249b8ce614cec55bb1, type: 3}
+  m_Name: VideoDeliveryConfig
+  m_EditorClassIdentifier: Assembly-CSharp::M1.VideoDeliveryConfig
+  cloudBaseUrl: https://cloud1-d6gmycfs6b37edb43-1476749432.tcloudbaseapp.com/rail-inspection/videos
+  introFile: m1-intro.mp4
+  idleFile: digital-human-idle.mp4
+  thinkingFile: digital-human-thinking.mp4
+  speakingFile: digital-human-speaking.mp4
+  videoWidth: 1080
+  videoHeight: 1450

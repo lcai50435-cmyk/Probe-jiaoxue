@@ -26,8 +26,13 @@ namespace M1
         {
             get
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                var proxy = AiProxyConfig.Load();
+                return proxy != null && proxy.IsConfigured;
+#else
                 var config = DeepSeekConfig.Load();
                 return config != null && config.IsConfigured;
+#endif
             }
         }
 
@@ -58,6 +63,61 @@ namespace M1
 
         /// <summary>发起对话请求。成功回调回复文本；失败回调中文错误提示。协程需要外部 StartCoroutine 驱动。</summary>
         public IEnumerator ChatAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return ChatViaProxyAsync(userMessage, onSuccess, onError);
+#else
+            return ChatDirectAsync(userMessage, onSuccess, onError);
+#endif
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        /// <summary>微信端仅调用无密钥 CloudBase 代理（Key 在云函数环境变量）；代理未配置时不发任何请求。</summary>
+        private IEnumerator ChatViaProxyAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
+        {
+            var proxy = AiProxyConfig.Load();
+            if (proxy == null || !proxy.IsConfigured)
+            {
+                onError?.Invoke("AI 问答暂未开放，敬请期待。");
+                yield break;
+            }
+
+            var body = JsonUtility.ToJson(new ProxyRequestBody(userMessage));
+            using var req = new UnityWebRequest(proxy.proxyUrl.TrimEnd('/'), "POST");
+            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.timeout = Mathf.RoundToInt(proxy.timeout);
+
+            yield return req.SendWebRequest();
+
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                onError?.Invoke("网络连接失败，请检查网络后重试。");
+                yield break;
+            }
+
+            var response = JsonUtility.FromJson<ChatResponse>(req.downloadHandler.text);
+            if (response.choices == null || response.choices.Length == 0 ||
+                string.IsNullOrEmpty(response.choices[0].message.content))
+            {
+                onError?.Invoke("AI 返回内容为空，请换个问法试试。");
+                yield break;
+            }
+
+            onSuccess?.Invoke(response.choices[0].message.content);
+        }
+
+        [Serializable]
+        private class ProxyRequestBody
+        {
+            public string message;
+
+            public ProxyRequestBody(string message) { this.message = message; }
+        }
+#else
+        /// <summary>Android/Editor 保持既有直连共享 DeepSeekConfig 的行为，不做平台迁移。</summary>
+        private IEnumerator ChatDirectAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
         {
             var config = DeepSeekConfig.Load();
             if (config == null || !config.IsConfigured)
@@ -92,6 +152,7 @@ namespace M1
 
             onSuccess?.Invoke(response.choices[0].message.content);
         }
+#endif
 
         [Serializable]
         private class RequestBody

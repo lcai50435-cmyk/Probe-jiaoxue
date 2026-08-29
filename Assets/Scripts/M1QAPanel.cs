@@ -217,6 +217,7 @@ namespace M1
         private void OnDestroy()
         {
             if (_pressDetector != null) _pressDetector.OnLongPress -= Open;
+            SetWebGlKeyboardSupport(false);
             ApplyPause(false);
         }
 
@@ -238,6 +239,8 @@ namespace M1
             if (_input != null)
             {
                 _input.text = string.Empty;
+                // 微信 SDK 启动时默认关闭 WebGL 移动键盘；TMP_InputField 不会被 SDK 的旧 UI.Text 兜底重新开启。
+                SetWebGlKeyboardSupport(true);
                 _input.ActivateInputField();
             }
         }
@@ -246,6 +249,7 @@ namespace M1
         {
             if (!_isOpen) return;
             _isOpen = false;
+            SetWebGlKeyboardSupport(false);
             ApplyPause(false);
             if (_panelRt == null) return;
             StartCoroutine(Slide(_panelRt.anchoredPosition.x, hiddenOffsetX));
@@ -290,6 +294,13 @@ namespace M1
 
         // ==================== 输入 ====================
 
+        private static void SetWebGlKeyboardSupport(bool enabled)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR && UNITY_2022_1_OR_NEWER
+            WebGLInput.mobileKeyboardSupport = enabled;
+#endif
+        }
+
         private void OnInputChanged(string value)
         {
             if (_counter != null) _counter.text = value.Length + "/" + maxChars;
@@ -323,7 +334,7 @@ namespace M1
             var missing = deepSeekClient == null
                 ? "尚未配置 AI 服务：画板缺少 M1DeepSeekClient 组件，请运行 Setup AI 提问面板。"
                 : !deepSeekClient.IsConfigured
-                    ? "尚未配置 AI 服务：请在 Assets/Resources/DeepSeekConfig.asset 中填写一次后重试。"
+                    ? UnconfiguredHint()
                     : null;
             if (missing != null)
             {
@@ -337,6 +348,16 @@ namespace M1
             var thinkingBubble = AddMessage(false, "正在思考...");
             OnAnswerStateChanged?.Invoke(AnswerState.Thinking);
             StartCoroutine(ChatRoutine(question, thinkingBubble));
+        }
+
+        /// <summary>未配置提示分平台：微信端不暴露本地资产路径。</summary>
+        private static string UnconfiguredHint()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return "AI 问答暂未开放，敬请期待。";
+#else
+            return "尚未配置 AI 服务：请在 Assets/Resources/DeepSeekConfig.asset 中填写一次后重试。";
+#endif
         }
 
         private IEnumerator ChatRoutine(string question, MessageBubble thinkingBubble)

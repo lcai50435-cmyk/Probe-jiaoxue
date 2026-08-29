@@ -1,0 +1,5 @@
+{"file":".trellis/spec/unity/low-code.md","reason":"检查冻结 Scene、Android 资源和 Editor 工具幂等。"}
+{"file":".trellis/tasks/08-28-wechat-package-slimming/prd.md","reason":"核对 40MB、字体完整性和结构保留验收。"}
+{"file":"Temp/wx-export.log","reason":"复核 BuildReport Top-N、TMP 异常和被排除资源。"}
+{"file":"Builds/WXExport/minigame/game.js","reason":"验证最新 data 字节数和 CDN 配置。"}
+{"file":"Assets/WX-WASM-SDK-V2/Editor/MiniGameConfig.asset","reason":"检查 profiling 和微信代码分包配置。"}

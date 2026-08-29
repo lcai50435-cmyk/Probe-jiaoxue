@@ -21,6 +21,13 @@ namespace M1
         public VideoClip idleClip;
         public VideoClip thinkingClip;
         public VideoClip speakingClip;
+        [Tooltip("强制使用 URL 视频源（M3-M5 本地 StreamingAssets，WebGL 自动使用 CloudBase）。")]
+        public bool forceUrlPlayback;
+        [Tooltip("微信 WebGL 透明帧图集播放器（Awake 自动创建于 FullBodyView；仅微信端使用，替代第二个 VideoPlayer）")]
+        public M1DigitalHumanFramePlayer framePlayer;
+        [HideInInspector] public string idleUrl;
+        [HideInInspector] public string thinkingUrl;
+        [HideInInspector] public string speakingUrl;
         /// <summary>长按阻塞委托：非空且返回 true 时不响应长按（老板 2026-08-23：气泡台词说完前不能长按开输入界面）。</summary>
         public System.Func<bool> longPressBlocked;
 
@@ -33,6 +40,11 @@ namespace M1
         private AnswerState _answer = AnswerState.Idle;
         private RenderTexture _rt;
         private bool _shortPressEnabled; // 全模块禁用点击切换全身/折叠头像，长按开问答面板保留
+        private bool _urlPlayback;
+        private bool _useFrameAtlas;
+        private int _urlVideoWidth = 1080;
+        private int _urlVideoHeight = 1450;
+        private bool _pendingAfterIntro;
 
         private void Awake()
         {
@@ -43,30 +55,70 @@ namespace M1
                 qaPanel.OnAnswerStateChanged += OnAnswerState;
                 qaPanel.OnPanelVisibilityChanged += OnPanelVisibility;
             }
+            var delivery = VideoDeliveryConfig.Load();
+            _urlPlayback = forceUrlPlayback || (delivery != null && delivery.UseRemoteVideo);
+            if (delivery != null)
+            {
+                if (string.IsNullOrEmpty(idleUrl)) idleUrl = delivery.IdleUrl;
+                if (string.IsNullOrEmpty(thinkingUrl)) thinkingUrl = delivery.ThinkingUrl;
+                if (string.IsNullOrEmpty(speakingUrl)) speakingUrl = delivery.SpeakingUrl;
+                _urlVideoWidth = delivery.videoWidth;
+                _urlVideoHeight = delivery.videoHeight;
+            }
+            // 微信端改透明帧图集后端（配置缺失时回退视频 URL 路径）；帧图集自带 Alpha，移除黑底抠像材质
+            _useFrameAtlas = Application.platform == RuntimePlatform.WebGLPlayer && SetupFramePlayer();
+            if (_useFrameAtlas && rawImage != null) rawImage.material = null;
+            else if (Application.platform == RuntimePlatform.WebGLPlayer && rawImage != null && rawImage.material != null && rawImage.material.HasProperty("_VideoInputIsSRGB"))
+                rawImage.material.SetFloat("_VideoInputIsSRGB", 1f);
             if (player != null)
             {
                 player.playOnAwake = false;
                 player.isLooping = true;
                 player.audioOutputMode = VideoAudioOutputMode.None; // 运行时兜底静音，不依赖导入配置
                 player.skipOnDrop = true;
+                player.waitForFirstFrame = true;
+                player.playbackSpeed = 1f;
                 player.sendFrameReadyEvents = true;
                 player.frameReady += OnFrameReady;
+                if (_urlPlayback) player.prepareCompleted += OnUrlPrepared;
             }
             // 视频经 RenderTexture 由 RawImage 显示（复用开场引导链路）
             var clip = idleClip != null ? idleClip : thinkingClip != null ? thinkingClip : speakingClip;
-            if (clip != null && player != null)
-            {
-                // 原生分辨率 RT + mip 链：缩小显示由 mip 采样避免白描边锯齿；VideoPlayer 只写基级，mip 需在 Update 显式重建
-                _rt = new RenderTexture((int)clip.width, (int)clip.height, 0)
-                { useMipMap = true, autoGenerateMips = false, filterMode = FilterMode.Bilinear };
-                player.targetTexture = _rt;
-                if (rawImage != null) rawImage.texture = _rt;
-            }
+            if (!_urlPlayback && clip != null && player != null) SetupRenderTexture((int)clip.width, (int)clip.height);
         }
 
         private void Start()
         {
+            // 帧图集后端不占用视频解码器：引导期间即可加载待机帧，引导结束（恢复 Graphic）后立即显示。
+            if (_useFrameAtlas)
+            {
+                ApplyMode(DisplayMode.FullBody);
+                return;
+            }
+            // 微信小游戏解码器只支持一个视频：M1 引导结束前不得创建常驻数字人视频实例。
+            if (_urlPlayback && WebGlVideoPlaybackGate.IntroActive)
+            {
+                _pendingAfterIntro = true;
+                return;
+            }
             ApplyMode(DisplayMode.FullBody); // 默认全身待机（内部按当前状态播放）
+        }
+
+        /// <summary>微信帧图集后端装配：挂 RawImage 同节点并注入 target；配置资产缺失返回 false（回退视频路径）。</summary>
+        private bool SetupFramePlayer()
+        {
+            if (rawImage == null) return false;
+            framePlayer = rawImage.GetComponent<M1DigitalHumanFramePlayer>();
+            if (framePlayer == null) framePlayer = rawImage.gameObject.AddComponent<M1DigitalHumanFramePlayer>(); // Unity 6 伪 null：必须 if == null 分步
+            framePlayer.target = rawImage;
+            return framePlayer.HasConfig();
+        }
+
+        public void ResumeAfterIntro()
+        {
+            if (!_pendingAfterIntro) return;
+            _pendingAfterIntro = false;
+            ApplyMode(DisplayMode.FullBody);
         }
 
         private void OnFrameReady(VideoPlayer source, long frame)
@@ -80,7 +132,11 @@ namespace M1
             Bind(avatarPress, false);
             if (qaPanel != null)
             { qaPanel.OnAnswerStateChanged -= OnAnswerState; qaPanel.OnPanelVisibilityChanged -= OnPanelVisibility; }
-            if (player != null) player.frameReady -= OnFrameReady;
+            if (player != null)
+            {
+                player.frameReady -= OnFrameReady;
+                player.prepareCompleted -= OnUrlPrepared;
+            }
             if (_rt != null) { _rt.Release(); Destroy(_rt); }
         }
 
@@ -158,13 +214,61 @@ namespace M1
             => state == AnswerState.Thinking ? thinkingClip
             : state == AnswerState.Speaking ? speakingClip : idleClip;
 
+        private string UrlForState(AnswerState state)
+            => state == AnswerState.Thinking ? thinkingUrl
+            : state == AnswerState.Speaking ? speakingUrl : idleUrl;
+
+        private string KeyForState(AnswerState state)
+            => state == AnswerState.Thinking ? "thinking"
+            : state == AnswerState.Speaking ? "speaking" : "idle";
+
         private void PlayClip(VideoClip clip)
         {
-            if (clip == null || player == null) return;
+            // 微信帧图集后端：状态机/长按问答行为与视频后端完全一致，仅切换播放源
+            if (_useFrameAtlas)
+            {
+                if (framePlayer != null) framePlayer.PlayState(KeyForState(_answer));
+                return;
+            }
+            if (player == null) return;
+            if (_urlPlayback)
+            {
+                var url = UrlForState(_answer);
+                if (string.IsNullOrEmpty(url))
+                {
+                    Debug.LogWarning("[M1DigitalHumanPresenter] 未配置视频 URL。");
+                    return;
+                }
+                if (player.url == url && (player.isPlaying || player.isPrepared)) return;
+                player.Stop();
+                player.source = VideoSource.Url;
+                player.url = url;
+                SetupRenderTexture(_urlVideoWidth, _urlVideoHeight);
+                player.Prepare();
+                return;
+            }
+            if (clip == null) return;
             if (player.clip == clip && player.isPlaying) return;
             player.Stop();
+            player.source = VideoSource.VideoClip;
             player.clip = clip;
             player.Play(); // 从头播放并循环（R1）
+        }
+
+        private void OnUrlPrepared(VideoPlayer source)
+        {
+            if (!_urlPlayback) return;
+            SetupRenderTexture((int)source.width, (int)source.height);
+            source.Play();
+        }
+
+        private void SetupRenderTexture(int width, int height)
+        {
+            if (_rt != null || player == null) return;
+            _rt = new RenderTexture(Mathf.Max(1, width), Mathf.Max(1, height), 0)
+            { useMipMap = true, autoGenerateMips = false, filterMode = FilterMode.Bilinear };
+            player.targetTexture = _rt;
+            if (rawImage != null) rawImage.texture = _rt;
         }
     }
 }
