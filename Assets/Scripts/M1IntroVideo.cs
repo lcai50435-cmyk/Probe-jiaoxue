@@ -108,6 +108,19 @@ namespace M1
         [Tooltip("微信 WebGL 视频启动超时（秒）：准备完成后播放时间仍未推进时关闭引导遮罩；0=关闭")]
         public float webglPlaybackStartTimeout = 8f;
 
+        [Header("微信分包视频（2026-08-30：引导视频随包分发，进游戏即播）")]
+        [Tooltip("分包就绪等待上限（秒）：导出注入的 JS 启动加载 videos 分包并写 storage 信号，超时或失败回退 CDN URL")]
+        public float webglPackageWaitTimeout = 4f;
+
+        [Tooltip("CDN 兜底准备超时（秒）：分包源失败转 CDN 播放后，仍无准备完成则转海报字幕引导；0=关闭")]
+        public float webglFallbackPrepareTimeout = 6f;
+
+        [Tooltip("海报兜底引导时长（秒）：视频完全不可用时以海报+字幕完成引导，到时自动恢复游戏")]
+        public float webglPosterFallbackDuration = 16f;
+
+        /// <summary>JS 注入侧写入的分包就绪信号 storage key（1=就绪 2=失败）；Editor 导出工具按同名注入 game.js。</summary>
+        public const string PackageReadyKey = "__wxIntroVideoPkg";
+
         private RenderTexture _rt;
         private bool _firstTime;
         private bool _started;
@@ -124,6 +137,11 @@ namespace M1
         private Color _dimOverlayColor;
         private RawImage _posterImage;
         private bool _firstFrameShown;
+        private VideoDeliveryConfig _delivery;
+        private bool _usePackageSource;      // WebGL 且配置了 videos 分包内引导视频
+        private bool _introSourceAvailable;  // 存在任一可播放视频源（包内/CDN/本地 clip）
+        private bool _posterFallback;        // 海报+字幕兜底引导进行中
+        private float _posterClockStart = -1f;
 
         private void Awake()
         {
@@ -152,6 +170,7 @@ namespace M1
             }
             // 先确定播放后端：动态字幕创建必须立即使用正确的平台布局，不能等创建后再赋值。
             var delivery = VideoDeliveryConfig.Load();
+            _delivery = delivery;
             _urlPlayback = delivery != null && delivery.UseRemoteVideo;
             // 运行时兜底二：场景无字幕节点时动态创建（挂遮罩底部，字体从跳过按钮复制），保证不跑 Setup 也显示字幕
             if (subtitleText == null) subtitleText = CreateRuntimeSubtitle();
@@ -177,25 +196,34 @@ namespace M1
             }
             if (_urlPlayback)
             {
-                player.source = VideoSource.Url;
-                player.url = delivery.IntroUrl;
                 _remoteVideoWidth = delivery.videoWidth;
                 _remoteVideoHeight = delivery.videoHeight;
                 CacheDimOverlay();
                 SetDimOverlayVisible(false); // 下载首帧期间保留正常教学画面，避免空黑遮罩
                 CreatePoster();
                 StartCoroutine(ApplyWebGlSubtitleLayoutWhenReady()); // 等 Canvas/ARF 布局完成后再定位字幕
+                // 2026-08-30：包内 720p 视频优先（videos 分包随包分发，进游戏即播）；未配置则维持 CDN 直连
+                _usePackageSource = !string.IsNullOrEmpty(delivery.wechatIntroPackageFile);
+                if (!_usePackageSource)
+                {
+                    player.source = VideoSource.Url;
+                    player.url = delivery.IntroUrl;
+                }
             }
-            var clip = player.clip;
-            if ((_urlPlayback && string.IsNullOrEmpty(player.url)) || (!_urlPlayback && clip == null))
+            _introSourceAvailable = _urlPlayback
+                ? _usePackageSource || !string.IsNullOrEmpty(delivery.IntroUrl)
+                : player.clip != null;
+            if (!_introSourceAvailable)
             {
-                Debug.LogError("[M1IntroVideo] 未配置可播放的引导视频源。");
+                Debug.LogError("[M1IntroVideo] 未配置可播放的引导视频源，转海报字幕兜底引导。");
+                Time.timeScale = 0f;
+                StartPosterFallback();
                 return;
             }
 
             // 视频渲染到 RenderTexture，再由 RawImage 显示（保证视频层叠在遮罩之上）
             if (_urlPlayback) SetupRenderTexture(_remoteVideoWidth, _remoteVideoHeight);
-            else SetupRenderTexture((int)clip.width, (int)clip.height);
+            else SetupRenderTexture((int)player.clip.width, (int)player.clip.height);
             player.loopPointReached += OnVideoEnd;
             player.prepareCompleted += OnPrepared;
             player.errorReceived += OnVideoError;
@@ -210,7 +238,8 @@ namespace M1
 
             // 场景加载即冻结游戏 + 后台预解码：避免玩家在准备期间操作，也避免播放开头卡顿
             Time.timeScale = 0f;
-            player.Prepare();
+            if (_usePackageSource) StartCoroutine(WaitWebGlPackageSource());
+            else player.Prepare();
             StartCoroutine(PrepareTimeout());
         }
 
@@ -219,6 +248,14 @@ namespace M1
         {
             CheckWebGlSubtitleRelayout();
             UpdateSubtitle();
+            // 海报兜底引导到时自动结束（realtime 计时，不受 timeScale=0 影响）
+            if (_posterFallback && !_finished && _posterClockStart >= 0f
+                && Time.realtimeSinceStartup - _posterClockStart >= webglPosterFallbackDuration)
+            {
+                _finished = true;
+                FinishIntro();
+                return;
+            }
             if (_finished || pauseWhilePlaying == null) return;
             foreach (var p in pauseWhilePlaying)
                 if (p != null && p.isPlaying) p.Pause();
@@ -236,20 +273,26 @@ namespace M1
             var overlayButton = overlay.GetComponent<Button>();
             if (overlayButton != null) overlayButton.interactable = canSkip;
 
-            // 视频可播放才隐藏常驻数字人（避免半黑遮罩两侧透出）；缺失时不隐藏，防止播放逻辑不触发导致永久消失
-            if (player != null && (player.clip != null || (_urlPlayback && !string.IsNullOrEmpty(player.url))))
+            // 有视频源或海报兜底时隐藏常驻数字人（结束后 RestoreWhilePlaying 恢复）；完全无引导内容时不隐藏，防止数字人永久消失
+            if (player != null && (_introSourceAvailable || _posterFallback))
             {
                 HideWhilePlaying();
-                if (!_urlPlayback) TryPlay(); // 远程视频必须等待 prepareCompleted，避免首播速度异常
-                if (Application.platform == RuntimePlatform.WebGLPlayer && webglPrepareTimeout > 0f)
+                if (!_urlPlayback && !_posterFallback) TryPlay(); // 远程视频必须等待 prepareCompleted，避免首播速度异常
+                if (Application.platform == RuntimePlatform.WebGLPlayer && webglPrepareTimeout > 0f && !_usePackageSource && !_posterFallback)
                     StartCoroutine(WebGlPrepareTimeout());
             }
         }
 
         private void OnPrepared(VideoPlayer vp)
         {
+            if (_posterFallback) return; // 兜底已接管，忽略迟到的视频准备
             _prepared = true;
-            if (_urlPlayback) SetupRenderTexture((int)vp.width, (int)vp.height);
+            // 包内视频 720×966 与配置声明的 1080×1450 不同：按实际解码尺寸重建 RenderTexture，避免画面只占一角
+            if (_urlPlayback && vp.width > 0 && vp.height > 0 && (_rt == null || _rt.width != (int)vp.width || _rt.height != (int)vp.height))
+            {
+                if (_rt != null) { _rt.Release(); Destroy(_rt); _rt = null; }
+                SetupRenderTexture((int)vp.width, (int)vp.height);
+            }
             TryPlay();
             if (_urlPlayback && webglPlaybackStartTimeout > 0f && !_playbackTimeoutStarted)
             {
@@ -270,9 +313,9 @@ namespace M1
         private void OnVideoError(VideoPlayer vp, string message)
         {
             Debug.LogWarning("[M1IntroVideo] 视频播放失败：" + message);
-            if (Application.platform != RuntimePlatform.WebGLPlayer || _finished) return;
-            _finished = true;
-            FinishIntro();
+            if (Application.platform != RuntimePlatform.WebGLPlayer || _finished || _posterFallback) return;
+            if (_firstFrameShown) { _finished = true; FinishIntro(); return; } // 已开播后失败：直接放行进游戏
+            StartPosterFallback(); // 首帧前失败：快速转海报字幕引导，不再干等超时
         }
 
         /// <summary>预解码超时兜底：Prepare 长时间未完成（解码异常）时强制播放，避免永久黑屏。</summary>
@@ -293,7 +336,7 @@ namespace M1
         private IEnumerator WebGlPrepareTimeout()
         {
             yield return new WaitForSecondsRealtime(webglPrepareTimeout);
-            if (_finished || _prepared) yield break;
+            if (_finished || _prepared || _posterFallback) yield break;
 
             Debug.LogWarning("[M1IntroVideo] 微信 WebGL 视频准备超时，跳过引导以避免黑屏。");
             _finished = true;
@@ -303,11 +346,71 @@ namespace M1
         private IEnumerator WebGlFirstFrameTimeout()
         {
             yield return new WaitForSecondsRealtime(webglPlaybackStartTimeout);
-            if (_finished || _firstFrameShown) yield break;
+            if (_finished || _firstFrameShown || _posterFallback) yield break;
 
             Debug.LogWarning("[M1IntroVideo] 微信 WebGL 视频首帧超时，跳过引导以避免永久冻结。");
             _finished = true;
             FinishIntro();
+        }
+
+        /// <summary>轮询导出注入 JS 写入的 videos 分包就绪信号：就绪用包内路径播放；失败/超时回退 CDN URL。</summary>
+        private IEnumerator WaitWebGlPackageSource()
+        {
+            var deadline = Time.realtimeSinceStartup + Mathf.Max(0.5f, webglPackageWaitTimeout);
+            var ready = false;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                var flag = WeChatWASM.WXBase.StorageGetStringSync(PackageReadyKey, "0");
+#else
+                var flag = "2"; // 非 WebGL 编译目标不含 WX 接口：视为分包不可用，直接走 CDN 兜底
+#endif
+                if (flag == "1") { ready = true; break; }
+                if (flag == "2") break;
+                yield return new WaitForSecondsRealtime(0.2f);
+            }
+            if (ready)
+            {
+                player.source = VideoSource.Url;
+                player.url = _delivery.wechatIntroPackageFile; // 代码包相对路径，随包秒取
+                player.Prepare();
+                yield break;
+            }
+            Debug.LogWarning("[M1IntroVideo] 分包引导视频未就绪，回退 CDN URL 播放。");
+            FallbackToCdn();
+        }
+
+        /// <summary>分包源失败后的 CDN 兜底：配置了较短准备超时，仍失败则进海报字幕引导。</summary>
+        private void FallbackToCdn()
+        {
+            var url = _delivery != null ? _delivery.IntroUrl : string.Empty;
+            if (string.IsNullOrEmpty(url)) { StartPosterFallback(); return; }
+            player.source = VideoSource.Url;
+            player.url = url;
+            player.Prepare();
+            if (Application.platform == RuntimePlatform.WebGLPlayer && webglFallbackPrepareTimeout > 0f)
+                StartCoroutine(WebGlFallbackPrepareTimeout());
+        }
+
+        private IEnumerator WebGlFallbackPrepareTimeout()
+        {
+            yield return new WaitForSecondsRealtime(webglFallbackPrepareTimeout);
+            if (_finished || _prepared || _posterFallback) yield break;
+
+            Debug.LogWarning("[M1IntroVideo] CDN 兜底视频准备超时，转海报字幕兜底引导。");
+            StartPosterFallback();
+        }
+
+        /// <summary>视频链路完全不可用时的兜底引导：半黑遮罩 + 海报 + 按 realtime 时间轴播放字幕，到时自动恢复游戏。</summary>
+        private void StartPosterFallback()
+        {
+            if (_posterFallback || _finished) return;
+            _posterFallback = true;
+            Debug.LogWarning("[M1IntroVideo] 启用海报+字幕兜底引导（" + webglPosterFallbackDuration + " 秒）。");
+            SetDimOverlayVisible(true);
+            if (_posterImage != null) _posterImage.enabled = true;
+            if (subtitleText != null) subtitleText.enabled = true;
+            _posterClockStart = Time.realtimeSinceStartup;
         }
 
         /// <summary>跳过引导（遮罩/跳过按钮点击触发；首次进入时不可用）。</summary>
@@ -365,9 +468,12 @@ namespace M1
         private void UpdateSubtitle()
         {
             if (_finished || subtitleText == null || player == null || subtitleSegments == null || subtitleSegments.Length == 0) return;
-            var t = _urlPlayback && _playbackStartRealtime >= 0f
-                ? Time.realtimeSinceStartup - _playbackStartRealtime
-                : (float)player.time;
+            // 海报兜底模式：字幕跟兜底时钟走（视频未参与）；正常模式：URL 播放用 realtime，本地 clip 用视频时间
+            var t = _posterFallback && _posterClockStart >= 0f
+                ? Time.realtimeSinceStartup - _posterClockStart
+                : _urlPlayback && _playbackStartRealtime >= 0f
+                    ? Time.realtimeSinceStartup - _playbackStartRealtime
+                    : (float)player.time;
             var idx = -1;
             if (subtitleTimes != null)
                 for (var i = subtitleTimes.Length - 1; i >= 0; i--)
@@ -470,8 +576,8 @@ namespace M1
             subtitleText.fontSizeMax = webglSubtitleFontSize;
             subtitleText.alignment = TextAlignmentOptions.Center;
             subtitleText.textWrappingMode = TextWrappingModes.NoWrap;
-            // 布局协程可能晚于首帧回调执行；可见性必须由首帧状态决定，不能无条件再次隐藏。
-            subtitleText.enabled = _firstFrameShown;
+            // 布局协程可能晚于首帧回调或海报兜底执行；可见性必须由首帧/兜底状态决定，不能无条件再次隐藏。
+            subtitleText.enabled = _firstFrameShown || _posterFallback;
         }
 
         /// <summary>Canvas/AspectRatioFitter 布局完成后再应用字幕几何；分辨率或方向变化时幂等重算。</summary>

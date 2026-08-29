@@ -8,6 +8,8 @@ namespace M1
     {
         public string cloudBaseUrl = "https://cloud1-d6gmycfs6b37edb43-1476749432.tcloudbaseapp.com/rail-inspection/videos";
         public string introFile = "m1-intro-faststart.mp4";
+        [Tooltip("微信小游戏 videos 分包内引导视频文件路径（空=停用包内源走 CDN；文件由导出后处理复制进分包）")]
+        public string wechatIntroPackageFile = "videos/m1-intro-wx.mp4";
         public string idleFile = "digital-human-idle.mp4";
         public string thinkingFile = "digital-human-thinking.mp4";
         public string speakingFile = "digital-human-speaking.mp4";

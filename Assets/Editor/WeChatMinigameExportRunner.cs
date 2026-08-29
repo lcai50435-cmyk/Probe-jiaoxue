@@ -23,6 +23,7 @@ namespace M1.EditorTools
                 return;
             }
             CloudFunctionExporter.Install();
+            WxVideoSubpackageInstaller.Install();
         }
     }
 }

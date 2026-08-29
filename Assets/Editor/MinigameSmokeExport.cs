@@ -36,7 +36,10 @@ namespace M1.EditorTools
             }
             var error = WXEditorWin.DoExport(true);
             if (error == WXConvertCore.WXExportError.SUCCEED)
+            {
                 CloudFunctionExporter.Install();
+                WxVideoSubpackageInstaller.Install();
+            }
             return error;
         }
 
