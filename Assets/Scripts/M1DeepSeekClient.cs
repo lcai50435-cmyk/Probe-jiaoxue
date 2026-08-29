@@ -72,7 +72,7 @@ namespace M1
         }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        /// <summary>微信端仅调用无密钥 CloudBase 代理（Key 在云函数环境变量）；代理未配置时不发任何请求。</summary>
+        /// <summary>微信端通过 WX.cloud.CallFunction 调用无密钥 CloudBase 普通云函数（Key 在云函数环境变量，客户端零凭据）；代理未配置时不发任何请求。</summary>
         private IEnumerator ChatViaProxyAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
         {
             var proxy = AiProxyConfig.Load();
@@ -82,26 +82,74 @@ namespace M1
                 yield break;
             }
 
-            var body = JsonUtility.ToJson(new ProxyRequestBody(userMessage));
-            using var req = new UnityWebRequest(proxy.proxyUrl.TrimEnd('/'), "POST");
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.timeout = Mathf.RoundToInt(proxy.timeout);
+            var done = false;
+            var timedOut = false;
+            var reply = string.Empty;
+            var errMsg = string.Empty;
+            var startedAt = Time.unscaledTime; // QA 面板暂停（timeScale=0）时仍按真实时间超时
 
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
+            try
             {
-                onError?.Invoke("网络连接失败，请检查网络后重试。");
+                var cloudConfig = new WeChatWASM.ICloudConfig { env = proxy.envId };
+                WeChatWASM.WX.cloud.Init(cloudConfig);
+                WeChatWASM.WX.cloud.CallFunction(new WeChatWASM.CallFunctionParam
+                {
+                    name = proxy.functionName,
+                    data = new ProxyRequestBody(userMessage),
+                    slow = true,
+                    config = cloudConfig,
+                    success = res =>
+                    {
+                        reply = res.result ?? string.Empty; // 云函数返回对象 JSON 序列化字符串
+                        done = true;
+                    },
+                    fail = res =>
+                    {
+                        errMsg = res.errMsg ?? string.Empty;
+                        done = true;
+                    },
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[M1DeepSeekClient] 云函数调用初始化失败：" + e.Message);
+                onError?.Invoke("AI 服务暂不可用，请稍后再试。");
                 yield break;
             }
 
-            var response = JsonUtility.FromJson<ChatResponse>(req.downloadHandler.text);
-            if (response.choices == null || response.choices.Length == 0 ||
-                string.IsNullOrEmpty(response.choices[0].message.content))
+            while (!done)
+            {
+                if (Time.unscaledTime - startedAt >= proxy.timeout)
+                {
+                    timedOut = true;
+                    break;
+                }
+                yield return null;
+            }
+            if (timedOut)
+            {
+                onError?.Invoke("AI 回答超时，请稍后重试。");
+                yield break;
+            }
+            if (!string.IsNullOrEmpty(errMsg))
+            {
+                Debug.LogWarning("[M1DeepSeekClient] 云函数调用失败：" + errMsg);
+                onError?.Invoke("AI 服务暂不可用，请稍后再试。");
+                yield break;
+            }
+            if (string.IsNullOrEmpty(reply))
             {
                 onError?.Invoke("AI 返回内容为空，请换个问法试试。");
+                yield break;
+            }
+
+            var response = JsonUtility.FromJson<ChatResponse>(reply);
+            if (response == null || response.choices == null || response.choices.Length == 0 ||
+                string.IsNullOrEmpty(response.choices[0].message.content))
+            {
+                onError?.Invoke(!string.IsNullOrEmpty(response?.error)
+                    ? response.error
+                    : "AI 返回内容为空，请换个问法试试。");
                 yield break;
             }
 
@@ -186,6 +234,7 @@ namespace M1
         private class ChatResponse
         {
             public Choice[] choices;
+            public string error;
 
             [Serializable]
             public class Choice

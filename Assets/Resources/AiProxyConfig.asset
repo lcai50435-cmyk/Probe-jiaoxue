@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6e495f79ad742658c3d4b8cc4e13712, type: 3}
   m_Name: AiProxyConfig
   m_EditorClassIdentifier: Assembly-CSharp::M1.AiProxyConfig
-  proxyUrl:
-  timeout: 30
+  envId: cloud1-d6gmycfs6b37edb43
+  functionName: deepseek-proxy
+  timeout: 40

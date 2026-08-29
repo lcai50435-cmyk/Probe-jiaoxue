@@ -7,7 +7,7 @@ namespace M1
     public sealed class VideoDeliveryConfig : ScriptableObject
     {
         public string cloudBaseUrl = "https://cloud1-d6gmycfs6b37edb43-1476749432.tcloudbaseapp.com/rail-inspection/videos";
-        public string introFile = "m1-intro.mp4";
+        public string introFile = "m1-intro-faststart.mp4";
         public string idleFile = "digital-human-idle.mp4";
         public string thinkingFile = "digital-human-thinking.mp4";
         public string speakingFile = "digital-human-speaking.mp4";

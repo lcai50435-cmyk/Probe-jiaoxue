@@ -18,7 +18,11 @@ namespace M1.EditorTools
             var err = WeChatWASM.WXConvertCore.DoExport(true);
             Debug.Log("[WeChatMinigameExportRunner] 导出结果：" + err);
             if (err != WeChatWASM.WXConvertCore.WXExportError.SUCCEED)
+            {
                 EditorApplication.Exit(2);
+                return;
+            }
+            CloudFunctionExporter.Install();
         }
     }
 }

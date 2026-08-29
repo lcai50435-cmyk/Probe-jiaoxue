@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: VideoDeliveryConfig
   m_EditorClassIdentifier: Assembly-CSharp::M1.VideoDeliveryConfig
   cloudBaseUrl: https://cloud1-d6gmycfs6b37edb43-1476749432.tcloudbaseapp.com/rail-inspection/videos
-  introFile: m1-intro.mp4
+  introFile: m1-intro-faststart.mp4
   idleFile: digital-human-idle.mp4
   thinkingFile: digital-human-thinking.mp4
   speakingFile: digital-human-speaking.mp4

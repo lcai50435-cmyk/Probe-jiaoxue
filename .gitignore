@@ -124,3 +124,7 @@ InitTestScene*.unity*
 # 本地 DeepSeek 凭据：由 Tools/AI/配置共享 DeepSeek 服务或 M1 QA Setup 创建，不纳入版本控制。
 /Assets/Resources/DeepSeekConfig.asset
 /Assets/Resources/DeepSeekConfig.asset.meta
+
+# 字体子集工具的构建备份与临时产物(可再生成)
+TextToolDatas/
+nul

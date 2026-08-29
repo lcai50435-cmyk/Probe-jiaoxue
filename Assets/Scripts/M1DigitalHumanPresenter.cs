@@ -116,6 +116,13 @@ namespace M1
 
         public void ResumeAfterIntro()
         {
+            // 引导会临时禁用 RawImage；帧图集后端不依赖 pending 标志，结束时必须主动恢复可见性与待机帧。
+            if (_useFrameAtlas)
+            {
+                if (rawImage != null) rawImage.enabled = true;
+                ApplyMode(DisplayMode.FullBody);
+                return;
+            }
             if (!_pendingAfterIntro) return;
             _pendingAfterIntro = false;
             ApplyMode(DisplayMode.FullBody);

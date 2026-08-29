@@ -34,7 +34,10 @@ namespace M1.EditorTools
                 EditorUtility.SetDirty(config);
                 AssetDatabase.SaveAssets();
             }
-            return WXEditorWin.DoExport(true);
+            var error = WXEditorWin.DoExport(true);
+            if (error == WXConvertCore.WXExportError.SUCCEED)
+                CloudFunctionExporter.Install();
+            return error;
         }
 
         private static void Finish(WXConvertCore.WXExportError error)
