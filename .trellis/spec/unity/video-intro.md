@@ -38,7 +38,52 @@
 
 **微信 WebGL 单行字幕（2026-08-29 开发者工具定稿）**：微信端宽 1700、高 52、最大字号 30/最小 24 自动缩小，`TextWrappingModes.NoWrap`，三段台词均强制单行；布局仍按人物实际底边、20px 间距与底部 40px 安全线计算。不得通过自动换行规避溢出；长句优先缩小字号。Android/Editor 继续使用 Setup 单行布局，运行时兜底 anchoredPosition 必须保持 y=16。
 
-**微信引导三级来源与必达释放（2026-08-29 Android 真机）**：导出后 `videos` 普通分包必须同时包含 MP4 与根入口 `game.js`。微信 SDK 的视频后端分叉必须保留：仅 Android `createVideoDecoder` 在分包加载后 `copyFileSync` 到 `wx.env.USER_DATA_PATH` 并把 `wxfile://usr/...` 经 SDK storage 交给 Unity；iOS `createWKVideo` 与开发者工具继续使用已验证的 `videos/...` 分包相对路径，禁止强行共用 wxfile 路径。运行时按“平台适配的分包本地文件→CDN→海报字幕”降级：分包 `Prepare` 无回调、报错或首帧超时必须 Stop 后切 CDN，CDN Prepare/首帧失败进入海报字幕，海报按 realtime 到时调用 `FinishIntro`。海报必须有自己的 `AspectRatioFitter`，在视频布局首帧尚未计算时也立即可见。禁止任何失败路径永久保留 overlay 或 `Time.timeScale=0`；Android/Editor 本地 VideoClip 路径保持不变。
+### 微信 iOS 海报字幕后端（2026-08-30 真机修复）
+
+#### 1. Scope / Trigger
+
+微信 Android 的 `VideoDecoder` 已能稳定播放分包 MP4；iPhone 的 `WKVideo` 实测只交付静帧，且其 M1 卸载会与 RenderTexture 释放叠加造成微信进程闪退。iPhone 不再尝试引导视频，统一复用 `IntroPoster + subtitleTimes` 后端。
+
+#### 2. Signatures
+
+- JS→C# 平台键：`__wxIntroVideoPlatform`，值为 `android`、`ios` 或 `unknown`。
+- 分包键：`__wxIntroVideoPkg` / `__wxIntroVideoPath`；仅 Android 使用。
+- 读取入口：`VideoDeliveryConfig.IsWechatAndroid()`，只可在 `UNITY_WEBGL && !UNITY_EDITOR` 下通过 `WXStorageGetStringSync` 读取。
+
+#### 3. Contracts
+
+`WxVideoSubpackageInstaller` 的注入代码必须在 `checkVersion().then(...startGame())` 之前经 `GameGlobal.WXWASMSDK.WXStorageSetStringSync` 写入平台键。只有 `android` 执行 `loadSubpackage('videos')`、复制 MP4 到 `wx.env.USER_DATA_PATH` 并传回真实路径；`ios` 必须直接标记分包不可用，禁止 `loadSubpackage`、`Prepare`、`Play`、`Stop`、创建 RT 或触发 `createWKVideo`。`M1IntroVideo` 对非 Android WebGL 立即显示半黑遮罩、海报和 realtime 字幕，到时调用 `FinishIntro`；海报初始化必须 hidden，不能在 Android 等待首帧时裸露静帧人物。常驻数字人 iOS 优先透明图集；图集缺失时不得回退第二个 URL `VideoPlayer`。
+
+#### 4. Validation & Error Matrix
+
+| 条件 | 行为 |
+|---|---|
+| `android` + 分包可用 | `wxfile://` MP4 播放；首帧前仍保留原 Android 行为 |
+| `android` + 分包失败 | 分包→CDN→海报字幕三级降级 |
+| `ios` / `unknown` | 直接海报字幕；不创建视频后端 |
+| 视频/场景销毁 | 先解绑事件、断开 `VideoPlayer.targetTexture` 与 `RawImage.texture`，再 Release/Destroy RT |
+
+#### 5. Good / Base / Bad Cases
+
+- Good：Android 正常播放动画；iPhone 第一帧就是带半黑遮罩的海报和字幕，完成后显示帧图集数字人。
+- Base：Editor/非微信 WebGL 无平台键时走海报字幕，不依赖闭源 WKVideo。
+- Bad：iOS 写入 `videos/...` 后让 Unity `Prepare()`；或先 Release RT、后销毁视频实例，均会恢复静帧/闪退风险。
+
+#### 6. Tests Required
+
+重新导出后检查 `game.js` 在启动 Unity 前写入平台键，且 `if (!A) { ... return; }` 位于 `loadSubpackage` 前；`game.json` 必须保留 `videos/game.js` 与 Android 并行预载。Android 真机验证包内 MP4，iPhone 真机验证无 `createWKVideo`、遮罩/三段字幕/结束后图集数字人和 M1→M2 连续两轮不闪退。构建前后核对 M2/M3 哈希。
+
+#### 7. Wrong vs Correct
+
+```js
+// Wrong: iOS also loads a relative MP4 and enters WKVideo.
+wx.loadSubpackage({ name: 'videos', success: () => set(pathKey, 'videos/m1-intro-wx.mp4') });
+
+// Correct: record the platform first; only Android allocates the video path.
+set(platformKey, device.platform || 'unknown');
+if (device.platform !== 'android') { set(readyKey, '2'); return; }
+wx.loadSubpackage({ name: 'videos', success: loadAndroidVideo });
+```
 
 **微信 H.264 输入 Alpha 合同（2026-08-30 Android 真机）**：引导 MP4 为 `yuv420p`，没有 Alpha。微信视频桥虽然以 RGBA 上传帧，但 Android 与 iOS 对补写 A 通道没有一致保证；`UI/LumaKey` 在 `_VideoInputHasAlpha=0` 时必须只用亮度 `keyAlpha` 生成最终 Alpha，禁止乘 `raw.a` 导致 Android 人物全透明。`M1IntroVideo` 仅在 WebGL 引导材质运行时设为0；Android/Editor 与有 Alpha 素材默认值1保持原路径。
 
