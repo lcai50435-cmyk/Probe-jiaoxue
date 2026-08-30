@@ -1,4 +1,5 @@
 using System.Linq;
+using M1;
 using M2;
 using TMPro;
 using UnityEngine;
@@ -128,6 +129,7 @@ namespace M5
 
         public void ResetAll()
         {
+            ExperienceReplayOnResume.CancelCompleted();
             Wiped = false;
             ragDrag?.ResetTool();
             couplantFx?.Reset();
@@ -140,6 +142,7 @@ namespace M5
             CurrentStage = stage;
             if (stage == Stage.Completed)
             {
+                ExperienceReplayOnResume.MarkCompleted();
                 onCompleted?.Invoke();
                 speechBubble?.Show(CompletedSpeech);
             }

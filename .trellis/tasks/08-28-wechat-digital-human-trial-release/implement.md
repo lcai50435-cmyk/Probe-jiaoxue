@@ -2,7 +2,7 @@
 
 ## Parent Role
 
-本任务现在是集成父任务，不直接承载后续修复代码。已有R1-R3实验实现保留在工作区，未通过验收的部分由子任务修正。禁止回退用户未提交改动或修改冻结M2/M3 Scene。
+本任务以集成为主；体验版真机暴露的跨子任务回归（上传结构、引导兜底、模块重置与会话重开）由父任务直接修复和验证。已有R1-R3实现保留，禁止回退用户未提交改动或修改冻结M2/M3 Scene。
 
 ## Child Execution Order
 
@@ -20,6 +20,14 @@
    - 完成微信Android/iPhone、Android APK、CDN版本、体验版二维码和受邀账号验收。
 
 前三个子任务可以由不同Agent并行执行，但共享工作区时必须先读取最新Git状态并协调重叠文件：`WebGlVideoBuildProcessor.cs`、`WeChatMinigameExportRunner.cs`、`M3DigitalHumanBootstrap.cs`。同一文件不得并行覆盖。
+
+## Latest Regression Fix
+
+1. 导出器生成 `videos/game.js`，当前导出目录同步补齐，微信上传预检通过后才上传。
+2. 共享运行时重置弹窗样式覆盖 M2-M5，校验标题映射、按钮对称和背景线框；不得保存 Scene。
+3. M5 完成后标记会话，下一次真正离开并恢复时加载 M1；Reset 清除标记，未完成不重开。
+4. 分包视频复制到微信用户目录后播放；WebGL H.264 忽略不可靠源 Alpha，海报稳定占位；Prepare/首帧失败切 CDN，CDN 失败切海报。Unity WebGL 编译后做 Android+iPhone 真机矩阵。
+5. 重新完整导出并记录新 data/code 哈希；先上传新 data，再上传开发版本并设体验版。
 
 ## Parent Validation Gates
 

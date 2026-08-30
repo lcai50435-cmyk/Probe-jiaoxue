@@ -17,6 +17,7 @@ Shader "UI/LumaKey"
         _KeyThreshold ("Key Threshold", Range(0, 0.5)) = 0.02
         _KeySmooth ("Key Smooth", Range(0, 0.1)) = 0.015
         _VideoInputIsSRGB ("Video Input Is SRGB", Range(0, 1)) = 0
+        _VideoInputHasAlpha ("Video Input Has Alpha", Range(0, 1)) = 1
         _RemoveGreenGuide ("Remove Green Guide", Range(0, 1)) = 0
         _GreenGuideThreshold ("Green Guide Threshold", Range(0, 0.5)) = 0.02
         _GreenGuideDominance ("Green Guide Dominance", Range(0, 0.5)) = 0.02
@@ -97,6 +98,7 @@ Shader "UI/LumaKey"
             float _KeyThreshold;
             float _KeySmooth;
             float _VideoInputIsSRGB;
+            float _VideoInputHasAlpha;
             float _RemoveGreenGuide;
             float _GreenGuideThreshold;
             float _GreenGuideDominance;
@@ -136,7 +138,10 @@ Shader "UI/LumaKey"
                 half3 srgb = ToSRGB(raw.rgb);
                 half lum = max(srgb.r, max(srgb.g, srgb.b));
                 half keyAlpha = smoothstep(_KeyThreshold, _KeyThreshold + _KeySmooth, lum);
-                half alpha = raw.a * keyAlpha;
+                // 微信 Android 的 H.264 解码帧虽然按 RGBA 上传，但源视频无 Alpha，A 通道值没有跨平台保证。
+                // _VideoInputHasAlpha=0 时完全由亮度键控生成 Alpha；Editor/原生 WebM 默认仍保留源 Alpha。
+                half sourceAlpha = lerp(1.0h, raw.a, saturate(_VideoInputHasAlpha));
+                half alpha = sourceAlpha * keyAlpha;
                 half greenGuide = step(_GreenGuideThreshold, srgb.g) * step(srgb.r + _GreenGuideDominance, srgb.g) * step(srgb.b + _GreenGuideDominance, srgb.g);
                 alpha *= 1 - _RemoveGreenGuide * greenGuide;
 

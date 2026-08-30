@@ -36,6 +36,14 @@ CDN 文件已可访问。当前实现把引导和常驻数字人都交给 URL `V
 - `M1DigitalHumanPresenter` 保留三态和问答状态机，只抽象“播放某状态”的后端；Android 使用 VideoPlayer 后端，微信使用帧图集后端。
 - `M3DigitalHumanBootstrap` 继续运行时装配，不保存 M2/M3。
 
+### 4. 体验版回归：重置弹窗、会话重开与 Android 引导
+
+- `ModuleResetDialogStyle` 在 M2-M5 场景加载后运行时覆盖标题、按钮位置和背景线框；四个 `FlowController.ResetAll()` 保持独立，M2/M3 Scene 不写回。
+- `ExperienceReplayOnResume` 是跨平台会话生命周期边界。M5 完成只记录当前进程内状态；完成后发生 hide→show / pause→resume 才清首次引导标记并加载 M1。进程被系统杀死时 Unity 本来就从 M1 启动，未完成流程不触发重开。
+- 微信引导采用 `videos` 分包本地文件→CDN→海报字幕三级链。分包加载后 JS 把 MP4 复制到 `wx.env.USER_DATA_PATH` 并传真实路径；分包 Prepare 无回调、报错或首帧超时均切 CDN，CDN Prepare/首帧失败进入定时海报，任何失败路径最终关闭遮罩并恢复时间。
+- WebGL H.264 输入不信任解码纹理 Alpha，`UI/LumaKey` 只用亮度键控生成人物 Alpha；海报自带 `AspectRatioFitter`，视频首帧前也有稳定人物占位。
+- `WxVideoSubpackageInstaller` 必须同时生成 `videos/m1-intro-wx.mp4` 与分包入口 `videos/game.js`，再写入 `game.json`。
+
 ## Package Architecture
 
 ### Current WeChat Packages

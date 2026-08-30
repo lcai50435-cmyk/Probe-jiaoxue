@@ -7,9 +7,9 @@ using Debug = UnityEngine.Debug;
 namespace M1.EditorTools
 {
     /// <summary>
-    /// 微信导出后处理：把引导视频放入 minigame/videos 普通分包（单个普通分包不限大小，主包 4M 不受影响），
+    /// 微信导出后处理：把引导视频放入 minigame/videos 普通分包，并生成微信要求的分包 game.js 入口，
     /// 补 game.json 分包与 parallelPreloadSubpackages 声明（与 wasmcode/data 并行预载，玩家无感知），
-    /// 并在 game.js 末尾注入启动加载信号——结果写 storage（M1IntroVideo.PackageReadyKey），由 M1IntroVideo 轮询。
+    /// 并在 game.js 末尾注入启动加载：分包 MP4 复制到微信用户目录后，把就绪信号与真实路径写 storage 供 Unity 轮询。
     /// 幂等：重复导出安全；视频文件缺失时整体跳过（运行时自动回退 CDN），不阻塞导出。
     /// </summary>
     public static class WxVideoSubpackageInstaller
@@ -18,6 +18,7 @@ namespace M1.EditorTools
         public const string SourceRelative = "WeChatVideos/m1-intro-wx.mp4";
         public const string SubpackageName = "videos";
         private const string Marker = "[WxVideoSubpackageInstaller]";
+        private const string EntryFileName = "game.js";
 
         public static void Install()
         {
@@ -36,6 +37,9 @@ namespace M1.EditorTools
 
             var dstDir = Path.Combine(dstRoot, SubpackageName);
             Directory.CreateDirectory(dstDir);
+            var entryFile = Path.Combine(dstDir, EntryFileName);
+            if (!File.Exists(entryFile))
+                File.WriteAllText(entryFile, "// videos subpackage entry.\n");
             var dstFile = Path.Combine(dstDir, Path.GetFileName(src));
             File.Copy(src, dstFile, true);
             var kb = new FileInfo(dstFile).Length / 1024;
@@ -86,9 +90,9 @@ namespace M1.EditorTools
             return true;
         }
 
-        /// <summary>在 game.js 末尾注入启动加载信号：置 0 → loadSubpackage → 成功置 1 / 失败置 2；已注入则跳过。
-        /// 必须走 GameGlobal.WXWASMSDK 的存储通道写——SDK 的读接口带进程内缓存，原生 wx.setStorageSync 直写会导致
-        /// C# 轮询永远读到旧缓存值（key 一旦被缓存便不再回落到 wx.getStorageSync）。</summary>
+        /// <summary>注入启动加载：置 0 → loadSubpackage → 复制 MP4 到 USER_DATA_PATH → 写路径并置 1。
+        /// Android VideoDecoder 不可靠支持代码包相对路径；复制失败时保留相对路径并由运行时超时切 CDN。
+        /// 必须走 GameGlobal.WXWASMSDK 存储通道，确保 C# 能读到进程内缓存的新值。</summary>
         private static void PatchGameJs(string path)
         {
             if (!File.Exists(path))
@@ -99,15 +103,19 @@ namespace M1.EditorTools
             var js = File.ReadAllText(path);
             if (js.Contains(Marker)) return;
             var key = M1IntroVideo.PackageReadyKey;
+            var pathKey = M1IntroVideo.PackagePathKey;
+            var fileName = Path.GetFileName(SourceRelative);
+            var packagePath = SubpackageName + "/" + fileName;
             js += "\n" +
-                  "//" + Marker + " 引导视频分包：启动即加载，经 SDK 存储通道写就绪信号供 Unity 轮询（M1IntroVideo.PackageReadyKey）\n" +
-                  ";(function(){try{var K='" + key + "';" +
+                  "//" + Marker + " 引导视频分包：复制到 USER_DATA_PATH 后写就绪信号与真实路径供 Unity 轮询\n" +
+                  ";(function(){try{var K='" + key + "',P='" + pathKey + "',S='" + packagePath + "';" +
                   "var W=(typeof GameGlobal!=='undefined'&&GameGlobal.WXWASMSDK)?GameGlobal.WXWASMSDK:null;" +
-                  "var set=function(v){if(W&&W.WXStorageSetStringSync){W.WXStorageSetStringSync(K,v);}else{wx.setStorageSync(K,v);}};" +
-                  "set('0');" +
-                  "wx.loadSubpackage({name:'" + SubpackageName + "'," +
-                  "success:function(){set('1');}," +
-                  "fail:function(e){set('2');console.warn('" + Marker + " videos 分包加载失败',e);}});" +
+                  "var set=function(k,v){if(W&&W.WXStorageSetStringSync){W.WXStorageSetStringSync(k,v);}else{wx.setStorageSync(k,v);}};" +
+                  "set(K,'0');set(P,'');" +
+                  "wx.loadSubpackage({name:'" + SubpackageName + "',success:function(){var d=wx.env.USER_DATA_PATH+'/" + fileName + "';" +
+                  "try{var f=wx.getFileSystemManager();try{f.unlinkSync(d);}catch(_){}f.copyFileSync(S,d);set(P,d);set(K,'1');}" +
+                  "catch(e){set(P,S);set(K,'1');console.warn('" + Marker + " 分包视频复制失败，尝试相对路径',e);}}," +
+                  "fail:function(e){set(K,'2');console.warn('" + Marker + " videos 分包加载失败',e);}});" +
                   "}catch(e){try{wx.setStorageSync('" + key + "','2');}catch(_){}}})();\n";
             File.WriteAllText(path, js);
             Debug.Log(Marker + " 已注入分包加载信号到 game.js。");

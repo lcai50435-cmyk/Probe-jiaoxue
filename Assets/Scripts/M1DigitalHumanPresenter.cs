@@ -68,8 +68,11 @@ namespace M1
             // 微信端改透明帧图集后端（配置缺失时回退视频 URL 路径）；帧图集自带 Alpha，移除黑底抠像材质
             _useFrameAtlas = Application.platform == RuntimePlatform.WebGLPlayer && SetupFramePlayer();
             if (_useFrameAtlas && rawImage != null) rawImage.material = null;
-            else if (Application.platform == RuntimePlatform.WebGLPlayer && rawImage != null && rawImage.material != null && rawImage.material.HasProperty("_VideoInputIsSRGB"))
-                rawImage.material.SetFloat("_VideoInputIsSRGB", 1f);
+            else if (Application.platform == RuntimePlatform.WebGLPlayer && rawImage != null && rawImage.material != null)
+            {
+                if (rawImage.material.HasProperty("_VideoInputIsSRGB")) rawImage.material.SetFloat("_VideoInputIsSRGB", 1f);
+                if (rawImage.material.HasProperty("_VideoInputHasAlpha")) rawImage.material.SetFloat("_VideoInputHasAlpha", 0f);
+            }
             if (player != null)
             {
                 player.playOnAwake = false;
