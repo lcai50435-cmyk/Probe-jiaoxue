@@ -150,6 +150,7 @@ namespace M1
         private IntroSource _activeSource;   // 当前活动视频源（分包/CDN/本地）：切源决策与迟到回调过滤的唯一依据
         private string _activeSourceUrl;     // 当前源的真实 URL（分包复制后为 wxfile://usr/...），用于过滤迟到回调
         private bool _cutover;               // 切源进行中（旧源已 Stop、新源 Prepare 完成前）：忽略旧源迟到帧/回调
+        private bool _webGlPosterOnly;        // iOS WKVideo 仅交付静帧且会增加切场景崩溃风险，直接使用海报字幕
 
         /// <summary>WebGL 引导视频源状态：None=未定（等待分包就绪或本地 clip），Package=分包内视频，Cdn=远程 URL。</summary>
         private enum IntroSource { None, Package, Cdn }
@@ -230,6 +231,16 @@ namespace M1
             _introSourceAvailable = _urlPlayback
                 ? _usePackageSource || !string.IsNullOrEmpty(delivery.IntroUrl)
                 : player.clip != null;
+            _webGlPosterOnly = _urlPlayback && !VideoDeliveryConfig.IsWechatAndroid();
+            if (_webGlPosterOnly)
+            {
+                // iOS/未知 WebGL 后端不触碰 WKVideo：避免只提交首帧后停住，并消除 M1 卸载时的原生解码器清算。
+                _introSourceAvailable = true;
+                player.enabled = false;
+                Time.timeScale = 0f;
+                StartPosterFallback();
+                return;
+            }
             if (!_introSourceAvailable)
             {
                 Debug.LogError("[M1IntroVideo] 未配置可播放的引导视频源，转海报字幕兜底引导。");
@@ -288,11 +299,11 @@ namespace M1
             if (overlayButton != null) overlayButton.interactable = canSkip;
 
             // 有视频源或海报兜底时隐藏常驻数字人（结束后 RestoreWhilePlaying 恢复）；完全无引导内容时不隐藏，防止数字人永久消失
-            if (player != null && (_introSourceAvailable || _posterFallback))
+            if (_introSourceAvailable || _posterFallback)
             {
                 HideWhilePlaying();
-                if (!_urlPlayback && !_posterFallback) TryPlay(); // 远程视频必须等待 prepareCompleted，避免首播速度异常
-                if (Application.platform == RuntimePlatform.WebGLPlayer && webglPrepareTimeout > 0f && !_usePackageSource && !_posterFallback)
+                if (player != null && !_urlPlayback && !_posterFallback) TryPlay(); // 远程视频必须等待 prepareCompleted，避免首播速度异常
+                if (player != null && Application.platform == RuntimePlatform.WebGLPlayer && webglPrepareTimeout > 0f && !_usePackageSource && !_posterFallback)
                     StartCoroutine(WebGlPrepareTimeout());
             }
         }
@@ -311,7 +322,7 @@ namespace M1
             // 包内视频 720×966 与配置声明的 1080×1450 不同：按实际解码尺寸重建 RenderTexture，避免画面只占一角
             if (_urlPlayback && vp.width > 0 && vp.height > 0 && (_rt == null || _rt.width != (int)vp.width || _rt.height != (int)vp.height))
             {
-                if (_rt != null) { _rt.Release(); Destroy(_rt); _rt = null; }
+                ReleaseRenderTexture();
                 SetupRenderTexture((int)vp.width, (int)vp.height);
             }
             TryPlay();
@@ -515,7 +526,7 @@ namespace M1
             if (_posterFallback || _finished) return;
             _posterFallback = true;
             Debug.LogWarning("[M1IntroVideo] 启用海报+字幕兜底引导（" + webglPosterFallbackDuration + " 秒）。");
-            if (player != null) player.Stop(); // 停掉仍挂起的视频链路：释放解码器并拦截迟到帧写入 RT
+            ReleaseVideoPlayback();
             SetDimOverlayVisible(true);
             if (_posterImage != null) _posterImage.enabled = true;
             if (subtitleText != null) subtitleText.enabled = true;
@@ -539,13 +550,7 @@ namespace M1
 
         private void FinishIntro()
         {
-            if (player != null)
-            {
-                player.Stop();
-                UnbindEvents();
-                // Stop 不会释放微信底层解码器；禁用组件后才能启动常驻数字人。
-                if (_urlPlayback) player.enabled = false;
-            }
+            ReleaseVideoPlayback();
             WebGlVideoPlaybackGate.IntroActive = false;
             RestoreWhilePlaying(); // 引导结束：先恢复常驻数字人显示
             if (pauseWhilePlaying != null)
@@ -564,22 +569,42 @@ namespace M1
 
         private void SetupRenderTexture(int width, int height)
         {
-            if (_rt != null || player == null) return;
+            if (_rt != null || player == null || !player.enabled) return;
             _rt = new RenderTexture(Mathf.Max(1, width), Mathf.Max(1, height), 0);
             player.targetTexture = _rt;
             if (videoImage != null) videoImage.texture = _rt;
         }
 
+        /// <summary>先断开播放器与 UI 对 RT 的引用，再释放纹理，避免 iOS 视频桥在场景销毁时写入已释放目标。</summary>
+        private void ReleaseRenderTexture()
+        {
+            if (player != null) player.targetTexture = null;
+            if (videoImage != null && videoImage.texture == _rt) videoImage.texture = null;
+            if (_rt == null) return;
+            _rt.Release();
+            Destroy(_rt);
+            _rt = null;
+        }
+
+        private void ReleaseVideoPlayback()
+        {
+            UnbindEvents();
+            if (player != null && player.enabled) player.Stop();
+            if (player != null && _urlPlayback) player.enabled = false;
+            ReleaseRenderTexture();
+        }
+
         /// <summary>按视频播放进度切换字幕分段；未到第一段或已结束时清空。</summary>
         private void UpdateSubtitle()
         {
-            if (_finished || subtitleText == null || player == null || subtitleSegments == null || subtitleSegments.Length == 0) return;
+            if (_finished || subtitleText == null || subtitleSegments == null || subtitleSegments.Length == 0) return;
+            if (!_posterFallback && player == null) return;
             // 海报兜底模式：字幕跟兜底时钟走（视频未参与）；正常模式：URL 播放用 realtime，本地 clip 用视频时间
             var t = _posterFallback && _posterClockStart >= 0f
                 ? Time.realtimeSinceStartup - _posterClockStart
                 : _urlPlayback && _playbackStartRealtime >= 0f
                     ? Time.realtimeSinceStartup - _playbackStartRealtime
-                    : (float)player.time;
+                    : player != null ? (float)player.time : 0f;
             var idx = -1;
             if (subtitleTimes != null)
                 for (var i = subtitleTimes.Length - 1; i >= 0; i--)
@@ -743,6 +768,7 @@ namespace M1
             _posterImage = poster.GetComponent<RawImage>();
             _posterImage.texture = texture;
             _posterImage.raycastTarget = false;
+            _posterImage.enabled = false; // 仅真正进入海报兜底时显示，避免等待视频时先露出静帧人物。
         }
 
         private void CacheDimOverlay()
@@ -831,12 +857,7 @@ namespace M1
         private void OnDestroy()
         {
             WebGlVideoPlaybackGate.IntroActive = false;
-            UnbindEvents();
-            if (_rt != null)
-            {
-                _rt.Release();
-                Destroy(_rt);
-            }
+            ReleaseVideoPlayback();
         }
     }
 }

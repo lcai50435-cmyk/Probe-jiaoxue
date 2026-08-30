@@ -45,6 +45,7 @@ namespace M1
         private int _urlVideoWidth = 1080;
         private int _urlVideoHeight = 1450;
         private bool _pendingAfterIntro;
+        private bool _webGlVideoBlocked;
 
         private void Awake()
         {
@@ -57,6 +58,7 @@ namespace M1
             }
             var delivery = VideoDeliveryConfig.Load();
             _urlPlayback = forceUrlPlayback || (delivery != null && delivery.UseRemoteVideo);
+            _webGlVideoBlocked = _urlPlayback && !VideoDeliveryConfig.IsWechatAndroid();
             if (delivery != null)
             {
                 if (string.IsNullOrEmpty(idleUrl)) idleUrl = delivery.IdleUrl;
@@ -78,12 +80,20 @@ namespace M1
                 player.playOnAwake = false;
                 player.isLooping = true;
                 player.audioOutputMode = VideoAudioOutputMode.None; // 运行时兜底静音，不依赖导入配置
-                player.skipOnDrop = true;
-                player.waitForFirstFrame = true;
-                player.playbackSpeed = 1f;
-                player.sendFrameReadyEvents = true;
-                player.frameReady += OnFrameReady;
-                if (_urlPlayback) player.prepareCompleted += OnUrlPrepared;
+                if (_webGlVideoBlocked)
+                {
+                    // iOS 常驻数字人必须使用透明帧图集；配置缺失时退头像，绝不再创建第二个 WKVideo。
+                    player.enabled = false;
+                }
+                else
+                {
+                    player.skipOnDrop = true;
+                    player.waitForFirstFrame = true;
+                    player.playbackSpeed = 1f;
+                    player.sendFrameReadyEvents = true;
+                    player.frameReady += OnFrameReady;
+                    if (_urlPlayback) player.prepareCompleted += OnUrlPrepared;
+                }
             }
             // 视频经 RenderTexture 由 RawImage 显示（复用开场引导链路）
             var clip = idleClip != null ? idleClip : thinkingClip != null ? thinkingClip : speakingClip;
@@ -96,6 +106,11 @@ namespace M1
             if (_useFrameAtlas)
             {
                 ApplyMode(DisplayMode.FullBody);
+                return;
+            }
+            if (_webGlVideoBlocked)
+            {
+                ApplyMode(DisplayMode.Avatar);
                 return;
             }
             // 微信小游戏解码器只支持一个视频：M1 引导结束前不得创建常驻数字人视频实例。
@@ -124,6 +139,11 @@ namespace M1
             {
                 if (rawImage != null) rawImage.enabled = true;
                 ApplyMode(DisplayMode.FullBody);
+                return;
+            }
+            if (_webGlVideoBlocked)
+            {
+                ApplyMode(DisplayMode.Avatar);
                 return;
             }
             if (!_pendingAfterIntro) return;
@@ -234,6 +254,7 @@ namespace M1
 
         private void PlayClip(VideoClip clip)
         {
+            if (_webGlVideoBlocked) return;
             // 微信帧图集后端：状态机/长按问答行为与视频后端完全一致，仅切换播放源
             if (_useFrameAtlas)
             {

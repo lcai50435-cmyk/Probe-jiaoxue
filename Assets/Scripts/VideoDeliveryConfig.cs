@@ -16,9 +16,21 @@ namespace M1
         [Min(1)] public int videoWidth = 1080;
         [Min(1)] public int videoHeight = 1450;
 
+        public const string WechatPlatformKey = "__wxIntroVideoPlatform";
+
         public static VideoDeliveryConfig Load() => Resources.Load<VideoDeliveryConfig>("VideoDeliveryConfig");
 
         public bool UseRemoteVideo => Application.platform == RuntimePlatform.WebGLPlayer;
+
+        /// <summary>仅 Android 使用微信引导 MP4；iOS WKVideo 已验证会停在首帧，统一走海报字幕后端。</summary>
+        public static bool IsWechatAndroid()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return WeChatWASM.WXBase.StorageGetStringSync(WechatPlatformKey, string.Empty) == "android";
+#else
+            return false;
+#endif
+        }
 
         public string IntroUrl => Resolve(introFile);
         public string IdleUrl => Resolve(idleFile);

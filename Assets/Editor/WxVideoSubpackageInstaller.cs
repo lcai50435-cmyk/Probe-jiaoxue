@@ -108,12 +108,13 @@ namespace M1.EditorTools
             var packagePath = SubpackageName + "/" + fileName;
             js += "\n" +
                   "//" + Marker + " 引导视频分包：复制到 USER_DATA_PATH 后写就绪信号与真实路径供 Unity 轮询\n" +
-                  ";(function(){try{var K='" + key + "',P='" + pathKey + "',S='" + packagePath + "';" +
+                  ";(function(){try{var K='" + key + "',P='" + pathKey + "',Q='" + VideoDeliveryConfig.WechatPlatformKey + "',S='" + packagePath + "';" +
                   "var W=(typeof GameGlobal!=='undefined'&&GameGlobal.WXWASMSDK)?GameGlobal.WXWASMSDK:null;" +
                   "var set=function(k,v){if(W&&W.WXStorageSetStringSync){W.WXStorageSetStringSync(k,v);}else{wx.setStorageSync(k,v);}};" +
                   "var D=wx.getDeviceInfo?wx.getDeviceInfo():wx.getSystemInfoSync(),A=D.platform==='android';" +
-                  "set(K,'0');set(P,'');" +
-                  "wx.loadSubpackage({name:'" + SubpackageName + "',success:function(){if(!A){set(P,S);set(K,'1');return;}var d=wx.env.USER_DATA_PATH+'/" + fileName + "';" +
+                  "set(Q,D.platform||'unknown');set(K,'0');set(P,'');" +
+                  "if(!A){set(K,'2');return;}" +
+                  "wx.loadSubpackage({name:'" + SubpackageName + "',success:function(){var d=wx.env.USER_DATA_PATH+'/" + fileName + "';" +
                   "try{var f=wx.getFileSystemManager();try{f.unlinkSync(d);}catch(_){}f.copyFileSync(S,d);set(P,d);set(K,'1');}" +
                   "catch(e){set(P,S);set(K,'1');console.warn('" + Marker + " Android 分包视频复制失败，尝试相对路径',e);}}," +
                   "fail:function(e){set(K,'2');console.warn('" + Marker + " videos 分包加载失败',e);}});" +
