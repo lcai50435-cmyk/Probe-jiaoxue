@@ -15,6 +15,11 @@ namespace M4
         public Slider angleSlider;
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
+        [Tooltip("角度未达标时的单行纠偏提示色，沿用 M1 角度提示视觉。")]
+        public Color anglePromptColor = new Color(.96f, .42f, .28f);
+        [Tooltip("M1 基准：标题距滑块左缘、提示距滑块右缘的间距。")]
+        public float angleTitleGap = 32f, anglePromptGap = 68f, angleTitleWidth = 110f, anglePromptWidth = 160f;
+        public Color angleTitleColor = new Color(.12f, .15f, .18f);
         public Color beamColor = new Color(.3f, 1f, .5f);
         public Color beamDetectedColor = new Color(1f, .45f, .05f);
         public Vector2 placementTolerancePx = new Vector2(60f, 40f);
@@ -98,7 +103,12 @@ namespace M4
             CalibrateTrack(); CalibrateEllipse(); ConfigureBeam(); HideBeam();
             OnDistanceChanged -= flow.NotifyDistance; OnDistanceChanged += flow.NotifyDistance;
             if (angleSlider != null) { angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged); _angleDeg = angleSlider.value; initialAngleDeg = angleSlider.value; } // 初始角以 Scene 中滑块当前值为准
-            if (angleValueText != null) angleValueText.text = $"{_angleDeg:0}°";
+            if (angleStatusText == null)
+            {
+                var status = FindDeep(transform.root, "AngleLabel");
+                if (status != null) angleStatusText = status.GetComponent<TMP_Text>();
+            }
+            RefreshAnglePrompt(_angleDeg);
             currentDistanceMm = scanStartMm;
             TouchHitExpand.Ensure(probeRt, new Vector2(20f, 56f)); // 手机抓取热区外扩（幂等不写回 Scene）
             ApplyAngleVisual(_angleDeg);
@@ -125,9 +135,7 @@ namespace M4
             _angleDeg = degrees;
             flow?.idleHelp?.ResetIdle();
             _settle = 0f; // 角度变动重置稳定计时（M2 同款：稳定停留才确认校角）
-            var correct = AngleCorrect;
-            if (angleValueText != null) angleValueText.text = $"{degrees:0}°";
-            if (angleStatusText != null) { angleStatusText.text = correct ? "偏角正确" : degrees < flow.targetAngle ? "请增大偏角" : "偏角过大"; angleStatusText.color = correct ? okGreen : Color.red; }
+            RefreshAnglePrompt(degrees);
             ApplyAngleVisual(degrees);
             if (_placed && _beamVisible) UpdateBeam();
         }
@@ -138,12 +146,41 @@ namespace M4
             MoveToProgress(Mathf.InverseLerp(scanStartMm, scanEndMm, mm));
         }
 
+        private void RefreshAnglePrompt(float degrees)
+        {
+            var correct = AngleCorrect;
+            var prompt = correct ? "偏角正确" : degrees < flow.targetAngle ? "请增大偏角" : "偏角过大";
+            var promptText = angleStatusText != null ? angleStatusText : angleValueText;
+            if (promptText == null) return;
+            promptText.gameObject.SetActive(true);
+            promptText.text = $"{degrees:0}°{prompt}";
+            promptText.color = correct ? okGreen : anglePromptColor;
+            promptText.alignment = TextAlignmentOptions.Left;
+            promptText.textWrappingMode = TextWrappingModes.NoWrap;
+            if (!promptText.enableAutoSizing)
+            {
+                promptText.fontSizeMax = promptText.fontSize;
+                promptText.fontSizeMin = Mathf.Min(18f, promptText.fontSize);
+                promptText.enableAutoSizing = true;
+            }
+            if (angleValueText != null && promptText != angleValueText)
+            {
+                angleValueText.gameObject.SetActive(true);
+                angleValueText.text = "探头偏角";
+                angleValueText.color = angleTitleColor;
+                angleValueText.alignment = TextAlignmentOptions.Right;
+                angleValueText.fontSize = 24f;
+                angleValueText.enableAutoSizing = false;
+            }
+            LayoutAnglePrompt(angleValueText, promptText);
+        }
+        private void LayoutAnglePrompt(TMP_Text title, TMP_Text prompt) => AnglePromptLayout.Place(angleSlider, title, prompt, angleTitleGap, anglePromptGap, angleTitleWidth, anglePromptWidth);
+
         public void ResetTool()
         {
             unlocked = _inputLocked = _dragging = false; currentDistanceMm = scanStartMm; _angleDeg = initialAngleDeg; _settle = 0f;
             if (angleSlider != null) { angleSlider.interactable = true; angleSlider.SetValueWithoutNotify(initialAngleDeg); }
-            if (angleValueText != null) angleValueText.text = $"{initialAngleDeg:0}°";
-            if (angleStatusText != null) { angleStatusText.text = "请增大偏角"; angleStatusText.color = Color.red; }
+            RefreshAnglePrompt(initialAngleDeg);
             ReturnHome(); HideBeam(); ApplyAngleVisual(initialAngleDeg); OnDistanceChanged?.Invoke(currentDistanceMm);
         }
 

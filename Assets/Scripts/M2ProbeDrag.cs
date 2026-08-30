@@ -12,6 +12,11 @@ namespace M2
         public Slider angleSlider;
         public TMP_Text angleValueText, angleStatusText;
         public Color okGreen = new Color(0f, .55f, .25f);
+        [Tooltip("角度未达标时的单行纠偏提示色，沿用 M1 角度提示视觉。")]
+        public Color anglePromptColor = new Color(.96f, .42f, .28f);
+        [Tooltip("M1 基准：标题距滑块左缘、提示距滑块右缘的间距。")]
+        public float angleTitleGap = 32f, anglePromptGap = 68f;
+        private TMP_Text _angleTitleText;
         public Vector2 scanDirection = new Vector2(1f, 0f), probeEntryLocal = new Vector2(.5f, .25f), startLocal = new Vector2(-500f, 0f), damageUv = new Vector2(.4808f, .711f), placementTolerancePx = new Vector2(60f, 40f);
         [Tooltip("Home 槽位内初始显示位置（老板 2026-08-23：对齐 M3 (-9,-8)；运行时覆盖 Scene 旧值不写回）")]
         public Vector2 homeOffset = new Vector2(-9f, -8f);
@@ -82,7 +87,12 @@ namespace M2
             TouchHitExpand.Ensure(probeRt, new Vector2(20f, 56f)); // 手机抓取热区外扩（幂等不写回 Scene；须在 angleSlider 提前 return 前）
             if (angleSlider == null) return;
             angleSlider.onValueChanged.RemoveListener(OnAngleChanged); angleSlider.onValueChanged.AddListener(OnAngleChanged);
-            _angleDeg = angleSlider.value; ApplyAngleVisual(_angleDeg); SetAngleLocked(true);
+            var title = angleSlider.transform.parent != null ? angleSlider.transform.parent.Find("SliderLabel") : null;
+            if (title == null) Debug.LogError("[M2ProbeDrag] AngleControls 缺少 SliderLabel，无法对齐 M1 角度提示。", this);
+            else _angleTitleText = title.GetComponent<TMP_Text>();
+            _angleDeg = angleSlider.value;
+            RefreshAnglePrompt(_angleDeg);
+            ApplyAngleVisual(_angleDeg); SetAngleLocked(true);
         }
         public void RefreshMobileLayout()
         {
@@ -108,18 +118,39 @@ namespace M2
         public void OnAngleChanged(float degrees)
         {
             _angleDeg = degrees; flow?.idleHelp?.ResetIdle(); _settle = 0f;
-            if (angleValueText != null) angleValueText.text = $"{degrees:0}°"; if (angleStatusText != null) { angleStatusText.text = AngleCorrect ? "偏角正确" : degrees < flow.targetAngle ? "请增大偏角" : "偏角过大"; angleStatusText.color = AngleCorrect ? okGreen : Color.red; }
+            RefreshAnglePrompt(degrees);
             ApplyAngleVisual(degrees);
         }
-        public void SetAngleSilently(float degrees) { _angleDeg = degrees; ApplyAngleVisual(degrees); }
+        public void SetAngleSilently(float degrees) { _angleDeg = degrees; RefreshAnglePrompt(degrees); ApplyAngleVisual(degrees); }
         public void AutoMoveToMm(float mm) { if (!_placed) PlaceAtStart(); MoveToScan(Mathf.InverseLerp(StartMm, hitMm, mm)); }
+        private void RefreshAnglePrompt(float degrees)
+        {
+            var correct = AngleCorrect;
+            var prompt = correct ? "偏角正确" : degrees < flow.targetAngle ? "请增大偏角" : "偏角过大";
+            var promptText = angleStatusText != null ? angleStatusText : angleValueText;
+            if (promptText == null) return;
+            promptText.gameObject.SetActive(true);
+            promptText.text = $"{degrees:0}°{prompt}";
+            promptText.color = correct ? okGreen : anglePromptColor;
+            promptText.alignment = TextAlignmentOptions.Left;
+            promptText.textWrappingMode = TextWrappingModes.NoWrap;
+            if (!promptText.enableAutoSizing)
+            {
+                promptText.fontSizeMax = promptText.fontSize;
+                promptText.fontSizeMin = Mathf.Min(18f, promptText.fontSize);
+                promptText.enableAutoSizing = true;
+            }
+            if (angleValueText != null && promptText != angleValueText) angleValueText.gameObject.SetActive(false);
+            LayoutAnglePrompt(_angleTitleText, promptText);
+        }
+        private void LayoutAnglePrompt(TMP_Text title, TMP_Text prompt) => AnglePromptLayout.Place(angleSlider, title, prompt, angleTitleGap, anglePromptGap);
         public void PlaceAtStart() { _placed = true; Reparent(probeRt, railViewport, new Vector2(.5f, .5f)); MoveToScan(0f); ShowBeam(); flow?.NotifyPlacementChanged(); }
         public void ResetTool()
         {
             unlocked = _inputLocked = _dragging = false; _beamVisible = false; currentDistanceMm = StartMm; _angleDeg = 0f;
             RefreshBeamVisibility();
             if (angleSlider != null) { angleSlider.SetValueWithoutNotify(0f); angleSlider.interactable = false; }
-            if (angleStatusText != null) { angleStatusText.text = "请增大偏角"; angleStatusText.color = Color.red; } if (angleValueText != null) angleValueText.text = "0°";
+            RefreshAnglePrompt(0f);
             ApplyAngleVisual(0f); ReturnHome(); OnDistanceChanged?.Invoke(currentDistanceMm);
         }
         public void OnBeginDrag(PointerEventData eventData)
@@ -233,6 +264,27 @@ namespace M2
         private void Reparent(RectTransform child, RectTransform parent, Vector2 anchor)
         {
             child.SetParent(parent, false); child.localScale = Vector3.one; child.anchorMin = child.anchorMax = anchor; child.pivot = new Vector2(.5f, .5f); child.anchoredPosition = Vector2.zero; if (_probeSize != Vector2.zero) child.sizeDelta = _probeSize;
+        }
+    }
+
+    internal static class AnglePromptLayout
+    {
+        public static void Place(Slider slider, TMP_Text title, TMP_Text prompt, float titleGap, float promptGap, float titleWidth = 0f, float promptWidth = 0f)
+        {
+            var sliderRt = slider != null ? slider.transform as RectTransform : null;
+            if (sliderRt == null || title == null || prompt == null || title.rectTransform.parent != sliderRt.parent || prompt.rectTransform.parent != sliderRt.parent) return;
+            var left = sliderRt.anchoredPosition.x - sliderRt.rect.width * sliderRt.pivot.x;
+            var right = sliderRt.anchoredPosition.x + sliderRt.rect.width * (1f - sliderRt.pivot.x);
+            title.alignment = TextAlignmentOptions.Right;
+            PlaceText(title.rectTransform, sliderRt, new Vector2(left - titleGap, sliderRt.anchoredPosition.y), new Vector2(1f, .5f), titleWidth);
+            PlaceText(prompt.rectTransform, sliderRt, new Vector2(right + promptGap, sliderRt.anchoredPosition.y), new Vector2(0f, .5f), promptWidth);
+        }
+        private static void PlaceText(RectTransform textRt, RectTransform sliderRt, Vector2 position, Vector2 pivot, float width)
+        {
+            textRt.anchorMin = textRt.anchorMax = sliderRt.anchorMin;
+            textRt.pivot = pivot;
+            textRt.anchoredPosition = position;
+            if (width > 0f) textRt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
         }
     }
 }
