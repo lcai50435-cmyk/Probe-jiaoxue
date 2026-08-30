@@ -38,7 +38,7 @@
 
 **微信 WebGL 单行字幕（2026-08-29 开发者工具定稿）**：微信端宽 1700、高 52、最大字号 30/最小 24 自动缩小，`TextWrappingModes.NoWrap`，三段台词均强制单行；布局仍按人物实际底边、20px 间距与底部 40px 安全线计算。不得通过自动换行规避溢出；长句优先缩小字号。Android/Editor 继续使用 Setup 单行布局，运行时兜底 anchoredPosition 必须保持 y=16。
 
-**微信引导三级来源与必达释放（2026-08-29 Android 真机）**：导出后 `videos` 普通分包必须同时包含 MP4 与根入口 `game.js`；分包加载成功后先 `copyFileSync` 到 `wx.env.USER_DATA_PATH`，再把真实 `wxfile://usr/...` 路径经 SDK storage 交给 Unity，禁止依赖 Android VideoDecoder 不稳定的代码包相对路径。运行时按“分包本地文件→CDN→海报字幕”降级：分包 `Prepare` 无回调、报错或首帧超时必须 Stop 后切 CDN，CDN Prepare/首帧失败进入海报字幕，海报按 realtime 到时调用 `FinishIntro`。海报必须有自己的 `AspectRatioFitter`，在视频布局首帧尚未计算时也立即可见。禁止任何失败路径永久保留 overlay 或 `Time.timeScale=0`；Android/Editor 本地 VideoClip 路径保持不变。
+**微信引导三级来源与必达释放（2026-08-29 Android 真机）**：导出后 `videos` 普通分包必须同时包含 MP4 与根入口 `game.js`。微信 SDK 的视频后端分叉必须保留：仅 Android `createVideoDecoder` 在分包加载后 `copyFileSync` 到 `wx.env.USER_DATA_PATH` 并把 `wxfile://usr/...` 经 SDK storage 交给 Unity；iOS `createWKVideo` 与开发者工具继续使用已验证的 `videos/...` 分包相对路径，禁止强行共用 wxfile 路径。运行时按“平台适配的分包本地文件→CDN→海报字幕”降级：分包 `Prepare` 无回调、报错或首帧超时必须 Stop 后切 CDN，CDN Prepare/首帧失败进入海报字幕，海报按 realtime 到时调用 `FinishIntro`。海报必须有自己的 `AspectRatioFitter`，在视频布局首帧尚未计算时也立即可见。禁止任何失败路径永久保留 overlay 或 `Time.timeScale=0`；Android/Editor 本地 VideoClip 路径保持不变。
 
 **微信 H.264 输入 Alpha 合同（2026-08-30 Android 真机）**：引导 MP4 为 `yuv420p`，没有 Alpha。微信视频桥虽然以 RGBA 上传帧，但 Android 与 iOS 对补写 A 通道没有一致保证；`UI/LumaKey` 在 `_VideoInputHasAlpha=0` 时必须只用亮度 `keyAlpha` 生成最终 Alpha，禁止乘 `raw.a` 导致 Android 人物全透明。`M1IntroVideo` 仅在 WebGL 引导材质运行时设为0；Android/Editor 与有 Alpha 素材默认值1保持原路径。
 

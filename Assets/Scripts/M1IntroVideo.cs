@@ -124,7 +124,7 @@ namespace M1
 
         /// <summary>JS 注入侧写入的分包就绪信号 storage key（1=就绪 2=失败）；Editor 导出工具按同名注入 game.js。</summary>
         public const string PackageReadyKey = "__wxIntroVideoPkg";
-        /// <summary>分包 MP4 复制到微信用户目录后的真实本地路径；Android VideoDecoder 不依赖代码包相对路径。</summary>
+        /// <summary>导出注入选择的实际分包路径：Android 为 wxfile 用户目录，iOS/开发者工具为分包相对路径。</summary>
         public const string PackagePathKey = "__wxIntroVideoPath";
 
         private RenderTexture _rt;

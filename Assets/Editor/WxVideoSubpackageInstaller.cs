@@ -90,8 +90,8 @@ namespace M1.EditorTools
             return true;
         }
 
-        /// <summary>注入启动加载：置 0 → loadSubpackage → 复制 MP4 到 USER_DATA_PATH → 写路径并置 1。
-        /// Android VideoDecoder 不可靠支持代码包相对路径；复制失败时保留相对路径并由运行时超时切 CDN。
+        /// <summary>注入启动加载：Android 复制 MP4 到 USER_DATA_PATH；iOS/开发者工具保留已验证的分包相对路径。
+        /// 两平台视频后端不同（Android VideoDecoder / iOS WKVideo），禁止强行共用 wxfile 路径。
         /// 必须走 GameGlobal.WXWASMSDK 存储通道，确保 C# 能读到进程内缓存的新值。</summary>
         private static void PatchGameJs(string path)
         {
@@ -111,10 +111,11 @@ namespace M1.EditorTools
                   ";(function(){try{var K='" + key + "',P='" + pathKey + "',S='" + packagePath + "';" +
                   "var W=(typeof GameGlobal!=='undefined'&&GameGlobal.WXWASMSDK)?GameGlobal.WXWASMSDK:null;" +
                   "var set=function(k,v){if(W&&W.WXStorageSetStringSync){W.WXStorageSetStringSync(k,v);}else{wx.setStorageSync(k,v);}};" +
+                  "var D=wx.getDeviceInfo?wx.getDeviceInfo():wx.getSystemInfoSync(),A=D.platform==='android';" +
                   "set(K,'0');set(P,'');" +
-                  "wx.loadSubpackage({name:'" + SubpackageName + "',success:function(){var d=wx.env.USER_DATA_PATH+'/" + fileName + "';" +
+                  "wx.loadSubpackage({name:'" + SubpackageName + "',success:function(){if(!A){set(P,S);set(K,'1');return;}var d=wx.env.USER_DATA_PATH+'/" + fileName + "';" +
                   "try{var f=wx.getFileSystemManager();try{f.unlinkSync(d);}catch(_){}f.copyFileSync(S,d);set(P,d);set(K,'1');}" +
-                  "catch(e){set(P,S);set(K,'1');console.warn('" + Marker + " 分包视频复制失败，尝试相对路径',e);}}," +
+                  "catch(e){set(P,S);set(K,'1');console.warn('" + Marker + " Android 分包视频复制失败，尝试相对路径',e);}}," +
                   "fail:function(e){set(K,'2');console.warn('" + Marker + " videos 分包加载失败',e);}});" +
                   "}catch(e){try{wx.setStorageSync('" + key + "','2');}catch(_){}}})();\n";
             File.WriteAllText(path, js);
