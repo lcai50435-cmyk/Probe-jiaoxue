@@ -119,13 +119,20 @@ namespace M3
             if (presenter == null) presenter = stageGo.AddComponent<M1DigitalHumanPresenter>(); // Unity 6 伪 null 分步
             var fb = stageGo.transform.Find(FullBodyName);
             var av = stageGo.transform.Find(AvatarName);
+            // M3 图集不可用时，折叠态复用场景完整人物静态图，而非新建的小头像。
+            var fallbackView = scene == "M3" ? stageGo.transform.Find(PreviewName) : av;
+            if (fallbackView == null) fallbackView = av;
+            var fallbackPress = fallbackView.GetComponent<M1PressDetector>();
+            if (fallbackPress == null) fallbackPress = fallbackView.gameObject.AddComponent<M1PressDetector>();
+            var fallbackImage = fallbackView.GetComponent<Image>();
+            if (fallbackImage != null) fallbackImage.raycastTarget = true;
             presenter.qaPanel = qa;
             presenter.player = fb.GetComponent<VideoPlayer>();
             presenter.rawImage = fb.GetComponent<RawImage>();
             presenter.fullBodyView = fb.gameObject;
-            presenter.avatarView = av.gameObject;
+            presenter.avatarView = fallbackView.gameObject;
             presenter.fullBodyPress = fb.GetComponent<M1PressDetector>();
-            presenter.avatarPress = av.GetComponent<M1PressDetector>();
+            presenter.avatarPress = fallbackPress;
             var delivery = VideoDeliveryConfig.Load();
             if (delivery == null)
             {
