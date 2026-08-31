@@ -477,7 +477,7 @@ namespace M1
             _started = false;         // TryPlay 幂等标志按源重置：新源必须重新 Play
             _playbackStartRealtime = -1f; // 字幕时间轴随新源从头开始
             UnbindEvents();  // 解绑旧源回调：Stop 后旧源迟到的 prepareCompleted/errorReceived/frameReady 不再进入处理链
-            player.Stop();
+            StopPlayerSafely();
             player.source = VideoSource.Url;
             _activeSourceUrl = url;
             player.url = url;
@@ -586,10 +586,17 @@ namespace M1
             _rt = null;
         }
 
+        private void StopPlayerSafely()
+        {
+            if (player == null || !player.enabled) return;
+            try { player.Stop(); }
+            catch (Exception ex) { Debug.LogWarning("[M1IntroVideo] 停止视频播放器失败：" + ex.Message); }
+        }
+
         private void ReleaseVideoPlayback()
         {
             UnbindEvents();
-            if (player != null && player.enabled) player.Stop();
+            StopPlayerSafely();
             if (player != null && _urlPlayback) player.enabled = false;
             ReleaseRenderTexture();
         }
