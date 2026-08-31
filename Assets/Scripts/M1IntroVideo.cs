@@ -46,6 +46,9 @@ namespace M1
         [Tooltip("运行时兜底：按此路径自动发现常驻数字人全身并补入隐藏列表（Setup 注入后仍会补全缺失项）")]
         public string hideStagePath = "画板/DigitalHumanStage/FullBodyView";
 
+        [Tooltip("运行时兜底：按此路径自动发现常驻数字人头像并补入隐藏列表（与全身视图同级，不能依赖子级隐藏）")]
+        public string hideAvatarPath = "画板/DigitalHumanStage/AvatarView";
+
         [Tooltip("运行时兜底：按此路径自动发现白板数字人对白框并补入隐藏列表（Setup 注入后仍会补全缺失项）")]
         public string hideDialoguePath = "画板/白板背景/数字人/对话框";
 
@@ -77,6 +80,7 @@ namespace M1
         private bool[] _hiddenActive;
         private Graphic[][] _hiddenGraphics;
         private bool[][] _hiddenGraphicEnabled;
+        private bool _hideApplied;
 
         [Header("微信 WebGL 布局（2026-08-28 真机定稿：字幕在人物正下方居中）")]
         [Tooltip("微信端引导人物等比缩放（从 0.70 起调；仅 WebGL 覆盖，Android 保持 Setup 的 0.78）")]
@@ -109,6 +113,9 @@ namespace M1
         [Tooltip("微信 WebGL 视频启动超时（秒）：准备完成后播放时间仍未推进时关闭引导遮罩；0=关闭")]
         public float webglPlaybackStartTimeout = 8f;
 
+        [Tooltip("微信 WebGL 视频播放结束安全放行（秒）：仅当播放结束事件丢失时触发；0=关闭")]
+        public float webglPlaybackEndFallbackDuration = 16f;
+
         [Header("微信分包视频（2026-08-30：引导视频随包分发，进游戏即播）")]
         [Tooltip("分包就绪等待上限（秒）：导出注入的 JS 启动加载 videos 分包并写 storage 信号，超时或失败回退 CDN URL")]
         public float webglPackageWaitTimeout = 4f;
@@ -136,6 +143,7 @@ namespace M1
         private bool _urlPlayback;
         private bool _prepared;
         private float _playbackStartRealtime = -1f;
+        private float _webGlPlaybackEndWatchdogStartRealtime = -1f;
         private int _remoteVideoWidth = 1080;
         private int _remoteVideoHeight = 1450;
         private Image _dimOverlay;
@@ -151,6 +159,12 @@ namespace M1
         private string _activeSourceUrl;     // 当前源的真实 URL（分包复制后为 wxfile://usr/...），用于过滤迟到回调
         private bool _cutover;               // 切源进行中（旧源已 Stop、新源 Prepare 完成前）：忽略旧源迟到帧/回调
         private bool _webGlPosterOnly;        // iOS WKVideo 仅交付静帧且会增加切场景崩溃风险，直接使用海报字幕
+        private int _eventGeneration;
+        private int _activeEventGeneration;
+        private VideoPlayer.EventHandler _videoEndHandler;
+        private VideoPlayer.EventHandler _preparedHandler;
+        private VideoPlayer.ErrorEventHandler _errorHandler;
+        private VideoPlayer.FrameReadyEventHandler _frameReadyHandler;
 
         /// <summary>WebGL 引导视频源状态：None=未定（等待分包就绪或本地 clip），Package=分包内视频，Cdn=远程 URL。</summary>
         private enum IntroSource { None, Package, Cdn }
@@ -184,6 +198,7 @@ namespace M1
             var delivery = VideoDeliveryConfig.Load();
             _delivery = delivery;
             _urlPlayback = delivery != null && delivery.UseRemoteVideo;
+            _webGlPosterOnly = Application.platform == RuntimePlatform.WebGLPlayer && !VideoDeliveryConfig.IsWechatAndroid();
             // 运行时兜底二：场景无字幕节点时动态创建（挂遮罩底部，字体从跳过按钮复制），保证不跑 Setup 也显示字幕
             if (subtitleText == null) subtitleText = CreateRuntimeSubtitle();
             // 运行时兜底：引导视频等比缩小（数字人变小；Setup 已设 0.78 则不覆盖）
@@ -207,48 +222,66 @@ namespace M1
             }
 
             _firstTime = PlayerPrefs.GetInt(seenPrefsKey, 0) == 0;
+            if (player == null && !_webGlPosterOnly)
+            {
+                Debug.LogError("[M1IntroVideo] 未配置 VideoPlayer，跳过引导以避免遮罩阻断游戏。");
+                if (overlay != null) overlay.SetActive(false);
+                enabled = false;
+                return;
+            }
+            if (_urlPlayback || _webGlPosterOnly)
+            {
+                CacheDimOverlay();
+                SetDimOverlayVisible(false); // 下载首帧期间保留正常教学画面，避免空黑遮罩
+                CreatePoster();
+                StartCoroutine(ApplyWebGlSubtitleLayoutWhenReady()); // 等 Canvas/ARF 布局完成后再定位字幕
+                if (_urlPlayback)
+                {
+                    _remoteVideoWidth = delivery.videoWidth;
+                    _remoteVideoHeight = delivery.videoHeight;
+                    // 2026-08-30：包内 720p 视频优先（videos 分包随包分发，进游戏即播）；未配置则维持 CDN 直连
+                    _usePackageSource = !string.IsNullOrEmpty(delivery.wechatIntroPackageFile);
+                    if (!_usePackageSource)
+                    {
+                        player.source = VideoSource.Url;
+                        player.url = delivery.IntroUrl;
+                    }
+                }
+            }
+            _introSourceAvailable = _urlPlayback
+                ? _usePackageSource || !string.IsNullOrEmpty(delivery.IntroUrl)
+                : player != null && player.clip != null;
+            if (_webGlPosterOnly)
+            {
+                // iOS/未知 WebGL 后端不触碰 WKVideo：避免只提交首帧后停住，并消除 M1 卸载时的原生解码器清算。
+                _introSourceAvailable = true;
+            }
+            if (_webGlPosterOnly)
+            {
+                // 已确认 iPhone 海报路径后立即隐藏常驻数字人，避免其 Start 首帧在遮罩下闪现。
+                HideWhilePlaying();
+                if (player != null) player.enabled = false;
+                Time.timeScale = 0f;
+                StartPosterFallback();
+                return;
+            }
             if (player == null)
             {
                 Debug.LogError("[M1IntroVideo] 未配置 VideoPlayer。");
                 return;
             }
-            if (_urlPlayback)
-            {
-                _remoteVideoWidth = delivery.videoWidth;
-                _remoteVideoHeight = delivery.videoHeight;
-                CacheDimOverlay();
-                SetDimOverlayVisible(false); // 下载首帧期间保留正常教学画面，避免空黑遮罩
-                CreatePoster();
-                StartCoroutine(ApplyWebGlSubtitleLayoutWhenReady()); // 等 Canvas/ARF 布局完成后再定位字幕
-                // 2026-08-30：包内 720p 视频优先（videos 分包随包分发，进游戏即播）；未配置则维持 CDN 直连
-                _usePackageSource = !string.IsNullOrEmpty(delivery.wechatIntroPackageFile);
-                if (!_usePackageSource)
-                {
-                    player.source = VideoSource.Url;
-                    player.url = delivery.IntroUrl;
-                }
-            }
-            _introSourceAvailable = _urlPlayback
-                ? _usePackageSource || !string.IsNullOrEmpty(delivery.IntroUrl)
-                : player.clip != null;
-            _webGlPosterOnly = _urlPlayback && !VideoDeliveryConfig.IsWechatAndroid();
-            if (_webGlPosterOnly)
-            {
-                // iOS/未知 WebGL 后端不触碰 WKVideo：避免只提交首帧后停住，并消除 M1 卸载时的原生解码器清算。
-                _introSourceAvailable = true;
-                player.enabled = false;
-                Time.timeScale = 0f;
-                StartPosterFallback();
-                return;
-            }
             if (!_introSourceAvailable)
             {
+                // 无视频时仍会播放海报字幕，先隐藏常驻数字人避免半透明遮罩下漏出。
+                HideWhilePlaying();
                 Debug.LogError("[M1IntroVideo] 未配置可播放的引导视频源，转海报字幕兜底引导。");
                 Time.timeScale = 0f;
                 StartPosterFallback();
                 return;
             }
 
+            // 正常视频路径也在 Awake 隐藏，不能等到 Start 才出现第一帧闪跳。
+            HideWhilePlaying();
             // 视频渲染到 RenderTexture，再由 RawImage 显示（保证视频层叠在遮罩之上）
             if (_urlPlayback) SetupRenderTexture(_remoteVideoWidth, _remoteVideoHeight);
             else SetupRenderTexture((int)player.clip.width, (int)player.clip.height);
@@ -281,6 +314,16 @@ namespace M1
                 FinishIntro();
                 return;
             }
+            // 微信 Android 偶发丢失 loopPointReached：仅 URL 视频正常播放路径按 realtime 安全放行。
+            if (Application.platform == RuntimePlatform.WebGLPlayer && _urlPlayback && !_posterFallback && !_finished
+                && _webGlPlaybackEndWatchdogStartRealtime >= 0f && webglPlaybackEndFallbackDuration > 0f
+                && Time.realtimeSinceStartup - _webGlPlaybackEndWatchdogStartRealtime >= webglPlaybackEndFallbackDuration)
+            {
+                Debug.LogWarning("[M1IntroVideo] 微信 WebGL 视频播放结束事件超时，安全结束引导。");
+                _finished = true;
+                FinishIntro();
+                return;
+            }
             if (_finished || pauseWhilePlaying == null) return;
             foreach (var p in pauseWhilePlaying)
                 if (p != null && p.isPlaying) p.Pause();
@@ -308,8 +351,9 @@ namespace M1
             }
         }
 
-        private void OnPrepared(VideoPlayer vp)
+        private void OnPrepared(int generation, VideoPlayer vp)
         {
+            if (generation == 0 || generation != _activeEventGeneration) return;
             if (_posterFallback || _finished) return; // 兜底/结束已接管，忽略迟到的视频准备
             if (_urlPlayback && !UrlMatchesActiveSource())
             {
@@ -331,17 +375,19 @@ namespace M1
                 StartCoroutine(WebGlFirstFrameTimeout(_activeSource));
         }
 
-        private void OnFrameReady(VideoPlayer vp, long frame)
+        private void OnFrameReady(int generation, VideoPlayer vp, long frame)
         {
-            if (!_urlPlayback || _firstFrameShown || _cutover || _posterFallback) return;
+            if (generation == 0 || generation != _activeEventGeneration || !_urlPlayback || _firstFrameShown || _cutover || _posterFallback) return;
             _firstFrameShown = true;
+            _webGlPlaybackEndWatchdogStartRealtime = Time.realtimeSinceStartup;
             if (_posterImage != null) _posterImage.enabled = false;
             SetDimOverlayVisible(true);
             if (subtitleText != null) subtitleText.enabled = true;
         }
 
-        private void OnVideoError(VideoPlayer vp, string message)
+        private void OnVideoError(int generation, VideoPlayer vp, string message)
         {
+            if (generation == 0 || generation != _activeEventGeneration) return;
             Debug.LogWarning("[M1IntroVideo] 视频播放失败：" + message);
             if (Application.platform != RuntimePlatform.WebGLPlayer || _finished || _posterFallback) return;
             if (!UrlMatchesActiveSource())
@@ -367,34 +413,49 @@ namespace M1
             if (_started || _finished) return;
             _started = true;
             _playbackStartRealtime = Time.realtimeSinceStartup;
+            _webGlPlaybackEndWatchdogStartRealtime = -1f;
             player.Play();
         }
 
-        /// <summary>绑定 VideoPlayer 事件。切源/结束时先 Unbind 再操作，保证旧源迟到回调无法进入处理链。</summary>
+        /// <summary>绑定 VideoPlayer 事件。每次绑定创建新的代际，隔离同一播放器切源后的迟到回调。</summary>
         private void BindEvents()
         {
             if (player == null) return;
-            player.loopPointReached += OnVideoEnd;
-            player.prepareCompleted += OnPrepared;
-            player.errorReceived += OnVideoError;
-            player.frameReady += OnFrameReady;
+            UnbindEvents();
+            var generation = ++_eventGeneration;
+            _activeEventGeneration = generation;
+            _videoEndHandler = vp => OnVideoEnd(generation, vp);
+            _preparedHandler = vp => OnPrepared(generation, vp);
+            _errorHandler = (vp, message) => OnVideoError(generation, vp, message);
+            _frameReadyHandler = (vp, frame) => OnFrameReady(generation, vp, frame);
+            player.loopPointReached += _videoEndHandler;
+            player.prepareCompleted += _preparedHandler;
+            player.errorReceived += _errorHandler;
+            player.frameReady += _frameReadyHandler;
         }
 
-        /// <summary>解绑 VideoPlayer 事件（幂等：重复调用不会重复添加/报错）。</summary>
+        /// <summary>解绑 VideoPlayer 事件并使当前代际失效（幂等：重复调用不会重复添加/报错）。</summary>
         private void UnbindEvents()
         {
-            if (player == null) return;
-            player.loopPointReached -= OnVideoEnd;
-            player.prepareCompleted -= OnPrepared;
-            player.errorReceived -= OnVideoError;
-            player.frameReady -= OnFrameReady;
+            if (player != null)
+            {
+                if (_videoEndHandler != null) player.loopPointReached -= _videoEndHandler;
+                if (_preparedHandler != null) player.prepareCompleted -= _preparedHandler;
+                if (_errorHandler != null) player.errorReceived -= _errorHandler;
+                if (_frameReadyHandler != null) player.frameReady -= _frameReadyHandler;
+            }
+            _activeEventGeneration = 0;
+            _videoEndHandler = null;
+            _preparedHandler = null;
+            _errorHandler = null;
+            _frameReadyHandler = null;
         }
 
         private IEnumerator WebGlPrepareTimeout()
         {
             yield return new WaitForSecondsRealtime(webglPrepareTimeout);
             if (_finished || _prepared || _posterFallback) yield break;
-            if (player != null && player.isPrepared) { OnPrepared(player); yield break; } // 回调丢失兜底：状态已就绪则按正常路径继续
+            if (player != null && player.isPrepared) { OnPrepared(_activeEventGeneration, player); yield break; } // 回调丢失兜底：状态已就绪则按正常路径继续
 
             Debug.LogWarning("[M1IntroVideo] 微信 WebGL CDN 视频准备超时，转海报字幕兜底引导。");
             StartPosterFallback();
@@ -458,7 +519,7 @@ namespace M1
         {
             yield return new WaitForSecondsRealtime(webglPackagePrepareTimeout);
             if (_finished || _posterFallback || _activeSource != IntroSource.Package || _prepared) yield break;
-            if (player != null && player.isPrepared) { OnPrepared(player); yield break; } // 回调丢失兜底：状态已就绪则按正常路径继续
+            if (player != null && player.isPrepared) { OnPrepared(_activeEventGeneration, player); yield break; } // 回调丢失兜底：状态已就绪则按正常路径继续
             Debug.LogWarning("[M1IntroVideo] 分包视频 Prepare 无回调超时，Stop 并切 CDN。");
             SwitchToCdn("分包视频 Prepare 超时");
         }
@@ -476,6 +537,7 @@ namespace M1
             _prepared = false;        // 旧源准备状态作废，防迟到 prepareCompleted 错误置位
             _started = false;         // TryPlay 幂等标志按源重置：新源必须重新 Play
             _playbackStartRealtime = -1f; // 字幕时间轴随新源从头开始
+            _webGlPlaybackEndWatchdogStartRealtime = -1f;
             UnbindEvents();  // 解绑旧源回调：Stop 后旧源迟到的 prepareCompleted/errorReceived/frameReady 不再进入处理链
             StopPlayerSafely();
             player.source = VideoSource.Url;
@@ -514,7 +576,7 @@ namespace M1
         {
             yield return new WaitForSecondsRealtime(webglFallbackPrepareTimeout);
             if (_finished || _prepared || _posterFallback) yield break;
-            if (player != null && player.isPrepared) { OnPrepared(player); yield break; } // 回调丢失兜底：状态已就绪则按正常路径继续
+            if (player != null && player.isPrepared) { OnPrepared(_activeEventGeneration, player); yield break; } // 回调丢失兜底：状态已就绪则按正常路径继续
 
             Debug.LogWarning("[M1IntroVideo] CDN 兜底视频准备超时，转海报字幕兜底引导。");
             StartPosterFallback();
@@ -541,9 +603,9 @@ namespace M1
             FinishIntro();
         }
 
-        private void OnVideoEnd(VideoPlayer vp)
+        private void OnVideoEnd(int generation, VideoPlayer vp)
         {
-            if (_finished) return;
+            if (generation == 0 || generation != _activeEventGeneration || _finished || _cutover) return;
             _finished = true;
             FinishIntro();
         }
@@ -639,7 +701,7 @@ namespace M1
             textGo.transform.SetParent(overlay.transform, false);
             var trt = textGo.GetComponent<RectTransform>();
             var tmp = textGo.GetComponent<TextMeshProUGUI>();
-            if (_urlPlayback)
+            if (_urlPlayback || _webGlPosterOnly)
             {
                 // 微信初始布局（ApplyWebGlSubtitleLayout 会按视频底边精调，这里给同合同默认值）
                 trt.anchorMin = new Vector2(0.5f, 0f);
@@ -663,9 +725,9 @@ namespace M1
                 tmp.alignment = TextAlignmentOptions.Bottom;
                 tmp.textWrappingMode = TextWrappingModes.NoWrap;
             }
-            tmp.fontSize = _urlPlayback ? webglSubtitleFontSize : 34f;
+            tmp.fontSize = (_urlPlayback || _webGlPosterOnly) ? webglSubtitleFontSize : 34f;
             tmp.color = Color.white;
-            if (_urlPlayback) tmp.enabled = false;
+            if (_urlPlayback || _webGlPosterOnly) tmp.enabled = false;
             if (skipButton != null)
             {
                 var src = skipButton.GetComponentInChildren<TextMeshProUGUI>(true);
@@ -797,7 +859,8 @@ namespace M1
         /// <summary>隐藏引导期间需暂隐的对象：禁用对象及子级 Graphic，保证对白框文字不会残留；无 Graphic 才 SetActive(false)。</summary>
         private void HideWhilePlaying()
         {
-            if (hideWhilePlaying == null) return;
+            if (_hideApplied || hideWhilePlaying == null) return;
+            _hideApplied = true;
             _hiddenActive = new bool[hideWhilePlaying.Length];
             _hiddenGraphics = new Graphic[hideWhilePlaying.Length][];
             _hiddenGraphicEnabled = new bool[hideWhilePlaying.Length][];
@@ -825,7 +888,7 @@ namespace M1
         /// <summary>恢复引导前被隐藏的对象（还原原状态）。</summary>
         private void RestoreWhilePlaying()
         {
-            if (hideWhilePlaying == null) return;
+            if (!_hideApplied || hideWhilePlaying == null) return;
             for (int i = 0; i < hideWhilePlaying.Length; i++)
             {
                 var go = hideWhilePlaying[i];
@@ -840,6 +903,7 @@ namespace M1
                 for (var j = 0; j < graphics.Length; j++)
                     if (graphics[j] != null) graphics[j].enabled = enabled != null && j < enabled.Length && enabled[j];
             }
+            _hideApplied = false;
         }
 
         /// <summary>合并场景已配置对象与运行时路径发现结果，保证旧场景不重跑 Setup 也能隐藏完整数字人区域。</summary>
@@ -850,6 +914,7 @@ namespace M1
                 foreach (var target in hideWhilePlaying)
                     if (target != null && !targets.Contains(target)) targets.Add(target);
             AddHideTarget(targets, hideStagePath);
+            AddHideTarget(targets, hideAvatarPath);
             AddHideTarget(targets, hideDialoguePath);
             hideWhilePlaying = targets.ToArray();
         }
