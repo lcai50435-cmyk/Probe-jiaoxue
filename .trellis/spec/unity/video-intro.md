@@ -61,7 +61,7 @@
 | `android` + 分包可用 | `wxfile://` MP4 播放；首帧前仍保留原 Android 行为 |
 | `android` + 分包失败 | 分包→CDN→海报字幕三级降级 |
 | `ios` / `unknown` | 直接海报字幕；不创建视频后端 |
-| 视频/场景销毁 | 先解绑事件、断开 `VideoPlayer.targetTexture` 与 `RawImage.texture`，再 Release/Destroy RT |
+| 视频/场景销毁 | 先解绑事件、断开 `VideoPlayer.targetTexture` 与 `RawImage.texture`，再 Release/Destroy RT；所有微信 `VideoPlayer.Stop()` 必须容错，异常后仍继续关闭遮罩和恢复 `Time.timeScale` |
 
 #### 5. Good / Base / Bad Cases
 
