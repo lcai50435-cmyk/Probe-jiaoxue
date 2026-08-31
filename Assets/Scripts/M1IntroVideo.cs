@@ -615,6 +615,7 @@ namespace M1
             var posterTexture = _posterImage.texture;
             var posterUvRect = _posterImage.uvRect;
             posterFramePlayer.target = _posterImage;
+            posterFramePlayer.loop = false;
             if (posterFramePlayer.PlayState("intro", true)) return;
             _posterImage.texture = posterTexture;
             _posterImage.uvRect = posterUvRect;

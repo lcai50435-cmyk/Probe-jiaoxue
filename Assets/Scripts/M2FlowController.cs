@@ -47,11 +47,11 @@ namespace M2
             "非常好，成功在轨头顶面\n探测到伤损了！\n接下来用多功能尺\n确认一下具体出波位置" // 检出
         };
         private static readonly string[] FinalSpeech = { // 测量完成（三段一体，段间 1 秒；老板 2026-08-23 定稿）
-            "可以看到探头入射点距离\n本侧焊缝熔合线\n正好也是\n110mm",
+            "可以看到探头入射点距离\n本侧焊缝熔合线\n正好也是110mm",
             "这就说明我们在轨头顶面\n利用新工艺\n成功捕捉到了伤损！",
             "可以点击透视视图查看超声波传播路径"
         };
-        private const string PerspectiveHint = "看！绿色光束就是超声波束，遇到红色伤损就会中断传播发生反射！"; // 首次点透视（Slide 7-【1】，仅第一次+探头已放置）
+        private const string PerspectiveHint = "看！绿色光束是\n超声波束，遇到\n红色伤损会中断并反射！"; // 首次点透视（Slide 7-【1】，仅第一次+探头已放置）
         private void Awake()
         {
             Bind(applyButton, ApplyCouplant); Bind(resetButton, ShowResetDialog); Bind(enterNextButton, EnterNextModule);

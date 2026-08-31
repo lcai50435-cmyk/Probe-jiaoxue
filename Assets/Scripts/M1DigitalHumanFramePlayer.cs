@@ -19,6 +19,9 @@ namespace M1
         [Tooltip("显示帧的 RawImage（Presenter 注入）")]
         public RawImage target;
 
+        [Tooltip("是否循环播放；关闭时停留在最后一帧")]
+        public bool loop = true;
+
         private DigitalHumanFrameConfig _config;
         private DigitalHumanFrameConfig.State _state;
         private Texture2D[] _pages;
@@ -80,7 +83,8 @@ namespace M1
         {
             if (!_playing || _state == null || _state.fps <= 0f) return;
             _clock += Time.unscaledDeltaTime;
-            var f = (int)(_clock * _state.fps) % _state.frameCount;
+            var frame = (int)(_clock * _state.fps);
+            var f = loop ? frame % _state.frameCount : Mathf.Min(frame, _state.frameCount - 1);
             if (f != _frame)
             {
                 _frame = f;
