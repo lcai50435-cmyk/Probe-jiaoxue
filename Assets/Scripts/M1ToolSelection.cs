@@ -26,7 +26,7 @@ namespace M1
     /// </summary>
     public class M1ToolSelection : MonoBehaviour
     {
-        public const string DefaultInitialDialogue = "那我们开始选择探测仪器吧，有问题随时长按我进行提问哦！";
+        public const string DefaultInitialDialogue = "那我们开始选择探测仪器吧，\n有问题随时长按我进行提问哦！";
 
         [Header("场景解析路径（相对本物体）")]
         [Tooltip("M1-1 工具按钮所在容器")]
