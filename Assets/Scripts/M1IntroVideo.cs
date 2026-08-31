@@ -149,6 +149,7 @@ namespace M1
         private Image _dimOverlay;
         private Color _dimOverlayColor;
         private RawImage _posterImage;
+        private M1DigitalHumanFramePlayer posterFramePlayer;
         private bool _firstFrameShown;
         private VideoDeliveryConfig _delivery;
         private bool _usePackageSource;      // WebGL 且配置了 videos 分包内引导视频
@@ -593,9 +594,31 @@ namespace M1
             ReleaseVideoPlayback();
             if (videoImage != null) videoImage.enabled = false;
             SetDimOverlayVisible(true);
-            if (_posterImage != null) _posterImage.enabled = true;
+            if (_posterImage != null)
+            {
+                _posterImage.enabled = true;
+                TryPlayPosterFrameAnimation();
+            }
             if (subtitleText != null) subtitleText.enabled = true;
             _posterClockStart = Time.realtimeSinceStartup;
+        }
+
+        /// <summary>iPhone/未知 WebGL 用透明帧图集替换静态海报；图集缺失时保留海报兜底。</summary>
+        private void TryPlayPosterFrameAnimation()
+        {
+            if (!_webGlPosterOnly || _posterImage == null) return;
+            if (posterFramePlayer == null)
+            {
+                posterFramePlayer = _posterImage.GetComponent<M1DigitalHumanFramePlayer>();
+                if (posterFramePlayer == null) posterFramePlayer = _posterImage.gameObject.AddComponent<M1DigitalHumanFramePlayer>();
+            }
+            var posterTexture = _posterImage.texture;
+            var posterUvRect = _posterImage.uvRect;
+            posterFramePlayer.target = _posterImage;
+            if (posterFramePlayer.PlayState("intro", true)) return;
+            _posterImage.texture = posterTexture;
+            _posterImage.uvRect = posterUvRect;
+            _posterImage.enabled = true;
         }
 
         /// <summary>跳过引导（遮罩/跳过按钮点击触发；首次进入时不可用）。</summary>

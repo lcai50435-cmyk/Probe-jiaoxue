@@ -83,6 +83,11 @@ namespace M2
             }            // 数字人台词气泡（PPT：替换底部提示；运行时创建，冻结 Scene 不改）
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒
+            speechBubble.bubbleSize = new Vector2(300f, 198f);
+            speechBubble.paddingX = 18f;
+            speechBubble.fontSize = 26f;
+            speechBubble.minFontSize = 20f;
+            speechBubble.preserveExplicitLineBreaks = true;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             // 老板定稿：场景已自带云朵（dialog/bg 节点），只创建文字，文字区对齐云朵中心（不新建云朵 Image）
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
@@ -91,7 +96,6 @@ namespace M2
                 speechBubble.SetAnchor(dialog);
                 speechBubble.useExistingCloud = true;
                 speechBubble.anchorOffset = new Vector2(-339f, 30f); // 对齐云朵（dialog/bg）中心；y=30（老板定稿）
-                speechBubble.bubbleSize = new Vector2(264f, 198f);   // 云朵内部文字区（dialog 局部像素）
             }
             speechBubble.Show(SpeechLines[0]);
             // Slide 5/6【4】删掉：场景静态 Hint 提示（冻结 Scene 不删节点，运行时隐藏）

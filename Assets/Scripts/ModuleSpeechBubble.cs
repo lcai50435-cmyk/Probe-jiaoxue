@@ -26,6 +26,10 @@ namespace M2
         public bool createOnlyWhenAnchored;
         [Tooltip("台词字号")]
         public float fontSize = 26f;
+        [Tooltip("保留显式换行时的最小自动字号")]
+        public float minFontSize = 20f;
+        [Tooltip("保留台词中的显式换行，禁止 TMP 自动折行")]
+        public bool preserveExplicitLineBreaks;
         [Tooltip("逐字间隔秒数（0 = 一次性显示；>0 逐字出现并驱动数字人说话动画）")]
         public float typeSpeed = 0.08f; // 老板 2026-08-23：速度调慢（原 0.045）
         [Tooltip("分段台词每段停留秒数（0 = 不自动切段）")]
@@ -139,7 +143,13 @@ namespace M2
             _text.fontSize = fontSize;
             _text.color = new Color(.1f, .16f, .26f, 1f); // 深蓝灰（云朵浅蓝底）
             _text.alignment = TextAlignmentOptions.Center;
-            _text.textWrappingMode = TextWrappingModes.Normal;
+            _text.enableAutoSizing = preserveExplicitLineBreaks;
+            _text.textWrappingMode = preserveExplicitLineBreaks ? TextWrappingModes.NoWrap : TextWrappingModes.Normal;
+            if (preserveExplicitLineBreaks)
+            {
+                _text.fontSizeMin = minFontSize;
+                _text.fontSizeMax = fontSize;
+            }
         }
 
         public void SetFont(TMP_FontAsset font) { _font = font; if (_text != null) _text.font = font; }
