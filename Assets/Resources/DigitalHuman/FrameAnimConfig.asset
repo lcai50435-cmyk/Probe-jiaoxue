@@ -47,8 +47,8 @@ MonoBehaviour:
     - DigitalHuman/Frames/speaking_1
     - DigitalHuman/Frames/speaking_2
   - key: intro
-    fps: 6
-    frameCount: 91
+    fps: 10
+    frameCount: 152
     frameWidth: 240
     frameHeight: 322
     gutter: 2
@@ -57,3 +57,5 @@ MonoBehaviour:
     pages:
     - DigitalHuman/Frames/intro_0
     - DigitalHuman/Frames/intro_1
+    - DigitalHuman/Frames/intro_2
+    - DigitalHuman/Frames/intro_3
