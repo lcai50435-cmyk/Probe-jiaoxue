@@ -137,8 +137,7 @@ namespace M1
             // 引导会临时禁用 RawImage；帧图集后端不依赖 pending 标志，结束时必须主动恢复可见性与待机帧。
             if (_useFrameAtlas)
             {
-                if (rawImage != null) rawImage.enabled = true;
-                ApplyMode(DisplayMode.FullBody);
+                PlayFrameState(true);
                 return;
             }
             if (_webGlVideoBlocked)
@@ -234,10 +233,21 @@ namespace M1
 
         private void ApplyMode(DisplayMode mode)
         {
-            _mode = mode;
-            if (fullBodyView != null) fullBodyView.SetActive(mode == DisplayMode.FullBody);
-            if (avatarView != null) avatarView.SetActive(mode == DisplayMode.Avatar);
-            if (mode == DisplayMode.FullBody) PlayClip(ClipForState(_answer)); // R14：回全身按当前状态恢复播放，防停帧
+            if (_useFrameAtlas)
+            {
+                if (mode == DisplayMode.FullBody) PlayFrameState(false);
+                else ShowAvatar();
+                return;
+            }
+            if (mode == DisplayMode.Avatar)
+            {
+                ShowAvatar();
+                return;
+            }
+            _mode = DisplayMode.FullBody;
+            if (fullBodyView != null) fullBodyView.SetActive(true);
+            if (avatarView != null) avatarView.SetActive(false);
+            PlayClip(ClipForState(_answer)); // R14：回全身按当前状态恢复播放，防停帧
         }
 
         private VideoClip ClipForState(AnswerState state)
@@ -254,13 +264,13 @@ namespace M1
 
         private void PlayClip(VideoClip clip)
         {
-            if (_webGlVideoBlocked) return;
             // 微信帧图集后端：状态机/长按问答行为与视频后端完全一致，仅切换播放源
             if (_useFrameAtlas)
             {
-                if (framePlayer != null) framePlayer.PlayState(KeyForState(_answer));
+                PlayFrameState(false);
                 return;
             }
+            if (_webGlVideoBlocked) return;
             if (player == null) return;
             if (_urlPlayback)
             {
@@ -284,6 +294,34 @@ namespace M1
             player.source = VideoSource.VideoClip;
             player.clip = clip;
             player.Play(); // 从头播放并循环（R1）
+        }
+
+        /// <summary>帧图集缺失/加载失败时使用已有头像视图，避免空 RawImage 绘制为白块。</summary>
+        private bool PlayFrameState(bool forceReload)
+        {
+            if (framePlayer != null && framePlayer.PlayState(KeyForState(_answer), forceReload))
+            {
+                if (!WebGlVideoPlaybackGate.IntroActive) ShowFullBody();
+                return true;
+            }
+            ShowAvatar();
+            return false;
+        }
+
+        private void ShowFullBody()
+        {
+            _mode = DisplayMode.FullBody;
+            if (rawImage != null) rawImage.enabled = true;
+            if (fullBodyView != null) fullBodyView.SetActive(true);
+            if (avatarView != null) avatarView.SetActive(false);
+        }
+
+        private void ShowAvatar()
+        {
+            _mode = DisplayMode.Avatar;
+            if (WebGlVideoPlaybackGate.IntroActive) return;
+            if (fullBodyView != null) fullBodyView.SetActive(false);
+            if (avatarView != null) avatarView.SetActive(true);
         }
 
         private void OnUrlPrepared(VideoPlayer source)

@@ -127,7 +127,7 @@ namespace M1
         public float webglFallbackPrepareTimeout = 6f;
 
         [Tooltip("海报兜底引导时长（秒）：视频完全不可用时以海报+字幕完成引导，到时自动恢复游戏")]
-        public float webglPosterFallbackDuration = 16f;
+        public float webglPosterFallbackDuration = 15.3f;
 
         /// <summary>JS 注入侧写入的分包就绪信号 storage key（1=就绪 2=失败）；Editor 导出工具按同名注入 game.js。</summary>
         public const string PackageReadyKey = "__wxIntroVideoPkg";
@@ -587,8 +587,11 @@ namespace M1
         {
             if (_posterFallback || _finished) return;
             _posterFallback = true;
+            // iPhone 直接海报分支会在普通 VideoPlayer 初始化前返回，必须在这里统一锁住常驻图集显示。
+            WebGlVideoPlaybackGate.IntroActive = true;
             Debug.LogWarning("[M1IntroVideo] 启用海报+字幕兜底引导（" + webglPosterFallbackDuration + " 秒）。");
             ReleaseVideoPlayback();
+            if (videoImage != null) videoImage.enabled = false;
             SetDimOverlayVisible(true);
             if (_posterImage != null) _posterImage.enabled = true;
             if (subtitleText != null) subtitleText.enabled = true;

@@ -30,32 +30,50 @@ namespace M1
 
         public bool HasConfig() => Config() != null;
 
-        /// <summary>切换到指定状态并从头循环播放；相同状态重复调用忽略。</summary>
-        public void PlayState(string key)
+        /// <summary>切换到指定状态并从头循环播放；返回是否已有可绘制帧。相同状态默认不重复加载。</summary>
+        public bool PlayState(string key, bool forceReload = false)
         {
-            if (_playing && _state != null && _state.key == key) return;
+            if (!forceReload && _state != null && _state.key == key) return HasDrawableTarget();
             var state = Config() != null ? Config().Get(key) : null;
             if (state == null || state.pages == null || state.pages.Length == 0)
             {
                 WarnOnce(key, "缺少状态图集：" + key + "（请运行 Tools/DigitalHuman/生成微信透明帧图集）");
-                return;
+                StopAndHide();
+                return false;
             }
-            // 不先解绑旧页：切换期间 RawImage 保留上一画面作兜底（零空白帧），新页就绪后定向释放旧页
-            _oldPages = _pages;
-            _state = state;
-            _pages = new Texture2D[state.pages.Length];
+
+            var pages = new Texture2D[state.pages.Length];
+            var validPages = 0;
             for (var i = 0; i < state.pages.Length; i++)
             {
-                _pages[i] = Resources.Load<Texture2D>(state.pages[i]);
-                if (_pages[i] == null)
-                    WarnOnce(key + "/" + i, "图集页加载失败：" + state.pages[i] + "（保留当前画面兜底）");
+                pages[i] = Resources.Load<Texture2D>(state.pages[i]);
+                if (pages[i] == null)
+                    WarnOnce(key + "/" + i, "图集页加载失败：" + state.pages[i]);
+                else
+                    validPages++;
             }
-            _frame = 0;
-            _clock = 0f;
-            _playing = true;
-            ApplyFrame();
+            if (validPages != pages.Length)
+            {
+                UnloadPages(pages, _pages);
+                StopAndHide();
+                return false;
+            }
+
+            // 不先解绑旧页：切换期间 RawImage 保留上一画面作兜底，新页绑定成功后定向释放旧页。
+            _oldPages = _pages;
+            _state = state;
+            _pages = pages;
+            _frame = FirstFrameOnLoadedPage();
+            _clock = _state.fps > 0f ? _frame / _state.fps : 0f;
+            _playing = ApplyFrame();
+            if (!_playing)
+            {
+                StopAndHide();
+                return false;
+            }
             FlushOldPages();
             Debug.Log($"[M1DigitalHumanFramePlayer] 切态 {key}：{_pages.Length} 页 @ {state.fps}fps（{state.frameCount} 帧），旧页已定向释放。");
+            return true;
         }
 
         private void Update()
@@ -63,26 +81,34 @@ namespace M1
             if (!_playing || _state == null || _state.fps <= 0f) return;
             _clock += Time.unscaledDeltaTime;
             var f = (int)(_clock * _state.fps) % _state.frameCount;
-            if (f != _frame) { _frame = f; ApplyFrame(); }
+            if (f != _frame)
+            {
+                _frame = f;
+                if (!ApplyFrame()) StopAndHide();
+            }
         }
 
-        private void ApplyFrame()
+        private bool ApplyFrame()
         {
-            if (target == null || _pages == null || _state == null) return;
+            if (target == null || _pages == null || _state == null) return false;
             var perPage = _state.cols * _state.rows;
+            if (perPage <= 0 || _state.frameCount <= 0) return false;
             var page = _frame / perPage;
             var index = _frame % perPage;
-            if (page >= _pages.Length || _pages[page] == null) return;
+            if (page >= _pages.Length || _pages[page] == null) return false;
             var tex = _pages[page];
+            if (tex.width <= 0 || tex.height <= 0) return false;
             var col = index % _state.cols;
             var row = index / _state.cols;
             var cellW = _state.frameWidth + _state.gutter * 2;
             var cellH = _state.frameHeight + _state.gutter * 2;
-            // 像素/UV 均以纹理左下为原点（Unity 惯例），帧内容按同方向写入图集，直接换算
+            if (cellW <= 0 || cellH <= 0) return false;
+            // 像素/UV 均以纹理左下为原点（Unity 惯例），帧内容按同方向写入图集，直接换算。
             var u0 = (col * (float)cellW + _state.gutter) / tex.width;
             var v0 = (row * (float)cellH + _state.gutter) / tex.height;
             target.texture = tex;
             target.uvRect = new Rect(u0, v0, (float)_state.frameWidth / tex.width, (float)_state.frameHeight / tex.height);
+            return true;
         }
 
         private DigitalHumanFrameConfig Config()
@@ -95,14 +121,54 @@ namespace M1
         /// 仍在 RawImage 上显示的页保留作兜底画面。</summary>
         private void FlushOldPages()
         {
-            if (_oldPages == null) return;
-            foreach (var p in _oldPages)
-            {
-                if (p == null) continue;
-                if (target != null && target.texture == p) continue;
-                Resources.UnloadAsset(p);
-            }
+            UnloadPages(_oldPages, _pages);
             _oldPages = null;
+        }
+
+        private int FirstFrameOnLoadedPage()
+        {
+            var perPage = _state.cols * _state.rows;
+            if (perPage <= 0) return 0;
+            for (var i = 0; i < _pages.Length; i++)
+                if (_pages[i] != null && i * perPage < _state.frameCount) return i * perPage;
+            return 0;
+        }
+
+        private bool HasDrawableTarget() => target != null && target.texture != null;
+
+        private void StopAndHide()
+        {
+            _playing = false;
+            _state = null;
+            _frame = 0;
+            _clock = 0f;
+            if (target != null)
+            {
+                target.texture = null;
+                target.enabled = false;
+            }
+            UnloadPages(_oldPages, _pages);
+            UnloadPages(_pages, null);
+            _pages = null;
+            _oldPages = null;
+        }
+
+        private static void UnloadPages(Texture2D[] pages, Texture2D[] keep)
+        {
+            if (pages == null) return;
+            foreach (var page in pages)
+            {
+                if (page == null || Contains(keep, page)) continue;
+                Resources.UnloadAsset(page);
+            }
+        }
+
+        private static bool Contains(Texture2D[] pages, Texture2D page)
+        {
+            if (pages == null) return false;
+            foreach (var candidate in pages)
+                if (candidate == page) return true;
+            return false;
         }
 
         /// <summary>同类错误只报一次，避免刷屏。</summary>
@@ -114,13 +180,6 @@ namespace M1
 
         private void OnDestroy() => ReleaseAll();
 
-        private void ReleaseAll()
-        {
-            if (_pages != null) foreach (var p in _pages) if (p != null) Resources.UnloadAsset(p);
-            _pages = null;
-            FlushOldPages();
-            _state = null;
-            _playing = false;
-        }
+        private void ReleaseAll() => StopAndHide();
     }
 }
