@@ -2501,12 +2501,18 @@ MonoBehaviour:
   angleValueText: {fileID: 1382911422}
   angleStatusText: {fileID: 0}
   okGreen: {r: 0, g: 0.55, b: 0.25, a: 1}
+  anglePromptColor: {r: 0.96, g: 0.42, b: 0.28, a: 1}
+  angleTitleGap: 32
+  anglePromptGap: 68
+  angleTitleWidth: 110
+  anglePromptWidth: 160
+  angleTitleColor: {r: 0.12, g: 0.15, b: 0.18, a: 1}
   beamColor: {r: 0.3, g: 1, b: 0.5, a: 1}
   beamDetectedColor: {r: 1, g: 0.45, b: 0.05, a: 1}
   placementTolerancePx: {x: 60, y: 40}
   probeEntryLocal: {x: 0.89, y: 0.6}
   scanStartMm: 119.03393
-  scanEndMm: 31.16
+  scanEndMm: 42.8
   scanStartY: 108.083405
   visualTiltAtTarget: 13
   initialAngleDeg: 0
@@ -5020,7 +5026,7 @@ MonoBehaviour:
   measureSprite: {fileID: 5987772278907439635, guid: 7a99bd260df48484c936a5411d1c3183, type: 3}
   measureSize: {x: 420, y: 91}
   positioningStart: {x: 0.27620193, y: 0.675487}
-  measureStartLocal: {x: 0.43134615, y: 0.6894643}
+  measureStartLocal: {x: 0.41658655, y: 0.6894643}
   zeroUv: {x: 0.005, y: 0.038}
   ruler120Uv: {x: 0.807, y: 0.038}
   slotUv: {x: 0.005, y: 0.136}
