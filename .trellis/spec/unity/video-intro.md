@@ -52,7 +52,7 @@
 
 #### 3. Contracts
 
-`WxVideoSubpackageInstaller` 的注入代码必须在 `checkVersion().then(...startGame())` 之前经 `GameGlobal.WXWASMSDK.WXStorageSetStringSync` 写入平台键。只有 `android` 执行 `loadSubpackage('videos')`、复制 MP4 到 `wx.env.USER_DATA_PATH` 并传回真实路径；`ios` 必须直接标记分包不可用，禁止 `loadSubpackage`、`Prepare`、`Play`、`Stop`、创建 RT 或触发 `createWKVideo`。`M1IntroVideo` 对非 Android WebGL 立即显示半黑遮罩、海报和 realtime 字幕，到时调用 `FinishIntro`；海报初始化必须 hidden，不能在 Android 等待首帧时裸露静帧人物。常驻数字人 iOS 优先透明图集；图集缺失时不得回退第二个 URL `VideoPlayer`。
+`WxVideoSubpackageInstaller` 的注入代码必须在 `checkVersion().then(...startGame())` 之前经 `GameGlobal.WXWASMSDK.WXStorageSetStringSync` 写入平台键。只有 `android` 执行 `loadSubpackage('videos')`、复制 MP4 到 `wx.env.USER_DATA_PATH` 并传回真实路径；`ios` 必须直接标记分包不可用，禁止 `loadSubpackage`、`Prepare`、`Play`、`Stop`、创建 RT 或触发 `createWKVideo`。`M1IntroVideo` 对非 Android WebGL 立即显示半黑遮罩、海报和 realtime 字幕，到时调用 `FinishIntro`；海报初始化必须 hidden，不能在 Android 等待首帧时裸露静帧人物。常驻数字人 iOS 优先透明图集；图集缺失时不得回退第二个 URL `VideoPlayer`。引导在 `Awake` 已确认路径后同时暂隐 `FullBodyView` 和同级 `AvatarView`，`Start` 的重复调用必须幂等。每次 VideoPlayer 源切换必须重绑带递增代际的回调，旧源的 prepare/error/frame/end 事件一律丢弃；结束事件丢失的 realtime watchdog 只能从当前源首帧开始计时。
 
 #### 4. Validation & Error Matrix
 
