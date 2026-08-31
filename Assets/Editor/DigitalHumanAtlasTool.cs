@@ -25,13 +25,13 @@ namespace M1.EditorTools
         private const string FramesDir = "Assets/Resources/DigitalHuman/Frames";
         private const string ConfigPath = "Assets/Resources/DigitalHuman/FrameAnimConfig.asset";
 
-        // 常驻三态 + iPhone 引导：引导按 6fps 降采样，复用同一亮度键控与图集管线。
+        // 常驻三态 + iPhone 引导：引导按 10fps 降采样，复用同一亮度键控与图集管线。
         private static readonly (string key, string webm, int fps)[] Sources =
         {
             ("idle", "Assets/DigitalHuman/A-01 待机动画/output.webm", 8),
             ("thinking", "Assets/DigitalHuman/A-03 思考动画/思考动画.webm", 10),
             ("speaking", "Assets/DigitalHuman/A-02讲解动画/讲解动画2.webm", 12),
-            ("intro", "WeChatVideos/m1-intro-wx.mp4", 6),
+            ("intro", "WeChatVideos/m1-intro-wx.mp4", 10),
         };
 
         [MenuItem("Tools/DigitalHuman/生成微信透明帧图集")]

@@ -129,6 +129,9 @@ namespace M1
         [Tooltip("海报兜底引导时长（秒）：视频完全不可用时以海报+字幕完成引导，到时自动恢复游戏")]
         public float webglPosterFallbackDuration = 15.3f;
 
+        [Tooltip("微信端引导帧图集画面宽高比（仅图集播放成功时覆盖海报比例）")]
+        public float webglIntroFrameAspect = 1080f / 1450f;
+
         /// <summary>JS 注入侧写入的分包就绪信号 storage key（1=就绪 2=失败）；Editor 导出工具按同名注入 game.js。</summary>
         public const string PackageReadyKey = "__wxIntroVideoPkg";
         /// <summary>导出注入选择的实际分包路径：Android 为 wxfile 用户目录，iOS/开发者工具为分包相对路径。</summary>
@@ -616,7 +619,12 @@ namespace M1
             var posterUvRect = _posterImage.uvRect;
             posterFramePlayer.target = _posterImage;
             posterFramePlayer.loop = false;
-            if (posterFramePlayer.PlayState("intro", true)) return;
+            if (posterFramePlayer.PlayState("intro", true))
+            {
+                var fitter = _posterImage.GetComponent<AspectRatioFitter>();
+                if (fitter != null) fitter.aspectRatio = webglIntroFrameAspect;
+                return;
+            }
             _posterImage.texture = posterTexture;
             _posterImage.uvRect = posterUvRect;
             _posterImage.enabled = true;
