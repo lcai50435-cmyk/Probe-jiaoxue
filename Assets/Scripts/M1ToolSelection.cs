@@ -117,6 +117,7 @@ namespace M1
         private bool _probeSolved;
         private bool _phase2;
         private bool _startLoading;
+        private AsyncOperation _nextSceneLoadOperation;
         private Coroutine _toolTimeout;
         private Coroutine _probeTimeout;
 
@@ -217,7 +218,11 @@ namespace M1
                 _continueButton.onClick.AddListener(OnContinueClicked);
             }
 
-            if (_aiAnswer != null) _aiAnswer.text = textInitial;
+            if (_aiAnswer != null)
+            {
+                ConfigureAiAnswerTypography();
+                _aiAnswer.text = textInitial;
+            }
             if (_continueButton != null) _continueButton.gameObject.SetActive(false);
 
             // M1-1 防卡死（规格书 3.1.1：20 秒无操作自动选对并进入 M1-2）
@@ -279,7 +284,11 @@ namespace M1
                 {
                     if (b != null) b.interactable = false;
                 }
-                if (_startButton != null) _startButton.gameObject.SetActive(true);
+                if (_startButton != null)
+                {
+                    _startButton.gameObject.SetActive(true);
+                    BeginNextScenePreload();
+                }
             }
             else
             {
@@ -290,7 +299,7 @@ namespace M1
             }
         }
 
-        /// <summary>点击“开始探测”：预加载下一场景，通关音效播完后再激活（默认 M2）。</summary>
+        /// <summary>点击“开始探测”：激活已预加载的下一场景，通关音效跨场景继续播放。</summary>
         private void OnStartClicked()
         {
             if (_startLoading) return;
@@ -301,27 +310,55 @@ namespace M1
             }
 
             _startLoading = true;
-            var loadOperation = SceneManager.LoadSceneAsync(nextSceneName);
-            if (loadOperation == null)
+            if (_startButton != null) _startButton.interactable = false;
+            BeginNextScenePreload();
+            if (_nextSceneLoadOperation == null)
             {
                 _startLoading = false;
-                Debug.LogError("[M1-2] 开始探测：无法预加载场景 " + nextSceneName);
+                if (_startButton != null) _startButton.interactable = true;
+                Debug.LogError("[M1-2] 开始探测：无法加载场景 " + nextSceneName);
                 return;
             }
 
-            loadOperation.allowSceneActivation = false;
-            Debug.Log("[M1-2] 开始探测：预加载场景，通关音效结束后激活 " + nextSceneName);
-            PlaySfx(passClip);
-            StartCoroutine(LoadSceneAfterSfx(passClip != null ? passClip.length : 0f, loadOperation));
+            PlayPassAcrossScene();
+            _nextSceneLoadOperation.allowSceneActivation = true;
         }
 
-        /// <summary>等待通关音效播完后激活已预加载场景，不等待 progress 以免卡在 0.9。</summary>
-        private System.Collections.IEnumerator LoadSceneAfterSfx(float delay, AsyncOperation loadOperation)
+        private void BeginNextScenePreload()
         {
-            yield return new WaitForSecondsRealtime(delay);
-            if (loadOperation == null) yield break;
-            loadOperation.allowSceneActivation = true;
-            yield return loadOperation;
+            if (_nextSceneLoadOperation != null || string.IsNullOrEmpty(nextSceneName)) return;
+            _nextSceneLoadOperation = SceneManager.LoadSceneAsync(nextSceneName);
+            if (_nextSceneLoadOperation == null)
+            {
+                Debug.LogError("[M1-2] 无法预加载场景 " + nextSceneName);
+                return;
+            }
+
+            _nextSceneLoadOperation.allowSceneActivation = false;
+            Debug.Log("[M1-2] 已开始预加载场景 " + nextSceneName);
+        }
+
+        private void PlayPassAcrossScene()
+        {
+            if (passClip == null) return;
+            var host = new GameObject("~M1PassAudio") { hideFlags = HideFlags.DontSave };
+            DontDestroyOnLoad(host);
+            var source = host.AddComponent<AudioSource>();
+            source.spatialBlend = 0f;
+            source.volume = sfxVolume;
+            source.clip = passClip;
+            source.Play();
+            var cleanup = host.AddComponent<M1PassAudioCleanup>();
+            cleanup.lifetime = passClip.length;
+        }
+
+        private void ConfigureAiAnswerTypography()
+        {
+            var designFontSize = _aiAnswer.fontSize;
+            _aiAnswer.enableAutoSizing = true;
+            _aiAnswer.textWrappingMode = TextWrappingModes.NoWrap;
+            _aiAnswer.fontSizeMax = designFontSize;
+            _aiAnswer.fontSizeMin = 12f;
         }
 
         private void StartToolTimeout()
@@ -461,6 +498,17 @@ namespace M1
                 if (hit != null) return hit;
             }
             return null;
+        }
+    }
+
+    internal sealed class M1PassAudioCleanup : MonoBehaviour
+    {
+        public float lifetime;
+
+        private IEnumerator Start()
+        {
+            yield return new WaitForSecondsRealtime(lifetime);
+            Destroy(gameObject);
         }
     }
 }
