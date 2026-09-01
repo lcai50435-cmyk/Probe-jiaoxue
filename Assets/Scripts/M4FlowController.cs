@@ -93,8 +93,8 @@ namespace M4
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2/M3 合同一致）
             speechBubble.preserveExplicitLineBreaks = true;
             speechBubble.fontSize = 24f;
-            speechBubble.minFontSize = 16f;
-            speechBubble.paddingX = 8f;
+            speechBubble.minFontSize = 18f;
+            speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
             if (dialog != null)

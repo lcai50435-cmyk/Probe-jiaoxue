@@ -355,10 +355,13 @@ namespace M1
         private void ConfigureAiAnswerTypography()
         {
             var designFontSize = _aiAnswer.fontSize;
+            var sizeDelta = _aiAnswer.rectTransform.sizeDelta;
+            sizeDelta.x = Mathf.Max(sizeDelta.x, 320f);
+            _aiAnswer.rectTransform.sizeDelta = sizeDelta;
             _aiAnswer.enableAutoSizing = true;
             _aiAnswer.textWrappingMode = TextWrappingModes.NoWrap;
             _aiAnswer.fontSizeMax = designFontSize;
-            _aiAnswer.fontSizeMin = 12f;
+            _aiAnswer.fontSizeMin = 18f;
         }
 
         private void StartToolTimeout()

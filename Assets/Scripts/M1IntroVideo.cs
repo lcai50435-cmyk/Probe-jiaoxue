@@ -75,6 +75,16 @@ namespace M1
         [Tooltip("每段字幕起始秒（视频约 15.2 秒，Inspector 可微调对帧）")]
         public float[] subtitleTimes = { 0.5f, 4.2f, 10.2f };
 
+        [Header("微信 WebGL 字幕时间（首帧从首句开始）")]
+        [Tooltip("微信 WebGL 首句字幕起始秒；设为 0 可避免人物首帧到达时跳过“叮咚”")]
+        public float webglSubtitleFirstStart = 0f;
+
+        [Tooltip("微信 WebGL 第二句字幕起始秒；仅覆盖 subtitleTimes 的第二项")]
+        public float webglSubtitleSecondStart = 4.8f;
+
+        [Tooltip("微信 WebGL 第三句字幕起始秒；仅覆盖 subtitleTimes 的第三项")]
+        public float webglSubtitleThirdStart = 10.4f;
+
         private int _subtitleIndex = -1;
 
         private bool[] _hiddenActive;
@@ -775,7 +785,7 @@ namespace M1
             var idx = -1;
             if (subtitleTimes != null)
                 for (var i = subtitleTimes.Length - 1; i >= 0; i--)
-                    if (t >= subtitleTimes[i]) { idx = i; break; }
+                    if (t >= GetSubtitleStartTime(i)) { idx = i; break; }
             if (idx < 0)
             {
                 if (_subtitleIndex != -1) { _subtitleIndex = -1; subtitleText.text = ""; }
@@ -786,6 +796,19 @@ namespace M1
             {
                 _subtitleIndex = idx;
                 subtitleText.text = subtitleSegments[idx];
+            }
+        }
+
+        /// <summary>微信首帧与视频时钟可能不同步，前三段使用独立起始时间；额外段仍沿用原有数组。</summary>
+        private float GetSubtitleStartTime(int index)
+        {
+            if (Application.platform != RuntimePlatform.WebGLPlayer) return subtitleTimes[index];
+            switch (index)
+            {
+                case 0: return webglSubtitleFirstStart;
+                case 1: return webglSubtitleSecondStart;
+                case 2: return webglSubtitleThirdStart;
+                default: return subtitleTimes[index];
             }
         }
 

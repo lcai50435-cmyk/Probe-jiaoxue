@@ -84,9 +84,9 @@ namespace M2
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒
             speechBubble.bubbleSize = new Vector2(300f, 198f);
-            speechBubble.paddingX = 18f;
+            speechBubble.paddingX = 0f;
             speechBubble.fontSize = 26f;
-            speechBubble.minFontSize = 20f;
+            speechBubble.minFontSize = 16f;
             speechBubble.preserveExplicitLineBreaks = true;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             // 老板定稿：场景已自带云朵（dialog/bg 节点），只创建文字，文字区对齐云朵中心（不新建云朵 Image）

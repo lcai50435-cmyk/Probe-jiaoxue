@@ -53,8 +53,8 @@ namespace M5
             speechBubble.segmentInterval = 1f;
             speechBubble.preserveExplicitLineBreaks = true;
             speechBubble.fontSize = 24f;
-            speechBubble.minFontSize = 16f;
-            speechBubble.paddingX = 8f;
+            speechBubble.minFontSize = 18f;
+            speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var stage = FindDeep(transform, "DigitalHumanStage");
             var dialog = stage != null ? FindDeep(stage, "dialog") : null;
