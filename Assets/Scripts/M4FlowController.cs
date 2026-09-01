@@ -47,15 +47,15 @@ namespace M4
         private static readonly string[] StageNames = { "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：探头偏角/步骤2：移动探测/步骤3：测距确认）
         // 数字人台词气泡（2026-08-23 按 台词.pptx Slide 12-15）
         private static readonly string[] SpeechLines = {
-            "现在把探头放轨腰最上端进行探测吧",             // 初始定位（Slide 12-【1】）
-            "角度正确！可以向前移动探头啦",                 // 校角确认（Slide 13-【1】）
-            "轨腰部位也探测到伤损了！用多功能尺确认一下出波位置" // 检出（Slide 14-【1】）
+            "现在把探头放在\n轨腰最上端进行探测吧",         // 初始定位（Slide 12-【1】）
+            "角度正确！\n可以向前移动探头啦",               // 校角确认（Slide 13-【1】）
+            "轨腰部位也探测到伤损了！\n用多功能尺确认一下出波位置" // 检出（Slide 14-【1】）
         };
         private static readonly string[] FinalSpeech = { // 测量完成（分段展示，逻辑同 M2/M3；2026-08-23 老板定稿）
-            "探头入射点距离本侧焊缝熔合线40mm",
+            "探头入射点距离\n本侧焊缝熔合线40mm",
             "在轨腰部位也探测到了伤损！",
-            "点击透视视图看一下超声波传播路径",
-            "三方位全部探测完成啦！但还有最后一步工作哦" // 全部完成引导（Slide 15-【1】）
+            "点击透视视图看一下\n超声波传播路径",
+            "三方位探测全部完成啦！\n但还有最后一步工作哦" // 全部完成引导（Slide 15-【1】）
         };
 
         private void Awake()
@@ -91,6 +91,10 @@ namespace M4
             // 数字人台词气泡（PPT）：文字放场景 dialog 节点（dialog/bg 已就位，与 M3 同结构）；配置与 M2/M3 合同一致（老板 2026-08-23）
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2/M3 合同一致）
+            speechBubble.preserveExplicitLineBreaks = true;
+            speechBubble.fontSize = 24f;
+            speechBubble.minFontSize = 16f;
+            speechBubble.paddingX = 8f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
             if (dialog != null)

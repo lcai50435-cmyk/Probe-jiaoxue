@@ -31,7 +31,7 @@ namespace M2
                 var title = FindChild(rt, "Title")?.GetComponent<TMP_Text>();
                 if (title != null)
                 {
-                    title.text = $"重置 {sceneName} 流程？";
+                    title.text = GetTitle(sceneName);
                     title.alignment = TextAlignmentOptions.Center;
                 }
 
@@ -40,6 +40,17 @@ namespace M2
                 var background = FindChild(rt, "bg")?.GetComponent<Image>();
                 if (background == null) background = rt.GetComponent<Image>();
                 EnsureBorder(background);
+            }
+        }
+
+        private static string GetTitle(string sceneName)
+        {
+            switch (sceneName)
+            {
+                case "M2": return "重置轨头顶面探测？";
+                case "M3": return "重置轨头侧面探测？";
+                case "M4": return "重置轨腰部位探测？";
+                default: return "重置 M5 流程？";
             }
         }
 

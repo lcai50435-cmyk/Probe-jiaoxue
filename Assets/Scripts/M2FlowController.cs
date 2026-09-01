@@ -51,7 +51,7 @@ namespace M2
             "这就说明我们在轨头顶面\n利用新工艺\n成功捕捉到了伤损！",
             "可以点击透视视图查看超声波传播路径"
         };
-        private const string PerspectiveHint = "看！绿色光束是\n超声波束，遇到\n红色伤损会中断并反射！"; // 首次点透视（Slide 7-【1】，仅第一次+探头已放置）
+        private const string PerspectiveHint = "看！\n绿色光束模拟超声波束\n遇到红色伤损\n会中断传播并发生反射！"; // 首次点透视（Slide 7-【1】，仅第一次+探头已放置）
         private void Awake()
         {
             Bind(applyButton, ApplyCouplant); Bind(resetButton, ShowResetDialog); Bind(enterNextButton, EnterNextModule);

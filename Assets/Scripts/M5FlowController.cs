@@ -33,8 +33,8 @@ namespace M5
         private float _timeScaleBeforeDialog = 1f;
         private static readonly string[] DefaultHints = { "请将擦拭布拖至钢轨顶面，由左至右擦拭" };
         private static readonly string[] StageNames = { "擦拭耦合剂" };
-        private const string InitialSpeech = "根据《安规》规定“\n焊缝探伤作业后钢轨顶面上的焊缝探伤耦合剂必须擦除干净。”";
-        private const string CompletedSpeech = "恭喜你！完整掌握了“三位一体、交叉验证”新工艺！";
+        private const string InitialSpeech = "根据《安规》规定\n“焊缝探伤作业后\n钢轨顶面上的焊缝探伤耦合剂\n必须擦除干净。”";
+        private const string CompletedSpeech = "恭喜你！\n完整掌握了\n“三位一体、交叉验证”新工艺！";
 
         private void Awake()
         {
@@ -51,6 +51,10 @@ namespace M5
             // 复用 M2-M4 的场景云朵：仅运行时创建文字，不改 M5 Scene。
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f;
+            speechBubble.preserveExplicitLineBreaks = true;
+            speechBubble.fontSize = 24f;
+            speechBubble.minFontSize = 16f;
+            speechBubble.paddingX = 8f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var stage = FindDeep(transform, "DigitalHumanStage");
             var dialog = stage != null ? FindDeep(stage, "dialog") : null;
