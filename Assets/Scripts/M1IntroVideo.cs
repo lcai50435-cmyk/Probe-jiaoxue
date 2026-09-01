@@ -116,6 +116,9 @@ namespace M1
         [Tooltip("微信 WebGL 视频播放结束安全放行（秒）：仅当播放结束事件丢失时触发；0=关闭")]
         public float webglPlaybackEndFallbackDuration = 16f;
 
+        [Tooltip("微信 Android URL 视频首帧后无新帧推进超时（秒）：分包源切 CDN，CDN 源转海报；0=关闭")]
+        public float webglFrameStallTimeout = 3f;
+
         [Header("微信分包视频（2026-08-30：引导视频随包分发，进游戏即播）")]
         [Tooltip("分包就绪等待上限（秒）：导出注入的 JS 启动加载 videos 分包并写 storage 信号，超时或失败回退 CDN URL")]
         public float webglPackageWaitTimeout = 4f;
@@ -163,6 +166,9 @@ namespace M1
         private string _activeSourceUrl;     // 当前源的真实 URL（分包复制后为 wxfile://usr/...），用于过滤迟到回调
         private bool _cutover;               // 切源进行中（旧源已 Stop、新源 Prepare 完成前）：忽略旧源迟到帧/回调
         private bool _webGlPosterOnly;        // iOS WKVideo 仅交付静帧且会增加切场景崩溃风险，直接使用海报字幕
+        private bool _applicationInBackground;
+        private long _lastVideoFrame = -1;
+        private float _lastVideoFrameRealtime = -1f;
         private int _eventGeneration;
         private int _activeEventGeneration;
         private VideoPlayer.EventHandler _videoEndHandler;
@@ -318,6 +324,8 @@ namespace M1
                 FinishIntro();
                 return;
             }
+            CheckWebGlFrameStall();
+            if (_finished || _posterFallback) return;
             // 微信 Android 偶发丢失 loopPointReached：仅 URL 视频正常播放路径按 realtime 安全放行。
             if (Application.platform == RuntimePlatform.WebGLPlayer && _urlPlayback && !_posterFallback && !_finished
                 && _webGlPlaybackEndWatchdogStartRealtime >= 0f && webglPlaybackEndFallbackDuration > 0f
@@ -331,6 +339,46 @@ namespace M1
             if (_finished || pauseWhilePlaying == null) return;
             foreach (var p in pauseWhilePlaying)
                 if (p != null && p.isPlaying) p.Pause();
+        }
+
+        /// <summary>微信 Android 已出首帧后 VideoDecoder 不再推进时，按当前源进入下一层兜底。</summary>
+        private void CheckWebGlFrameStall()
+        {
+            if (_applicationInBackground || Application.platform != RuntimePlatform.WebGLPlayer || !_urlPlayback
+                || _webGlPosterOnly || !_firstFrameShown || _cutover || _posterFallback || _finished
+                || webglFrameStallTimeout <= 0f || _lastVideoFrameRealtime < 0f) return;
+            if (Time.realtimeSinceStartup - _lastVideoFrameRealtime < webglFrameStallTimeout) return;
+
+            if (_activeSource == IntroSource.Package)
+            {
+                Debug.LogWarning("[M1IntroVideo] 分包视频首帧后无新帧推进，切 CDN 播放。");
+                SwitchToCdn("分包视频卡帧");
+            }
+            else if (_activeSource == IntroSource.Cdn)
+            {
+                Debug.LogWarning("[M1IntroVideo] CDN 视频首帧后无新帧推进，转海报字幕兜底引导。");
+                StartPosterFallback();
+            }
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            _applicationInBackground = paused;
+            if (!paused) ResetWebGlFrameStallWindow();
+        }
+
+        private void OnApplicationFocus(bool focused)
+        {
+            _applicationInBackground = !focused;
+            if (focused) ResetWebGlFrameStallWindow();
+        }
+
+        /// <summary>恢复前台后重新开始当前源的卡帧观察，后台时间不计入超时。</summary>
+        private void ResetWebGlFrameStallWindow()
+        {
+            if (Application.platform != RuntimePlatform.WebGLPlayer || !_urlPlayback || _webGlPosterOnly
+                || !_firstFrameShown || _cutover || _posterFallback || _finished) return;
+            _lastVideoFrameRealtime = Time.realtimeSinceStartup;
         }
 
         private void Start()
@@ -381,7 +429,13 @@ namespace M1
 
         private void OnFrameReady(int generation, VideoPlayer vp, long frame)
         {
-            if (generation == 0 || generation != _activeEventGeneration || !_urlPlayback || _firstFrameShown || _cutover || _posterFallback) return;
+            if (generation == 0 || generation != _activeEventGeneration || !_urlPlayback || _cutover || _posterFallback) return;
+            if (frame > _lastVideoFrame)
+            {
+                _lastVideoFrame = frame;
+                _lastVideoFrameRealtime = Time.realtimeSinceStartup;
+            }
+            if (_firstFrameShown) return;
             _firstFrameShown = true;
             _webGlPlaybackEndWatchdogStartRealtime = Time.realtimeSinceStartup;
             if (_posterImage != null) _posterImage.enabled = false;
@@ -541,7 +595,7 @@ namespace M1
             _prepared = false;        // 旧源准备状态作废，防迟到 prepareCompleted 错误置位
             _started = false;         // TryPlay 幂等标志按源重置：新源必须重新 Play
             _playbackStartRealtime = -1f; // 字幕时间轴随新源从头开始
-            _webGlPlaybackEndWatchdogStartRealtime = -1f;
+            ResetWebGlSourceFrameState();
             UnbindEvents();  // 解绑旧源回调：Stop 后旧源迟到的 prepareCompleted/errorReceived/frameReady 不再进入处理链
             StopPlayerSafely();
             player.source = VideoSource.Url;
@@ -551,6 +605,15 @@ namespace M1
             player.Prepare();
             if (Application.platform == RuntimePlatform.WebGLPlayer && webglFallbackPrepareTimeout > 0f)
                 StartCoroutine(WebGlFallbackPrepareTimeout());
+        }
+
+        /// <summary>切换 URL 源时清除旧源首帧和进度，确保新代际重新启动首帧与卡帧监测。</summary>
+        private void ResetWebGlSourceFrameState()
+        {
+            _firstFrameShown = false;
+            _lastVideoFrame = -1;
+            _lastVideoFrameRealtime = -1f;
+            _webGlPlaybackEndWatchdogStartRealtime = -1f;
         }
 
         /// <summary>回调是否属于当前活动源：分包相对路径与 CDN 绝对 URL 差异明显，切源后旧源迟到回调按此过滤。</summary>

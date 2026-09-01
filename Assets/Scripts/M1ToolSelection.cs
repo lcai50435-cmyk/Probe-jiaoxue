@@ -116,6 +116,7 @@ namespace M1
         private bool _solved;
         private bool _probeSolved;
         private bool _phase2;
+        private bool _startLoading;
         private Coroutine _toolTimeout;
         private Coroutine _probeTimeout;
 
@@ -289,25 +290,38 @@ namespace M1
             }
         }
 
-        /// <summary>点击“开始探测”：播放通关音效，播完后再加载下一场景（默认 M2）。</summary>
+        /// <summary>点击“开始探测”：预加载下一场景，通关音效播完后再激活（默认 M2）。</summary>
         private void OnStartClicked()
         {
+            if (_startLoading) return;
             if (string.IsNullOrEmpty(nextSceneName))
             {
                 Debug.Log("[M1-2] 开始探测：nextSceneName 未配置，保持占位不跳转。");
                 return;
             }
-            Debug.Log("[M1-2] 开始探测：播放通关音效后加载场景 " + nextSceneName);
+
+            _startLoading = true;
+            var loadOperation = SceneManager.LoadSceneAsync(nextSceneName);
+            if (loadOperation == null)
+            {
+                _startLoading = false;
+                Debug.LogError("[M1-2] 开始探测：无法预加载场景 " + nextSceneName);
+                return;
+            }
+
+            loadOperation.allowSceneActivation = false;
+            Debug.Log("[M1-2] 开始探测：预加载场景，通关音效结束后激活 " + nextSceneName);
             PlaySfx(passClip);
-            // 同步 LoadScene 会立即销毁当前场景音源，导致通关音效被截断；先等音效播完再切场景。
-            StartCoroutine(LoadSceneAfterSfx(passClip != null ? passClip.length : 0f));
+            StartCoroutine(LoadSceneAfterSfx(passClip != null ? passClip.length : 0f, loadOperation));
         }
 
-        /// <summary>等待通关音效播完再切场景，避免同步 LoadScene 销毁音源截断音效。</summary>
-        private System.Collections.IEnumerator LoadSceneAfterSfx(float delay)
+        /// <summary>等待通关音效播完后激活已预加载场景，不等待 progress 以免卡在 0.9。</summary>
+        private System.Collections.IEnumerator LoadSceneAfterSfx(float delay, AsyncOperation loadOperation)
         {
             yield return new WaitForSecondsRealtime(delay);
-            SceneManager.LoadScene(nextSceneName);
+            if (loadOperation == null) yield break;
+            loadOperation.allowSceneActivation = true;
+            yield return loadOperation;
         }
 
         private void StartToolTimeout()

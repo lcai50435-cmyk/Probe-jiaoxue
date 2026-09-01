@@ -219,7 +219,7 @@ namespace M3
             if (measurementBubble != null) measurementBubble.SetActive(true);
             PlayCorrect();
             Go(Stage.Completed);
-            speechBubble?.ShowSegments(FinalSpeech); // 测量完成 120mm 结论 + 进入下一模块引导（分段）
+            speechBubble?.ShowSegments(FinalSpeech, new[] { 1f, 1f, 2f }); // 测量完成 120mm 结论 + 进入下一模块引导（分段）
         }
         /// <summary>正确提示音（探头放置成功 / 尺子校角吸附 / 测量完成共用，与 M2 一致）。</summary>
         public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }

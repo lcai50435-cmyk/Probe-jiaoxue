@@ -177,6 +177,12 @@ namespace M2
         /// <summary>分段展示长台词（PPT：一段一段展示；每段逐字，段间 unscaled 停顿；一体播放中锁定，播完前其他台词不插入）。</summary>
         public void ShowSegments(params string[] segments)
         {
+            ShowSegments(segments, null);
+        }
+
+        /// <summary>分段展示长台词，可为每个段间隔单独指定秒数；缺失项沿用 segmentInterval。</summary>
+        public void ShowSegments(string[] segments, float[] segmentIntervals)
+        {
             if (_locked || segments == null || segments.Length == 0) { if (segments != null && segments.Length > 0) Show(string.Empty); return; }
             if (createOnlyWhenAnchored && anchor == null) return;
             if (useExistingCloud) EnsureTextOnly(); else EnsureCreated();
@@ -186,7 +192,7 @@ namespace M2
             if (anchor != null) anchor.gameObject.SetActive(true); // 云朵背景框一起显示
             _rt.gameObject.SetActive(true);
             _locked = true; // 一体播放：锁定直到全部段播完
-            _segments = StartCoroutine(SegmentFlow(segments));
+            _segments = StartCoroutine(SegmentFlow(segments, segmentIntervals));
         }
 
         private IEnumerator TypeFlow(string full)
@@ -201,7 +207,7 @@ namespace M2
             _typing = null;
         }
 
-        private IEnumerator SegmentFlow(string[] segments)
+        private IEnumerator SegmentFlow(string[] segments, float[] segmentIntervals)
         {
             SetSpeaking(true);
             for (var si = 0; si < segments.Length; si++)
@@ -219,7 +225,11 @@ namespace M2
                         yield return new WaitForSecondsRealtime(typeSpeed);
                     }
                 }
-                if (si < segments.Length - 1) yield return new WaitForSecondsRealtime(segmentInterval);
+                if (si < segments.Length - 1)
+                {
+                    var interval = segmentIntervals != null && si < segmentIntervals.Length ? segmentIntervals[si] : segmentInterval;
+                    yield return new WaitForSecondsRealtime(interval);
+                }
             }
             SetSpeaking(false);
             _locked = false; // 全部播完：解锁
