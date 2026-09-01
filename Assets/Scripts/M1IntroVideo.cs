@@ -720,6 +720,9 @@ namespace M1
 
         private void FinishIntro()
         {
+            // 海报图集仅服务引导；结束时先清掉当前页，不能留在内存或覆盖恢复后的常驻数字人。
+            if (posterFramePlayer != null) posterFramePlayer.StopAndRelease();
+            if (_posterImage != null) _posterImage.enabled = false;
             ReleaseVideoPlayback();
             WebGlVideoPlaybackGate.IntroActive = false;
             RestoreWhilePlaying(); // 引导结束：先恢复常驻数字人显示
@@ -1049,8 +1052,9 @@ namespace M1
 
         private void OnDestroy()
         {
-            WebGlVideoPlaybackGate.IntroActive = false;
+            if (posterFramePlayer != null) posterFramePlayer.StopAndRelease();
             ReleaseVideoPlayback();
+            WebGlVideoPlaybackGate.IntroActive = false;
         }
     }
 }

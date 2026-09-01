@@ -102,9 +102,14 @@ namespace M1
 
         private void Start()
         {
-            // 帧图集后端不占用视频解码器：引导期间即可加载待机帧，引导结束（恢复 Graphic）后立即显示。
+            // 引导遮罩期间保持图集后端空闲；结束后由 ResumeAfterIntro 强制绑定待机首帧再显示。
             if (_useFrameAtlas)
             {
+                if (WebGlVideoPlaybackGate.IntroActive)
+                {
+                    _pendingAfterIntro = true;
+                    return;
+                }
                 ApplyMode(DisplayMode.FullBody);
                 return;
             }
@@ -129,14 +134,20 @@ namespace M1
             framePlayer = rawImage.GetComponent<M1DigitalHumanFramePlayer>();
             if (framePlayer == null) framePlayer = rawImage.gameObject.AddComponent<M1DigitalHumanFramePlayer>(); // Unity 6 伪 null：必须 if == null 分步
             framePlayer.target = rawImage;
-            return framePlayer.HasConfig();
+            if (!framePlayer.HasConfig()) return false;
+            framePlayer.PlaybackFailed -= OnFramePlaybackFailed;
+            framePlayer.PlaybackFailed += OnFramePlaybackFailed;
+            return true;
         }
+
+        private void OnFramePlaybackFailed() => ShowAvatar();
 
         public void ResumeAfterIntro()
         {
             // 引导会临时禁用 RawImage；帧图集后端不依赖 pending 标志，结束时必须主动恢复可见性与待机帧。
             if (_useFrameAtlas)
             {
+                _pendingAfterIntro = false;
                 PlayFrameState(true);
                 return;
             }
@@ -166,6 +177,7 @@ namespace M1
                 player.frameReady -= OnFrameReady;
                 player.prepareCompleted -= OnUrlPrepared;
             }
+            if (framePlayer != null) framePlayer.PlaybackFailed -= OnFramePlaybackFailed;
             if (_rt != null) { _rt.Release(); Destroy(_rt); }
         }
 

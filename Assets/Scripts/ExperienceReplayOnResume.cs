@@ -61,14 +61,18 @@ namespace M1
 
         private void OnApplicationPause(bool paused)
         {
+#if !(UNITY_WEBGL && !UNITY_EDITOR)
             if (paused) MarkLeft();
             else TryRestart();
+#endif
         }
 
         private void OnApplicationFocus(bool focused)
         {
+#if !(UNITY_WEBGL && !UNITY_EDITOR)
             if (!focused) MarkLeft();
             else TryRestart();
+#endif
         }
 
         private void MarkLeft()
@@ -78,6 +82,13 @@ namespace M1
 
         private void TryRestart()
         {
+            if (SceneManager.GetActiveScene().name != "M5")
+            {
+                _completed = false;
+                _leftAfterCompletion = false;
+                return;
+            }
+
             if (!_completed || !_leftAfterCompletion || _restarting) return;
             _restarting = true;
             _completed = false;
