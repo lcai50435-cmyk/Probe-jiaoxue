@@ -38,6 +38,7 @@ namespace M4
         public bool PositioningRulerInPlace => rulerDrag != null && rulerDrag.positioned;
         private float _prevMm = 55f;
         private Sprite _damageMarkerSprite; // 伤损橙标记（椭圆）
+        private TMP_Text _actionHint;
         private static readonly string[] DefaultHints = {
             "将探头放在轨腰最上端，利用多功能尺将探头向上偏转10°", // Slide 12-【3】
             "将探头以10度偏角向前移动，注意观察波形变化",         // Slide 13-【3】
@@ -64,6 +65,7 @@ namespace M4
             Bind(FindButton("ConfirmButton"), ResetAll); Bind(FindButton("CancelButton"), HideResetDialog); Bind(FindButton("NormalButton"), SetNormalView); Bind(FindButton("PerspectiveButton"), SetPerspectiveView);
             // 先绑定尺子（提供 PixelsPerMm），再绑定探头（几何标定依赖 PixelsPerMm）
             rulerDrag?.Bind(this); probeDrag?.Bind(this);
+            _actionHint = ModuleHintOverlay.EnsureActionHint(transform, instructionText != null ? instructionText.font : null);
             EnableRaycast(probeDrag?.probeVisual); EnableRaycast(rulerDrag?.rulerImage); EnableRaycast(probeDrag?.angleSlider);
             EnableRaycast(resetButton); EnableRaycast(enterNextButton); EnableRaycast(FindButton("ConfirmButton"));
             EnableRaycast(FindButton("CancelButton")); EnableRaycast(FindButton("NormalButton")); EnableRaycast(FindButton("PerspectiveButton"));
@@ -151,6 +153,7 @@ namespace M4
             if (CurrentStage != Stage.Positioning) return;
             RulerDocked = true;
             probeDrag?.SetAngleLocked(false); // 尺子校角吸附成功 → 解锁角度滑块
+            UpdateUi();
         }
         /// <summary>校角稳定确认（M2 同款：13° 稳定停留 0.5s）→ 锁角度 + 正确音 + 解锁撤尺。</summary>
         public void NotifyAngleConfirmed()
@@ -161,6 +164,7 @@ namespace M4
             PlayCorrect();
             rulerDrag?.UnlockRetract();
             speechBubble?.Show(SpeechLines[1]); // 角度正确（Slide 13-【1】）
+            UpdateUi();
         }
         /// <summary>尺子拖回 RulerHome 归槽（恢复 Home 初态）→ 进入扫描，解锁探头平移。</summary>
         public void NotifyRulerRetracted() { if (CurrentStage == Stage.Positioning && AngleVerifiedByRuler) Go(Stage.Scanning); }
@@ -279,12 +283,35 @@ namespace M4
         private void UpdateUi()
         {
             var i = Mathf.Clamp((int)CurrentStage - 1, 0, 3);
-            if (instructionText != null && i < DefaultHints.Length) instructionText.text = DefaultHints[i];
+            if (instructionText != null && i < DefaultHints.Length) instructionText.text = CurrentInstruction();
+            ModuleHintOverlay.ConfigureInstruction(instructionText);
+            ModuleHintOverlay.SyncFont(_actionHint, instructionText);
+            var actionHint = CurrentActionHint();
+            if (_actionHint != null) { _actionHint.text = actionHint; _actionHint.gameObject.SetActive(!string.IsNullOrEmpty(actionHint)); ModuleHintOverlay.PositionAngleHint(_actionHint, actionHint == "滑动此处调整偏角"); }
             if (stepProgressText != null) stepProgressText.text = $"步骤{Mathf.Clamp(i + 1, 1, 3)}：{StageNames[i]}"; // 2026-08-23 按 台词.pptx：去 /3、中文冒号，改“步骤X：阶段名”
             var done = CurrentStage == Stage.Completed;
             if (completionPanel != null) completionPanel.SetActive(done);
             if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
             if (done && completionText != null) completionText.text = !string.IsNullOrEmpty(nextSceneName) || (onCompleted != null && onCompleted.GetPersistentEventCount() > 0) ? "<b>轨腰部位探测完成</b>" : "下一模块待接入";
+        }
+
+        private string CurrentInstruction()
+        {
+            return DefaultHints[Mathf.Clamp((int)CurrentStage - 1, 0, DefaultHints.Length - 1)];
+        }
+
+        private string CurrentActionHint()
+        {
+            if (CurrentStage == Stage.Positioning)
+            {
+                if (probeDrag != null && !probeDrag.Placed) return "拖动探头";
+                if (!RulerDocked) return "拖动多功能尺至探头处";
+                if (!AngleVerifiedByRuler) return "滑动此处调整偏角";
+                return "拖动多功能尺返回工具栏";
+            }
+            if (CurrentStage == Stage.Scanning) return "拖动探头向前移动";
+            if (CurrentStage == Stage.Measuring) return "拖动多功能尺至探头下方";
+            return string.Empty;
         }
     }
 }

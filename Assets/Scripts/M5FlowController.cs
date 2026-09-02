@@ -31,10 +31,12 @@ namespace M5
         public Stage CurrentStage { get; private set; } = Stage.Wipe;
         public bool Wiped;
         private float _timeScaleBeforeDialog = 1f;
-        private static readonly string[] DefaultHints = { "请将擦拭布拖至钢轨顶面，由左至右擦拭" };
+        private M5IdleHelp _idleHelp;
+        private TMP_Text _actionHint;
+        private static readonly string[] DefaultHints = { "拖动擦拭布\n至钢轨顶面由左至右擦拭" };
         private static readonly string[] StageNames = { "擦拭耦合剂" };
         private const string InitialSpeech = "根据《安规》规定\n“焊缝探伤作业后\n钢轨顶面上的焊缝探伤耦合剂\n必须擦除干净。”";
-        private const string CompletedSpeech = "恭喜你！\n完整掌握了\n“三位一体、交叉验证”新工艺！";
+        private const string CompletedSpeech = "恭喜你！\n完整掌握了\n“三位一体、交叉验证”\n新工艺！";
 
         private void Awake()
         {
@@ -48,6 +50,8 @@ namespace M5
             SwapRailSprites();
             ApplyView(false);
             UpdateUi();
+            _actionHint = ModuleHintOverlay.EnsureActionHint(transform, instructionText != null ? instructionText.font : null);
+            if (_actionHint != null) _actionHint.text = "拖动擦拭布";
             // 复用 M2-M4 的场景云朵：仅运行时创建文字，不改 M5 Scene。
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f;
@@ -67,6 +71,8 @@ namespace M5
                 speechBubble.Show(InitialSpeech);
             }
             else speechBubble.createOnlyWhenAnchored = true;
+            _idleHelp = gameObject.AddComponent<M5IdleHelp>();
+            _idleHelp.Initialize(this);
         }
 
         private Button FindButton(string name) => GetComponentsInChildren<Button>(true).FirstOrDefault(b => b.name == name);
@@ -76,6 +82,7 @@ namespace M5
         public void NotifyWipeProgress(float p)
         {
             if (CurrentStage != Stage.Wipe) return;
+            _idleHelp?.ResetIdle();
             couplantFx?.SetWipeProgress(p);
             if (p >= 1f - .001f) CompleteWipe();
         }
@@ -98,6 +105,7 @@ namespace M5
             if (visible && !wasOpen) { _timeScaleBeforeDialog = Time.timeScale; Time.timeScale = 0f; }
             else if (!visible && wasOpen) Time.timeScale = _timeScaleBeforeDialog;
             if (modal != null) modal.SetActive(visible);
+            _idleHelp?.SetPaused(visible);
         }
 
         private static Transform FindDeep(Transform root, string name)
@@ -135,6 +143,7 @@ namespace M5
         {
             ExperienceReplayOnResume.CancelCompleted();
             Wiped = false;
+            _idleHelp?.ResetAll();
             ragDrag?.ResetTool();
             couplantFx?.Reset();
             ApplyView(false); SetDialog(false); Go(Stage.Wipe);

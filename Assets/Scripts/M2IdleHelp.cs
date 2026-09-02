@@ -26,6 +26,9 @@ namespace M2
             Bind(autoDemoButton, AutoDemo);
             Bind(tryAgainButton, TryAgain);
             if (rulerDrag == null && flow != null) rulerDrag = flow.rulerDrag;
+            ModuleHintOverlay.MoveHelpPanel(helpPanel);
+            ModuleHintOverlay.SetHelpButtonText(autoDemoButton, "需要");
+            ModuleHintOverlay.SetHelpButtonText(tryAgainButton, "不需要");
         }
         private static void Bind(Button button, UnityAction action)
         {
@@ -37,8 +40,8 @@ namespace M2
         {
             if (_paused || _demoRunning || flow == null) return;
             _idle += Time.deltaTime;
-            if (flow.CurrentStage == M2FlowController.Stage.Positioning && _idle >= angleIdleTimeout) ShowHelp("需要帮助放置探头并校到 10° 吗？");
-            else if (flow.CurrentStage == M2FlowController.Stage.Scanning && _idle >= scanIdleTimeout) ShowHelp("即将演示移动到 110mm 检出");
+            if (flow.CurrentStage == M2FlowController.Stage.Positioning && _idle >= angleIdleTimeout) ShowHelp("需要帮助吗？");
+            else if (flow.CurrentStage == M2FlowController.Stage.Scanning && _idle >= scanIdleTimeout) ShowHelp("需要帮助吗？");
         }
         public void ResetIdle() => _idle = 0f;
         public void SetPaused(bool paused) => _paused = paused;

@@ -35,6 +35,7 @@ namespace M2
         private bool _applying; private float _timeScaleBeforeDialog = 1f;
         private bool _perspectiveHintShown; // 首次点透视提示已显示（老板 2026-08-23：只第一次出现）
         private TMP_Text _bubbleText;
+        private TMP_Text _actionHint;
         private Image _damageMarker; private Sprite _damageMarkerSprite; // 伤损橙标记（运行时椭圆，检出时显示）
         private static readonly string[] DefaultHints = { "", "将探头放置在轨头顶面，用多功能尺将探头偏转10°", "将探头以10度偏角向前移动，注意观察波形变化", "将定位尺0刻度对准探头入射点，进行测量", "<b>轨头顶面探测完成</b>" }; // 2026-08-23 按 台词.pptx；[0] 涂耦合剂提示已删（改由数字人气泡承载）
         private static readonly string[] StageNames = { "涂抹耦合剂", "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：涂抹耦合剂/步骤2：探头偏角/步骤3：移动探测/步骤4：测距确认）
@@ -63,6 +64,7 @@ namespace M2
             }
             Bind(FindButton("ConfirmButton"), ResetAll); Bind(FindButton("CancelButton"), HideResetDialog); Bind(FindButton("NormalButton"), SetNormalView); Bind(FindButton("PerspectiveButton"), SetPerspectiveView);
             rulerDrag?.Bind(this); probeDrag?.Bind(this);
+            _actionHint = ModuleHintOverlay.EnsureActionHint(transform, instructionText != null ? instructionText.font : null);
             if (completionPanel != null && enterNextButton != null && enterNextButton.transform.parent != completionPanel.transform) enterNextButton.transform.SetParent(completionPanel.transform, false);
             SwapRailSprites(); ApplyView(false);
             waveformFx?.SetDistanceMm(150f); UpdateUi(); // 波形窗口已 Scene 直做（4:3/刻度/点状网格/序列化挂载）
@@ -149,8 +151,8 @@ namespace M2
         {
             if (!CouplantApplied && CurrentStage == Stage.Couplant) speechBubble?.Show(SpeechLines[1]);
         }
-        public void NotifyPlacementChanged() { if (CurrentStage == Stage.Positioning && probeDrag != null && probeDrag.Placed) rulerDrag?.ShowAngleGuide(); }
-        public void NotifyRulerAligned() { if (CurrentStage == Stage.Positioning) { RulerDocked = true; probeDrag?.SetAngleLocked(false); } }
+        public void NotifyPlacementChanged() { if (CurrentStage == Stage.Positioning && probeDrag != null && probeDrag.Placed) rulerDrag?.ShowAngleGuide(); UpdateUi(); }
+        public void NotifyRulerAligned() { if (CurrentStage == Stage.Positioning) { RulerDocked = true; probeDrag?.SetAngleLocked(false); UpdateUi(); } }
         /// <summary>正确提示音（尺子校角吸附 / 校角确认 / 测量完成共用，与 M3 一致）。</summary>
         public void PlayCorrect() { if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume); }
         public void NotifyAngleConfirmed()
@@ -161,6 +163,7 @@ namespace M2
             if (sfx != null && correctClip != null) sfx.PlayOneShot(correctClip, sfxVolume);
             rulerDrag?.UnlockRetract();
             speechBubble?.Show(SpeechLines[3]); // 角度正确
+            UpdateUi();
         }
         public void NotifyRulerRetracted() { if (CurrentStage == Stage.Positioning && AngleVerifiedByRuler) Go(Stage.Scanning); }
         public void NotifyDistance(float mm) { waveformFx?.SetDistanceMm(mm); }
@@ -268,11 +271,35 @@ namespace M2
         {
             var i = Mathf.Min((int)CurrentStage, 4);
             var done = CurrentStage == Stage.Completed;
-            if (instructionText != null) instructionText.text = DefaultHints[i];
+            if (instructionText != null) instructionText.text = CurrentInstruction();
+            ModuleHintOverlay.ConfigureInstruction(instructionText);
+            ModuleHintOverlay.SyncFont(_actionHint, instructionText);
+            var actionHint = CurrentActionHint();
+            if (_actionHint != null) { _actionHint.text = actionHint; _actionHint.gameObject.SetActive(!string.IsNullOrEmpty(actionHint)); ModuleHintOverlay.PositionAngleHint(_actionHint, actionHint == "滑动此处调整偏角"); }
             if (stepProgressText != null) stepProgressText.text = done ? string.Empty : $"步骤{Mathf.Min(i + 1, 4)}：{StageNames[i]}"; // 2026-08-23 按 台词.pptx：去 /4、中文冒号；完成阶段不显示“步骤X：完成”（老板 2026-08-23）
             foreach (var panel in stepPanels) if (panel != null) panel.SetActive(i < stepPanels.Length && panel == stepPanels[i]);
             if (completionPanel != null) completionPanel.SetActive(done); if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
             if (done && completionText != null) completionText.text = string.Empty; // 老板 2026-08-23：完成阶段不显示“轨头顶面探测完成”绿色文字（保留按钮）
+        }
+
+        private string CurrentInstruction()
+        {
+            return DefaultHints[Mathf.Clamp((int)CurrentStage, 0, DefaultHints.Length - 1)];
+        }
+
+        private string CurrentActionHint()
+        {
+            if (CurrentStage == Stage.Couplant) return string.Empty;
+            if (CurrentStage == Stage.Positioning)
+            {
+                if (probeDrag != null && !probeDrag.Placed) return "拖动探头";
+                if (!RulerDocked) return "拖动多功能尺至探头处";
+                if (!AngleVerifiedByRuler) return "滑动此处调整偏角";
+                return "拖动多功能尺返回工具栏";
+            }
+            if (CurrentStage == Stage.Scanning) return "拖动探头向前移动";
+            if (CurrentStage == Stage.Measuring) return "拖动多功能尺至探头上方";
+            return string.Empty;
         }
     }
 }

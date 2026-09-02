@@ -41,6 +41,16 @@ namespace M5
 
         public void SetInputLocked(bool locked) { _inputLocked = locked; if (locked) _dragging = false; }
 
+        public void AutoSetProgress(float progress)
+        {
+            if (ragRt == null || railViewport == null || flow == null) return;
+            if (ragRt.parent != railViewport) EnterWorkFromPointer(Vector2.zero);
+            var bounds = WipeBounds();
+            WipeProgress = Mathf.Clamp01(progress);
+            ragRt.anchoredPosition = new Vector2(Mathf.Lerp(bounds.left, bounds.right, WipeProgress), bounds.y);
+            flow.NotifyWipeProgress(WipeProgress);
+        }
+
         public void ResetTool()
         {
             CacheSceneHome();

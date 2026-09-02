@@ -22,14 +22,17 @@ namespace M3
         {
             Bind(autoDemoButton, AutoDemo);
             Bind(tryAgainButton, TryAgain);
+            ModuleHintOverlay.MoveHelpPanel(helpPanel);
+            ModuleHintOverlay.SetHelpButtonText(autoDemoButton, "需要");
+            ModuleHintOverlay.SetHelpButtonText(tryAgainButton, "不需要");
         }
         private static void Bind(Button button, UnityAction action) { if (button == null) return; button.onClick.RemoveListener(action); button.onClick.AddListener(action); }
         private void Update()
         {
             if (_paused || _demoRunning || flow == null) return;
             _idle += Time.deltaTime;
-            if (flow.CurrentStage == M3FlowController.Stage.Positioning && _idle >= angleIdleTimeout) ShowHelp("需要帮助调整到向下 13° 吗？");
-            else if (flow.CurrentStage == M3FlowController.Stage.Scanning && _idle >= scanIdleTimeout) ShowHelp("即将演示移动到 120mm 检出");
+            if (flow.CurrentStage == M3FlowController.Stage.Positioning && _idle >= angleIdleTimeout) ShowHelp("需要帮助吗？");
+            else if (flow.CurrentStage == M3FlowController.Stage.Scanning && _idle >= scanIdleTimeout) ShowHelp("需要帮助吗？");
         }
         public void ResetIdle() { _idle = 0f; HideHelp(); }
         public void SetPaused(bool paused) => _paused = paused;
