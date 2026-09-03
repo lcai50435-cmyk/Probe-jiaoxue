@@ -50,7 +50,7 @@ namespace M2
                 case "M2": return "重置轨头顶面探测？";
                 case "M3": return "重置轨头侧面探测？";
                 case "M4": return "重置轨腰部位探测？";
-                default: return "重置 M5 流程？";
+                default: return "重置擦拭流程？";
             }
         }
 
