@@ -67,7 +67,12 @@ namespace M2
         {
             _demoRunning = true; HideHelp();
             var stage = flow.CurrentStage;
-            if (stage == M2FlowController.Stage.Positioning && probeDrag != null)
+            if (stage == M2FlowController.Stage.Couplant)
+            {
+                flow.ApplyCouplant();
+                while (flow.CurrentStage == M2FlowController.Stage.Couplant) yield return null;
+            }
+            else if (stage == M2FlowController.Stage.Positioning && probeDrag != null)
             {
                 probeDrag.SetInputLocked(true);
                 probeDrag.PlaceAtStart();                       // 0° 放置探头
@@ -90,6 +95,10 @@ namespace M2
                 probeDrag.SetInputLocked(true);
                 for (float t = 0f, from = probeDrag.CurrentDistanceMm; t < autoDemoDuration; t += Time.deltaTime) { probeDrag.AutoMoveToMm(Mathf.Lerp(from, flow.targetDistance, t / autoDemoDuration)); yield return null; }
                 probeDrag.AutoMoveToMm(flow.targetDistance);    // 与手动相同几何路径到 110mm 并触发检出
+            }
+            else if (stage == M2FlowController.Stage.Measuring && rulerDrag != null)
+            {
+                rulerDrag.AutoMeasure();
             }
             probeDrag?.SetInputLocked(flow != null && flow.Detected); // 检出后全锁；校角后仅角度锁（Go(Scanning)）
             _demoRunning = false; ResetIdle();

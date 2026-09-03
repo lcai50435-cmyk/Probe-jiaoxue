@@ -145,6 +145,8 @@ namespace M4
             if (rulerImage != null) rulerImage.color = Color.white;
         }
 
+        public void AutoMeasure() { Show(); SetPoseMeasure(); OnAligned?.Invoke(); }
+
         private void MoveToWork(Vector2 start)
         {
             if (rulerRt == null || railViewport == null) return;

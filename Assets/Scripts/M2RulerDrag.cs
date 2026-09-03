@@ -56,6 +56,7 @@ namespace M2
         /// <summary>检出后进入测量待拖态：尺子留在工具架（不自动出架），玩家自己拖出到测量放置位置吸附并应用测量角度（老板 2026-08-16，与 M3 一致）。</summary>
         public void PrepareMeasure() { ModeNow = Mode.DistanceMeasure; aligned = false; unlocked = true; if (rulerImage != null) rulerImage.color = Color.white; SetPhaseSprite(true); }
         public void ShowMeasure() { SetPhaseSprite(true); if (EnterWorkMode(measureSize)) { ModeNow = Mode.DistanceMeasure; OrientMeasure(); Unlock(); } }
+        public void AutoMeasure() { ShowMeasure(); SetPoseMeasure(); CheckMeasure(); }
         public void ResetTool()
         {
             CacheSceneHome();

@@ -63,6 +63,10 @@ namespace M3
                 for (float t = 0f, from = probeDrag.CurrentDistanceMm; t < autoDemoDuration; t += Time.deltaTime) { probeDrag.AutoMoveToMm(Mathf.Lerp(from, flow.targetDistance, t / autoDemoDuration)); yield return null; }
                 probeDrag.AutoMoveToMm(flow.targetDistance);
             }
+            else if (stage == M3FlowController.Stage.Measuring && flow.rulerDrag != null)
+            {
+                flow.rulerDrag.AutoMeasure();
+            }
             if (flow != null)
             {
                 probeDrag?.SetInputLocked(flow.Detected);
