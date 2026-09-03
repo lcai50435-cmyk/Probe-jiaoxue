@@ -48,13 +48,13 @@ namespace M3
         private static readonly string[] StageNames = { "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：探头偏角/步骤2：移动探测/步骤3：测距确认）
         // 数字人台词气泡（2026-08-23 按 台词.pptx Slide 8-11）
         private static readonly string[] SpeechLines = {
-            "把探头放在轨头侧面，准备进行探测",                 // 初始定位（Slide 8-【1】）
+            "把探头放在轨头侧面，\n准备进行探测",               // 初始定位（Slide 8-【1】）
             "角度正确！\n可以向前移动探头啦",                   // 校角确认（Slide 9-【1】）
-            "很棒！\n在轨头侧面也探测到了伤损！\n用多功能尺测量确认一下出波位置" // 检出（Slide 10-【1】）
+            "很棒！\n在轨头侧面也探测到了伤损！\n用多功能尺\n确认一下出波位置" // 检出（Slide 10-【1】）
         };
         private static readonly string[] FinalSpeech = { // 测量完成 + 完成引导（分段展示；2026-08-23 老板：结论句按 M2 风格逐句分段）
             "探头入射点距离\n本侧焊缝熔合线120mm",
-            "这说明我们在轨头侧面也探测到了伤损！",
+            "这说明我们在轨头侧面，\n也探测到了伤损！",
             "点击透视视图\n看看超声波传播路径",
             "轨头侧面伤损探测完成，\n点击进入轨腰部位探测吧" // Slide 11-【1】
         };
@@ -95,8 +95,8 @@ namespace M3
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2 合同一致）
             speechBubble.preserveExplicitLineBreaks = true;
-            speechBubble.fontSize = 24f;
-            speechBubble.minFontSize = 14f;
+            speechBubble.fontSize = 26f;
+            speechBubble.minFontSize = 16f;
             speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");

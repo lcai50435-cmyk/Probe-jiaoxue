@@ -12,7 +12,7 @@ public static class ModuleHintOverlay
         if (rt == null) return;
         rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
         rt.pivot = new Vector2(1f, 0f);
-        rt.anchoredPosition = new Vector2(-340f, 196f);
+        rt.anchoredPosition = new Vector2(-150f, 196f);
         rt.sizeDelta = new Vector2(400f, 150f);
         var text = panel.transform.Find("HelpText")?.GetComponent<TMP_Text>();
         if (text == null)

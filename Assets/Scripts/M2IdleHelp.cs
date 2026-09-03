@@ -17,6 +17,7 @@ namespace M2
         public M2RulerDrag rulerDrag;
         public float angleIdleTimeout = 30f;
         public float scanIdleTimeout = 60f;
+        public float missingStageIdleTimeout = 30f;
         public float autoDemoDuration = 1f;
         private float _idle;
         private bool _paused, _demoRunning;
@@ -42,6 +43,7 @@ namespace M2
             _idle += Time.deltaTime;
             if (flow.CurrentStage == M2FlowController.Stage.Positioning && _idle >= angleIdleTimeout) ShowHelp("需要帮助吗？");
             else if (flow.CurrentStage == M2FlowController.Stage.Scanning && _idle >= scanIdleTimeout) ShowHelp("需要帮助吗？");
+            else if ((flow.CurrentStage == M2FlowController.Stage.Couplant || flow.CurrentStage == M2FlowController.Stage.Measuring) && _idle >= missingStageIdleTimeout) ShowHelp("需要帮助吗？");
         }
         public void ResetIdle() => _idle = 0f;
         public void SetPaused(bool paused) => _paused = paused;

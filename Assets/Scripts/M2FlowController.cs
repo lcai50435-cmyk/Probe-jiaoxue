@@ -50,7 +50,7 @@ namespace M2
         private static readonly string[] FinalSpeech = { // 测量完成（三段一体，段间 1 秒；老板 2026-08-23 定稿）
             "可以看到探头入射点距离\n本侧焊缝熔合线\n正好也是110mm",
             "这就说明我们在轨头顶面\n利用新工艺\n成功捕捉到了伤损！",
-            "可以点击透视视图查看超声波传播路径"
+            "可以点击透视视图\n查看超声波传播路径"
         };
         private const string PerspectiveHint = "看！\n绿色光束模拟超声波束\n遇到红色伤损\n会中断传播并发生反射！"; // 首次点透视（Slide 7-【1】，仅第一次+探头已放置）
         private void Awake()

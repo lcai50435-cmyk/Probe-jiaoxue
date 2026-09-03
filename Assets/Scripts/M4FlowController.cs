@@ -50,12 +50,12 @@ namespace M4
         private static readonly string[] SpeechLines = {
             "现在把探头放在\n轨腰最上端进行探测吧",         // 初始定位（Slide 12-【1】）
             "角度正确！\n可以向前移动探头啦",               // 校角确认（Slide 13-【1】）
-            "轨腰部位也探测到伤损了！\n用多功能尺确认一下出波位置" // 检出（Slide 14-【1】）
+            "轨腰部位也探测到伤损了！\n用多功能尺\n确认一下出波位置" // 检出（Slide 14-【1】）
         };
         private static readonly string[] FinalSpeech = { // 测量完成（分段展示，逻辑同 M2/M3；2026-08-23 老板定稿）
             "探头入射点距离\n本侧焊缝熔合线40mm",
-            "在轨腰部位也探测到了伤损！",
-            "点击透视视图看一下\n超声波传播路径",
+            "在轨腰部位\n也探测到了伤损！",
+            "点击透视视图\n看一下超声波传播路径",
             "三方位探测全部完成啦！\n但还有最后一步工作哦" // 全部完成引导（Slide 15-【1】）
         };
 
@@ -94,7 +94,7 @@ namespace M4
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2/M3 合同一致）
             speechBubble.preserveExplicitLineBreaks = true;
-            speechBubble.fontSize = 24f;
+            speechBubble.fontSize = 26f;
             speechBubble.minFontSize = 18f;
             speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);

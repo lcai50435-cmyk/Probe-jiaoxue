@@ -56,7 +56,7 @@ namespace M5
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f;
             speechBubble.preserveExplicitLineBreaks = true;
-            speechBubble.fontSize = 24f;
+            speechBubble.fontSize = 26f;
             speechBubble.minFontSize = 18f;
             speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);

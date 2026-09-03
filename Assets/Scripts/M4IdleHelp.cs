@@ -15,6 +15,7 @@ namespace M4
         public Button autoDemoButton, tryAgainButton;
         public M4ProbeDrag probeDrag;
         public float angleIdleTimeout = 30f, scanIdleTimeout = 60f, autoDemoDuration = 1f;
+        public float measurementIdleTimeout = 30f;
         private float _idle;
         private bool _paused, _demoRunning;
 
@@ -33,6 +34,7 @@ namespace M4
             _idle += Time.deltaTime;
             if (flow.CurrentStage == M4FlowController.Stage.Positioning && _idle >= angleIdleTimeout) ShowHelp("需要帮助吗？");
             else if (flow.CurrentStage == M4FlowController.Stage.Scanning && _idle >= scanIdleTimeout) ShowHelp("需要帮助吗？");
+            else if (flow.CurrentStage == M4FlowController.Stage.Measuring && _idle >= measurementIdleTimeout) ShowHelp("需要帮助吗？");
         }
         public void ResetIdle() { _idle = 0f; HideHelp(); }
         public void SetPaused(bool paused) => _paused = paused;
