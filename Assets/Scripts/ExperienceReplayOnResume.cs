@@ -96,6 +96,7 @@ namespace M1
             Time.timeScale = 1f;
             PlayerPrefs.DeleteKey(IntroSeenKey);
             PlayerPrefs.Save();
+            Debug.Log("[ExperienceReplayOnResume] M5 完成后返回，清除首次标记并重载 M1 重播引导。");
             SceneManager.LoadScene("M1");
         }
     }

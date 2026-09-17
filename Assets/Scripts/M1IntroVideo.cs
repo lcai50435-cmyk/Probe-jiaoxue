@@ -142,6 +142,9 @@ namespace M1
         [Tooltip("海报兜底引导时长（秒）：视频完全不可用时以海报+字幕完成引导，到时自动恢复游戏")]
         public float webglPosterFallbackDuration = 15.3f;
 
+        [Tooltip("微信海报图集卡帧放行（秒）：图集动画超过此时长无帧推进时提前结束引导进游戏；0=关闭。动画正常推进时永不触发，不跳过正常播放")]
+        public float webglPosterStallTimeout = 6f;
+
         [Tooltip("微信端引导帧图集画面宽高比（仅图集播放成功时覆盖海报比例）")]
         public float webglIntroFrameAspect = 1080f / 1450f;
 
@@ -330,6 +333,16 @@ namespace M1
             if (_posterFallback && !_finished && _posterClockStart >= 0f
                 && Time.realtimeSinceStartup - _posterClockStart >= webglPosterFallbackDuration)
             {
+                _finished = true;
+                FinishIntro();
+                return;
+            }
+            // 海报图集卡帧放行（09-05 冻结修复）：仅海报后端；Android 降级海报路径不播图集，显式排除保证其行为零变化
+            if (_webGlPosterOnly && !_finished && _posterFallback && webglPosterStallTimeout > 0f
+                && posterFramePlayer != null && posterFramePlayer.LastAdvanceRealtime >= 0f
+                && Time.realtimeSinceStartup - posterFramePlayer.LastAdvanceRealtime >= webglPosterStallTimeout)
+            {
+                Debug.LogWarning("[M1IntroVideo] 海报图集动画长时间无帧推进，卡帧放行结束引导。");
                 _finished = true;
                 FinishIntro();
                 return;
@@ -698,6 +711,8 @@ namespace M1
                 if (fitter != null) fitter.aspectRatio = webglIntroFrameAspect;
                 return;
             }
+            // 诊断埋点（09-05 冻结修复）：具体缺失原因已由播放器 WarnOnce 打出，这里补启动失败汇总
+            Debug.LogError("[M1IntroVideo] intro 帧图集启动失败，回退静态海报（人物将静止），请核对 DigitalHuman 图集资产。");
             _posterImage.texture = posterTexture;
             _posterImage.uvRect = posterUvRect;
             _posterImage.enabled = true;

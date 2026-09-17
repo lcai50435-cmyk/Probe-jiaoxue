@@ -87,6 +87,10 @@ wx.loadSubpackage({ name: 'videos', success: loadAndroidVideo });
 
 **微信 H.264 输入 Alpha 合同（2026-08-30 Android 真机）**：引导 MP4 为 `yuv420p`，没有 Alpha。微信视频桥虽然以 RGBA 上传帧，但 Android 与 iOS 对补写 A 通道没有一致保证；`UI/LumaKey` 在 `_VideoInputHasAlpha=0` 时必须只用亮度 `keyAlpha` 生成最终 Alpha，禁止乘 `raw.a` 导致 Android 人物全透明。`M1IntroVideo` 仅在 WebGL 引导材质运行时设为0；Android/Editor 与有 Alpha 素材默认值1保持原路径。
 
+**重进重播与图集页钉住（2026-09-16 iPhone 冻结修复）**：微信 WebGL 上 `Resources.UnloadAsset` 后同进程二次 `Resources.Load` 同一纹理不可靠（iPhone 重进引导数字人静止的根因，`09-05-iphone-intro-replay-freeze`）。`M1DigitalHumanFramePlayer` 对 `intro` 状态图集页做进程级钉住：命中缓存即不走 `Resources.Load`，钉住页永不 `UnloadAsset`；`intro` 状态仅海报后端（`_webGlPosterOnly`）可达，Android 常驻三态（idle/thinking/speaking）永不入缓存、加载与释放行为不变。海报卡帧放行：`M1IntroVideo.webglPosterStallTimeout`（默认 6s，仅 `_webGlPosterOnly` 生效）无帧推进超时即告警并 `FinishIntro`；动画正常推进时永不触发（152帧@10fps=15.2s < 15.3s 到时时钟）。禁止恢复对 intro 页的卸载，或把 watchdog 门控放宽到 Android 海报降级路径。
+
+**导出后必传 CDN 数据文件（2026-09-16 复盘）**：小游戏包不含 Unity 数据（`game.js` 中 `loadDataPackageFromSubpackage=false`），启动时按 `DATA_CDN/<md5>.webgl.data.unityweb.bin.txt` 下载；文件名带构建哈希，**每次导出必须把 `Builds/WXExport/webgl/<md5>.webgl.data.unityweb.bin.txt` 上传到 CloudBase 静态托管 `rail-inspection/` 目录根**（文件名保持不变），否则开发者工具/体验版启动即报「资源下载失败」。上传前保留线上旧数据文件作回滚（如 `e8a68f578f45f170…`），上传后 `curl -sI` 新 URL 验证 200。
+
 ## 3. 黑底抠像（LumaKey）契约
 
 **适用前提**：视频背景纯黑（sRGB 亮度 ≤ 2）、主体亮色。本项目引导视频背景 0~2、人物暗部 8~40，阈值 0.02/羽化 0.015 分离清晰。

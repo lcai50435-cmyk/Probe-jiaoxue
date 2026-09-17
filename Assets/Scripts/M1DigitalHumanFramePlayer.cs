@@ -20,6 +20,16 @@ namespace M1
         [Tooltip("是否循环播放；关闭时停留在最后一帧")]
         public bool loop = true;
 
+        /// <summary>intro 状态键：仅海报后端（iOS/开发者工具）会播放，见 M1IntroVideo.TryPlayPosterFrameAnimation。</summary>
+        private const string IntroStateKey = "intro";
+
+        /// <summary>
+        /// 进程级钉住页：intro 图集页在 FinishIntro→StopAndRelease 后会被 Resources.UnloadAsset 卸载，
+        /// 同进程二次引导（M5 完成后返回重载 M1）需重新加载；微信 WebGL 上卸载后二次加载不可靠（09-05 冻结修复）。
+        /// 仅 intro 状态进缓存：Android 常驻数字人三态（idle/thinking/speaking）永不进入，释放行为不变。
+        /// </summary>
+        private static readonly Dictionary<string, Texture2D> _pinnedPages = new Dictionary<string, Texture2D>();
+
         private DigitalHumanFrameConfig _config;
         private DigitalHumanFrameConfig.State _state;
         private Texture2D _page;
@@ -30,6 +40,9 @@ namespace M1
         private readonly HashSet<string> _warnedMissing = new HashSet<string>();
 
         public event System.Action PlaybackFailed;
+
+        /// <summary>最近一次画面推进的 realtime 时间戳（海报卡帧放行 watchdog 用；-1=尚未绑定过画面）。</summary>
+        public float LastAdvanceRealtime { get; private set; } = -1f;
 
         public bool HasConfig() => Config() != null;
 
@@ -60,6 +73,7 @@ namespace M1
                 StopAndRelease();
                 return false;
             }
+            LastAdvanceRealtime = Time.realtimeSinceStartup;
 
             ReleasePage(oldPage, _page);
             Debug.Log($"[M1DigitalHumanFramePlayer] 切态 {key}：第 {_pageIndex + 1}/{state.pages.Length} 页 @ {state.fps}fps（{state.frameCount} 帧）。");
@@ -75,6 +89,7 @@ namespace M1
             if (nextFrame == _frame) return;
 
             _frame = nextFrame;
+            LastAdvanceRealtime = Time.realtimeSinceStartup;
             if (!ApplyFrame())
             {
                 StopAndRelease();
@@ -97,7 +112,7 @@ namespace M1
             if (pageChanged)
             {
                 var path = _state.pages[nextPageIndex];
-                nextPage = string.IsNullOrEmpty(path) ? null : Resources.Load<Texture2D>(path);
+                nextPage = string.IsNullOrEmpty(path) ? null : LoadPage(path);
                 if (nextPage == null)
                 {
                     WarnOnce(_state.key + "/" + nextPageIndex, "图集页加载失败：" + path);
@@ -133,13 +148,23 @@ namespace M1
             return _config;
         }
 
-        /// <summary>停止播放并只释放当前图集页；不触发全局 Resources 扫描。</summary>
+        /// <summary>页加载入口：intro 状态的页加载成功后进程级钉住，之后直接命中缓存不再走 Resources.Load。</summary>
+        private Texture2D LoadPage(string path)
+        {
+            if (_pinnedPages.TryGetValue(path, out var pinned) && pinned != null) return pinned;
+            var page = Resources.Load<Texture2D>(path);
+            if (page != null && _state != null && _state.key == IntroStateKey) _pinnedPages[path] = page;
+            return page;
+        }
+
+        /// <summary>停止播放并只释放当前图集页；不触发全局 Resources 扫描。钉住的 intro 页保留在缓存中不卸载。</summary>
         public void StopAndRelease()
         {
             _playing = false;
             _state = null;
             _frame = 0;
             _clock = 0f;
+            LastAdvanceRealtime = -1f;
             var page = _page;
             _page = null;
             _pageIndex = -1;
@@ -162,7 +187,9 @@ namespace M1
 
         private static void ReleasePage(Texture2D page, Texture2D keep)
         {
-            if (page != null && page != keep) Resources.UnloadAsset(page);
+            if (page == null || page == keep) return;
+            if (_pinnedPages.ContainsValue(page)) return; // intro 钉住页不卸载，保障同进程二次引导重播
+            Resources.UnloadAsset(page);
         }
 
         /// <summary>同类错误只报一次，避免刷屏。</summary>
