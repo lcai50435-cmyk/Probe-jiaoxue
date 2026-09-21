@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/unity/module-flow-contract.md", "reason": "验收阶段链与 actionHint 流转一致性；R2 断言「拖动多功能尺至探头处→滑动此处调整偏角」须符合 § 阶段合同。"}
+{"file": ".trellis/spec/unity/low-code.md", "reason": "低代码约束（新增 runtime ≤150 行、禁止不必要脚本）与 Scene 零写回哈希验收流程；check 阶段核对代码质量。"}

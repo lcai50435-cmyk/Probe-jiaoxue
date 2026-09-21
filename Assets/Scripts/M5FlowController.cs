@@ -56,10 +56,11 @@ namespace M5
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f;
             speechBubble.preserveExplicitLineBreaks = true;
-            speechBubble.fontSize = 26f;
+            speechBubble.fontSize = 28f; // 2026-09-19：上限 26→28（审计方案A，短句变大；长句由 minFontSize 自动缩字兜底不出云朵）
             speechBubble.minFontSize = 18f;
             speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
+            ModuleFontBump.ApplyM5(transform); // 2026-09-19 审计第一批字号放大（只改字号，不写回 Scene）
             var stage = FindDeep(transform, "DigitalHumanStage");
             var dialog = stage != null ? FindDeep(stage, "dialog") : null;
             if (dialog != null)

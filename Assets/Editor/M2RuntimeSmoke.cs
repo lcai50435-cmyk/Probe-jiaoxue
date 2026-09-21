@@ -94,6 +94,7 @@ namespace M2.EditorTools
                 Require(railNormal != null && railNormal.Length > 0 && _flow.railBg.GetComponentInChildren<Image>(true).sprite == railNormal[0], "钢轨普通视图未换成俯视角 v2");
                 Require(railPersp != null && railPersp.Length > 0 && _flow.railPerspective.GetComponentInChildren<Image>(true).sprite == railPersp[0], "钢轨透视视图未换成俯视角透视 v2");
                 Require(_flow.CurrentStage == M2FlowController.Stage.Couplant, "初始阶段错误");
+                Require(GameObject.Find("~ClickHereHint") != null, "Couplant 阶段缺少「点击这里」提示（R1 2026-09-05）");
                 _step = 0;
                 _nextAt = EditorApplication.timeSinceStartup + .2;
                 EditorApplication.update += Tick;
@@ -135,6 +136,7 @@ namespace M2.EditorTools
                         break;
                     case 1:
                         Require(_flow.CurrentStage == M2FlowController.Stage.Positioning, "耦合剂后未进入定位阶段");
+                        Require(GameObject.Find("~ClickHereHint") == null, "点击涂抹后「点击这里」提示未消失（R1 2026-09-05）");
                         var fx = _flow.couplantFx;
                         Require(fx != null && fx.film != null && fx.film.sprite != null, "薄膜未设置铁轨形状 sprite");
                         Require(fx.film.type == Image.Type.Filled && fx.film.fillMethod == Image.FillMethod.Horizontal && fx.film.fillOrigin == 0, "薄膜未配置从左至右揭示");
@@ -250,6 +252,7 @@ namespace M2.EditorTools
                         Require(Mathf.Abs(_flow.probeDrag.probeVisual.localEulerAngles.z - _flow.probeDrag.probeBaseAngleDeg) < .1f, "重置后探头角度非 0");
                         Require(_flow.rulerDrag.rulerImage != null && Mathf.Abs(_flow.rulerDrag.rulerImage.rectTransform.localScale.y - .8f) < .01f, "重置后尺子 bg 未恢复 Scene 缩放(0.8)");
                         Require(!_flow.AngleVerifiedByRuler && !_flow.Detected, "重置后流程状态未清空");
+                        Require(GameObject.Find("~ClickHereHint") != null, "重置后「点击这里」提示未重现（R1 2026-09-05）");
                         break;
                     case 4:
                         // Reset 后完整复跑

@@ -94,10 +94,11 @@ namespace M4
             speechBubble = gameObject.AddComponent<ModuleSpeechBubble>();
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒（与 M2/M3 合同一致）
             speechBubble.preserveExplicitLineBreaks = true;
-            speechBubble.fontSize = 26f;
+            speechBubble.fontSize = 28f; // 2026-09-19：上限 26→28（审计方案A，短句变大；长句由 minFontSize 自动缩字兜底不出云朵）
             speechBubble.minFontSize = 18f;
             speechBubble.paddingX = 0f;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
+            ModuleFontBump.ApplyM4(transform); // 2026-09-19 审计第一批字号放大（只改字号，不写回 Scene）
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
             if (dialog != null)
             {
@@ -147,7 +148,7 @@ namespace M4
         private void SetBusinessButtons(bool value) {
             if (resetButton != null) resetButton.interactable = value; var normal = FindButton("NormalButton"); if (normal != null) normal.interactable = value;
             var perspective = FindButton("PerspectiveButton"); if (perspective != null) perspective.interactable = value; }
-        public void NotifyPlacementChanged() { } // 探头就位仅解锁尺子吸附流程（扫描由撤尺进入）
+        public void NotifyPlacementChanged() { UpdateUi(); } // 探头就位即刷新 actionHint（2026-09-05 R2：放探头后切「拖动多功能尺至探头处」，对齐 M2）
         public void NotifyRulerPositioned()
         {
             if (CurrentStage != Stage.Positioning) return;

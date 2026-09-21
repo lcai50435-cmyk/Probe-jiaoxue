@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using M2;
 using M4;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -101,6 +102,7 @@ namespace M4.EditorTools
                         Require(_probe.unlocked && !_probe.angleSlider.interactable, "初始探头应解锁、角度滑块应锁定");
                         Require(_ruler.unlocked && !_ruler.positioned && _ruler.rulerRt.parent == _ruler.rulerHome, "初始定位尺应留在 RulerHome 且可拖拽");
                         Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg)) < .1f, "初始探头未保持平放基准角（bg z=15）");
+                        Require(ActionHintText() == "拖动探头", "初始 actionHint 应为「拖动探头」（R2）");
                         _flow.SetPerspectiveView();
                         Require(!_flow.beamLayer.activeSelf, "未放置探头时切换透视视图不应显示预置光束");
                         _flow.SetNormalView();
@@ -112,12 +114,14 @@ namespace M4.EditorTools
                         _probe.AutoMoveToMm(55f); // 放探头（0°）
                         Require(!_flow.beamLayer.activeSelf, "普通视图下放置探头不应显示检测束");
                         Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "仅探头就位不应进入扫描");
+                        Require(ActionHintText() == "拖动多功能尺至探头处", "放探头后提示未切「拖动多功能尺至探头处」（R2）");
                         _probe.OnAngleChanged(10f);
                         Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "尺子未吸附时角度正确仍不应进入扫描");
                         _ruler.AutoPosition(); // 尺子中心吸白色点 → 解锁角度滑块
                         Require(_ruler.rulerRt.parent == _ruler.railViewport, "定位尺未进入 RailViewport");
                         Require(_probe.angleSlider.interactable, "尺子吸附后角度滑块应解锁");
                         Require(_flow.RulerDocked && !_flow.AngleVerifiedByRuler, "尺子吸附后 RulerDocked 应为真、校角未确认");
+                        Require(ActionHintText() == "滑动此处调整偏角", "尺子吸附后提示未切「滑动此处调整偏角」（R2）");
                         _probe.OnAngleChanged(10f); // 重新触发稳定计时（滑块从 0 动画到 13 后停住）
                         _nextAt = EditorApplication.timeSinceStartup + 1f;
                         break;
@@ -125,8 +129,10 @@ namespace M4.EditorTools
                         Require(_flow.AngleVerifiedByRuler, "13° 稳定 0.5s 后校角未确认");
                         Require(!_probe.angleSlider.interactable, "校角确认后角度滑块应锁定");
                         Require(_flow.CurrentStage == M4FlowController.Stage.Positioning, "校角确认后不应直接进入扫描（需撤尺）");
+                        Require(ActionHintText() == "拖动多功能尺返回工具栏", "校角确认后提示未切「拖动多功能尺返回工具栏」（R2）");
                         _ruler.AutoRetract(); // 撤尺归槽 → 进入扫描
                         Require(_flow.CurrentStage == M4FlowController.Stage.Scanning, "撤尺后未进入扫描");
+                        Require(ActionHintText() == "拖动探头向前移动", "进入扫描后提示未切「拖动探头向前移动」（R2）");
                         Require(_ruler.rulerRt.parent == _ruler.rulerHome && !_ruler.positioned, "撤尺后尺子未归槽 Home");
                         Require(Mathf.Abs(Mathf.DeltaAngle(_probe.probeVisual.localEulerAngles.z, _probe.probeBaseAngleDeg + _probe.visualTiltAtTarget)) < .1f, "探头 10° 视觉反馈错误");
                         Require(Mathf.Abs(Mathf.DeltaAngle(_probe.beamLine.localEulerAngles.z, 10f)) < .1f, "入射声束角度错误");
@@ -184,6 +190,13 @@ namespace M4.EditorTools
                 }
             }
             catch (Exception e) { Fail(e); }
+        }
+
+        private static string ActionHintText()
+        {
+            var field = typeof(M4FlowController).GetField("_actionHint", BindingFlags.Instance | BindingFlags.NonPublic);
+            var text = field != null ? field.GetValue(_flow) as TMP_Text : null;
+            return text != null ? text.text : null;
         }
 
         private static void Click(string name)

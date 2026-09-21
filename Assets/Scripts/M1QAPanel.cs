@@ -465,7 +465,7 @@ namespace M1
             textGo.transform.SetParent(bubbleGo.transform, false);
             var tmp = textGo.GetComponent<TextMeshProUGUI>();
             tmp.font = cnFont;
-            tmp.fontSize = 28;
+            tmp.fontSize = 30; // 2026-09-19 审计：28→30，气泡按 GetPreferredValues 自适应不越界
             tmp.color = new Color(0.15f, 0.15f, 0.15f, 1f); // 两侧消息统一黑字（微信/参考图风格）
             tmp.textWrappingMode = TextWrappingModes.Normal;
             tmp.alignment = TextAlignmentOptions.Left;

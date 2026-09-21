@@ -1600,6 +1600,11 @@ MonoBehaviour:
   idleClip: {fileID: 32900000, guid: 7acf9e1eb779da546ad3ea10a766adc1, type: 3}
   thinkingClip: {fileID: 32900000, guid: 5afad0a3ad9ca4c44b8bf30d3d258dc8, type: 3}
   speakingClip: {fileID: 32900000, guid: 5dca6e626479f9d49990670bffd4f6a2, type: 3}
+  forceUrlPlayback: 0
+  framePlayer: {fileID: 0}
+  idleUrl: 
+  thinkingUrl: 
+  speakingUrl: 
 --- !u!1 &209456225
 GameObject:
   m_ObjectHideFlags: 0
@@ -8390,6 +8395,9 @@ MonoBehaviour:
   angleValueText: {fileID: 1142120342}
   angleStatusText: {fileID: 1181040906}
   okGreen: {r: 0.13, g: 0.67, b: 0.42, a: 1}
+  anglePromptColor: {r: 0.96, g: 0.42, b: 0.28, a: 1}
+  angleTitleGap: 32
+  anglePromptGap: 68
   scanDirection: {x: 1, y: 0}
   probeEntryLocal: {x: 0.24, y: 0.81}
   startLocal: {x: -500, y: -34.67}

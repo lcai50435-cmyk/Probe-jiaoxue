@@ -133,6 +133,7 @@ namespace M1
             _m2Items = FindDeep(transform, m2ItemsPath);
             if (_m1Items != null) _m1Items.gameObject.SetActive(true);
             if (_m2Items != null) _m2Items.gameObject.SetActive(false);
+            ModuleFontBump.ApplyM1(transform); // 2026-09-19 审计第一批字号放大（只改字号，不写回 Scene）
 
             var toolsRoot = FindDeep(transform, toolsRootPath);
             if (toolsRoot == null)

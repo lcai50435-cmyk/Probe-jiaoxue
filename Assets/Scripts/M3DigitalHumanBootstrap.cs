@@ -187,7 +187,7 @@ namespace M3
             hrt.anchorMin = new Vector2(0f, 1f); hrt.anchorMax = new Vector2(1f, 1f);
             hrt.pivot = new Vector2(0.5f, 1f); hrt.sizeDelta = new Vector2(0f, HeaderHeight);
 
-            var title = NewTmp("Title", header.transform, font, 34, new Color(0.15f, 0.15f, 0.15f, 1f), "向铁小探提问");
+            var title = NewTmp("Title", header.transform, font, 38, new Color(0.15f, 0.15f, 0.15f, 1f), "向铁小探提问"); // 2026-09-19 审计：34→38
             var trt = title.GetComponent<RectTransform>();
             trt.anchorMin = new Vector2(0f, 0.5f); trt.anchorMax = new Vector2(0f, 0.5f);
             trt.pivot = new Vector2(0f, 0.5f); trt.anchoredPosition = new Vector2(28f, 0f); trt.sizeDelta = new Vector2(400f, 60f);
@@ -251,13 +251,13 @@ namespace M3
             tmpInput.contentType = TMP_InputField.ContentType.Standard;
             tmpInput.lineType = TMP_InputField.LineType.SingleLine;
 
-            var voice = NewButton("VoiceButton", row.transform, font, 30, "语音",
+            var voice = NewButton("VoiceButton", row.transform, font, 32, "语音", // 2026-09-19 审计：30→32（76px 框上限）
                 new Color(0.35f, 0.62f, 0.95f, 1f), Color.white);
             var vrt2 = voice.GetComponent<RectTransform>();
             vrt2.anchorMin = new Vector2(0f, 0.5f); vrt2.anchorMax = new Vector2(0f, 0.5f);
             vrt2.pivot = new Vector2(0f, 0.5f); vrt2.anchoredPosition = new Vector2(388f, 4f); vrt2.sizeDelta = new Vector2(76f, 78f);
 
-            var send = NewButton("SendButton", row.transform, font, 32, "发送",
+            var send = NewButton("SendButton", row.transform, font, 36, "发送", // 2026-09-19 审计：32→36
                 new Color(0.15f, 0.42f, 0.82f, 1f), Color.white);
             var srt = send.GetComponent<RectTransform>();
             srt.anchorMin = new Vector2(0f, 0.5f); srt.anchorMax = new Vector2(0f, 0.5f);

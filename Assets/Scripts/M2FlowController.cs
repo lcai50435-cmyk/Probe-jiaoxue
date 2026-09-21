@@ -36,6 +36,7 @@ namespace M2
         private bool _perspectiveHintShown; // 首次点透视提示已显示（老板 2026-08-23：只第一次出现）
         private TMP_Text _bubbleText;
         private TMP_Text _actionHint;
+        private TMP_Text _clickHint; // 「点击这里」涂按钮提示（运行时 DontSave，冻结 Scene 零写回；2026-09-05 R1）
         private Image _damageMarker; private Sprite _damageMarkerSprite; // 伤损橙标记（运行时椭圆，检出时显示）
         private static readonly string[] DefaultHints = { "", "将探头放置在轨头顶面，用多功能尺将探头偏转10°", "将探头以10度偏角向前移动，注意观察波形变化", "将定位尺0刻度对准探头入射点，进行测量", "<b>轨头顶面探测完成</b>" }; // 2026-08-23 按 台词.pptx；[0] 涂耦合剂提示已删（改由数字人气泡承载）
         private static readonly string[] StageNames = { "涂抹耦合剂", "探头偏角", "移动探测", "测距确认", "完成" }; // 步骤名（2026-08-23 按 台词.pptx：步骤1：涂抹耦合剂/步骤2：探头偏角/步骤3：移动探测/步骤4：测距确认）
@@ -65,6 +66,7 @@ namespace M2
             Bind(FindButton("ConfirmButton"), ResetAll); Bind(FindButton("CancelButton"), HideResetDialog); Bind(FindButton("NormalButton"), SetNormalView); Bind(FindButton("PerspectiveButton"), SetPerspectiveView);
             rulerDrag?.Bind(this); probeDrag?.Bind(this);
             _actionHint = ModuleHintOverlay.EnsureActionHint(transform, instructionText != null ? instructionText.font : null);
+            EnsureClickHint();
             if (completionPanel != null && enterNextButton != null && enterNextButton.transform.parent != completionPanel.transform) enterNextButton.transform.SetParent(completionPanel.transform, false);
             SwapRailSprites(); ApplyView(false);
             waveformFx?.SetDistanceMm(150f); UpdateUi(); // 波形窗口已 Scene 直做（4:3/刻度/点状网格/序列化挂载）
@@ -87,10 +89,11 @@ namespace M2
             speechBubble.segmentInterval = 1f; // 老板 2026-08-23：分段台词一句话放完停留 1 秒
             speechBubble.bubbleSize = new Vector2(300f, 198f);
             speechBubble.paddingX = 0f;
-            speechBubble.fontSize = 26f;
+            speechBubble.fontSize = 28f; // 2026-09-19：上限 26→28（审计方案A，短句变大；长句由 minFontSize 自动缩字兜底不出云朵）
             speechBubble.minFontSize = 16f;
             speechBubble.preserveExplicitLineBreaks = true;
             if (instructionText != null) speechBubble.SetFont(instructionText.font);
+            ModuleFontBump.ApplyM2(transform); // 2026-09-19 审计第一批字号放大（只改字号，不写回 Scene）
             // 老板定稿：场景已自带云朵（dialog/bg 节点），只创建文字，文字区对齐云朵中心（不新建云朵 Image）
             var dialog = FindDeep(transform, "DigitalHumanStage/dialog");
             if (dialog != null)
@@ -137,6 +140,7 @@ namespace M2
         public void ApplyCouplant()
         {
             if (_applying || CouplantApplied) return;
+            if (_clickHint != null) _clickHint.gameObject.SetActive(false); // 点击即隐藏（R1 2026-09-05）
             _applying = true; if (applyButton != null) applyButton.interactable = false;
             couplantFx?.Play(OnCouplantDone);
         }
@@ -280,6 +284,30 @@ namespace M2
             foreach (var panel in stepPanels) if (panel != null) panel.SetActive(i < stepPanels.Length && panel == stepPanels[i]);
             if (completionPanel != null) completionPanel.SetActive(done); if (enterNextButton != null) enterNextButton.gameObject.SetActive(done);
             if (done && completionText != null) completionText.text = string.Empty; // 老板 2026-08-23：完成阶段不显示“轨头顶面探测完成”绿色文字（保留按钮）
+            RefreshClickHint();
+        }
+        /// <summary>「点击这里」提示显隐：仅 Couplant 阶段且未点击涂抹时可见（进入/ResetAll 后出现；2026-09-05 R1）。</summary>
+        private void RefreshClickHint()
+        {
+            if (_clickHint == null) return;
+            _clickHint.gameObject.SetActive(CurrentStage == Stage.Couplant && !CouplantApplied && !_applying);
+        }
+        /// <summary>涂按钮上方运行时提示：DontSave TMP 挂 applyButton（冻结 Scene 零写回，2026-09-05 R1）。</summary>
+        private void EnsureClickHint()
+        {
+            if (applyButton == null || _clickHint != null) return;
+            var go = new GameObject("~ClickHereHint", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            go.hideFlags = HideFlags.DontSave;
+            go.transform.SetParent(applyButton.transform, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(.5f, 1f); rt.anchorMax = new Vector2(.5f, 1f); // 锚定按钮顶边
+            rt.pivot = new Vector2(.5f, 0f); rt.anchoredPosition = new Vector2(0f, 8f); rt.sizeDelta = new Vector2(220f, 40f);
+            _clickHint = go.GetComponent<TextMeshProUGUI>();
+            _clickHint.font = instructionText != null ? instructionText.font : (applyButtonText != null ? applyButtonText.font : null);
+            _clickHint.fontSize = 26f; _clickHint.alignment = TextAlignmentOptions.Center;
+            _clickHint.color = new Color(.93f, .55f, .12f); // Accent 教学强调色
+            _clickHint.raycastTarget = false; // 不挡按钮点击
+            _clickHint.text = "点击这里";
         }
 
         private string CurrentInstruction()

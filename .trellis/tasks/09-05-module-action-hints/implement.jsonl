@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/unity/low-code.md", "reason": "运行时提示覆盖冻结 Scene 约定、DontSave/运行时绑定、RuntimeSmoke 哈希校验先例（5.4 各条）；R1/R2 均须遵守零写回与现有烟测工具链。"}
+{"file": ".trellis/spec/unity/module-flow-contract.md", "reason": "M2/M3/M4 放置→校角→扫描阶段流转合同与 actionHint/提示刷新边界；R2 修复 NotifyPlacementChanged 须与既有阶段链一致。"}
+{"file": ".trellis/spec/unity/ugui-module-template.md", "reason": "模块 UGUI 布局基线（按钮/操作带/instruction 区），R1 按钮旁提示定位参照。"}

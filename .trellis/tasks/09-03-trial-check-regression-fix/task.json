@@ -1,0 +1,30 @@
+{
+  "id": "trial-check-regression-fix",
+  "name": "trial-check-regression-fix",
+  "title": "体验版检查回归：M2/M3/M4操作提示缺失、退出重进引导数字人不动与防反复机制",
+  "description": "体验版回归检查发现四项问题：1) M2涂抹耦合剂按钮阶段旁缺点击这里提示；2) M3/M4旋转探头角度阶段需拖多功能尺到探头，缺拖动多功能尺至探头处提示；3) 扫码体验后退出再进入，引导视频数字人不动；4) 反复出现修好又坏的回归现象，需根因与防再犯机制。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "lcai",
+  "assignee": "lcai",
+  "createdAt": "2026-09-03",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-05-module-action-hints",
+    "09-05-iphone-intro-replay-freeze",
+    "09-05-regression-prevention"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
