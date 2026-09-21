@@ -15,3 +15,4 @@ MonoBehaviour:
   envId: cloud1-d6gmycfs6b37edb43
   functionName: deepseek-proxy
   timeout: 40
+  qaMode: 1

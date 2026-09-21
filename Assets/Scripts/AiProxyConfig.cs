@@ -22,6 +22,18 @@ namespace M1
         [Tooltip("云函数调用超时（秒）")]
         public float timeout = 40f;
 
+        /// <summary>微信端问答数据源。</summary>
+        public enum WechatQaMode
+        {
+            CloudProxy = 0,
+            PresetLibrary = 1,
+        }
+
+        [Tooltip("问答模式：CloudProxy=云函数实时 AI（体验版）；PresetLibrary=预设话术库（正式提审版，零网络请求）。")]
+        public WechatQaMode qaMode = WechatQaMode.CloudProxy;
+
+        public bool UsePresetLibrary => qaMode == WechatQaMode.PresetLibrary;
+
         public bool IsConfigured => !string.IsNullOrWhiteSpace(envId) && !string.IsNullOrWhiteSpace(functionName);
 
         public static AiProxyConfig Load()

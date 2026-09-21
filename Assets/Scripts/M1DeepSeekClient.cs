@@ -28,6 +28,7 @@ namespace M1
             {
 #if UNITY_WEBGL && !UNITY_EDITOR
                 var proxy = AiProxyConfig.Load();
+                if (proxy != null && proxy.UsePresetLibrary) return PresetQALibrary.Load() != null;
                 return proxy != null && proxy.IsConfigured;
 #else
                 var config = DeepSeekConfig.Load();
@@ -65,11 +66,33 @@ namespace M1
         public IEnumerator ChatAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
+            var proxy = AiProxyConfig.Load();
+            if (proxy != null && proxy.UsePresetLibrary)
+                return ChatPresetAsync(userMessage, onSuccess, onError);
             return ChatViaProxyAsync(userMessage, onSuccess, onError);
 #else
             return ChatDirectAsync(userMessage, onSuccess, onError);
 #endif
         }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        /// <summary>预设话术模式（正式提审版）：零网络请求、零生成式内容；话术库缺失按未开放处理，绝不回落云函数。</summary>
+        private IEnumerator ChatPresetAsync(string userMessage, Action<string> onSuccess, Action<string> onError)
+        {
+            var library = PresetQALibrary.Load();
+            if (library == null)
+            {
+                onError?.Invoke("AI 问答暂未开放，敬请期待。");
+                yield break;
+            }
+            if (library.replyDelay > 0f)
+            {
+                var doneAt = Time.unscaledTime + library.replyDelay; // 问答面板暂停（timeScale=0）时仍按真实时间推进
+                while (Time.unscaledTime < doneAt) yield return null;
+            }
+            onSuccess?.Invoke(library.Match(userMessage));
+        }
+#endif
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         /// <summary>微信端通过 WX.cloud.CallFunction 调用无密钥 CloudBase 普通云函数（Key 在云函数环境变量，客户端零凭据）；代理未配置时不发任何请求。</summary>

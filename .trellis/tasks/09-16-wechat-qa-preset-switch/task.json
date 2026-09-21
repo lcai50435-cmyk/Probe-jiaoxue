@@ -1,0 +1,32 @@
+{
+  "id": "wechat-qa-preset-switch",
+  "name": "wechat-qa-preset-switch",
+  "title": "微信问答预设话术开关（方案 A）",
+  "description": "AiProxyConfig 新增 qaMode 开关：体验版 CloudProxy 实时 AI / 正式提审版 PresetLibrary 预设话术（零网络请求），规避个人主体无法办理的深度合成类目",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "lcai",
+  "assignee": "lcai",
+  "createdAt": "2026-09-16",
+  "completedAt": "2026-09-21",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-16-wechat-upload-compliance",
+  "relatedFiles": [
+    "Assets/Scripts/AiProxyConfig.cs",
+    "Assets/Scripts/M1DeepSeekClient.cs",
+    "Assets/Scripts/PresetQALibrary.cs",
+    "Assets/Resources/PresetQALibrary.asset",
+    "Assets/Editor/WeChatFontSubsetTool.cs"
+  ],
+  "notes": "2026-09-21 老板完成开发者工具实测（预设回复+零请求）；qaMode 已由会话切回 CloudProxy 恢复体验版口径。全部验收关闭。 2026-09-21 老板定稿：预设库即最终版本，体验版/提审版统一 PresetLibrary，qaMode 恒为 1，云函数保留作为恢复实时 AI 的后门。",
+  "meta": {}
+}
