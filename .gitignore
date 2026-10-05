@@ -128,3 +128,7 @@ InitTestScene*.unity*
 # 字体子集工具的构建备份与临时产物(可再生成)
 TextToolDatas/
 nul
+
+# 本机 AI 工具链与 agent 会话产物（仅本机协作环境使用，不影响游戏运行，不入库）
+.zcode/
+/Assets/Editor/AIBatch/
