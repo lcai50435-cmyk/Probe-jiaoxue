@@ -1,0 +1,28 @@
+{
+  "id": "wechat-minigame",
+  "name": "wechat-minigame",
+  "title": "微信小游戏转换发布",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "lcai",
+  "assignee": "lcai",
+  "createdAt": "2026-08-24",
+  "completedAt": "2026-10-04",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-28-wechat-digital-human-trial-release"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
